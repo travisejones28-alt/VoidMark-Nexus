@@ -75,6 +75,54 @@ function N:InventoryIcon(id)
  end
  return nil
 end
+function N:ShowResourcePicker()
+ local entries={}
+ for _,node in pairs(self.nodeTypes or {}) do entries[node.name]=node.kind end
+ local names={}
+ for name in pairs(entries) do names[#names+1]=name end
+ table.sort(names)
+ if self.resourcePicker then self.resourcePicker:Hide() end
+ local f=CreateFrame('Frame',nil,UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
+ skin(f); f:SetSize(385,500); f:SetPoint('CENTER'); f:SetFrameStrata('FULLSCREEN_DIALOG')
+ f:EnableMouse(true); f:SetMovable(true); f:RegisterForDrag('LeftButton')
+ f:SetScript('OnDragStart',function(w) w:StartMoving() end)
+ f:SetScript('OnDragStop',function(w) w:StopMovingOrSizing() end)
+ local title=label(f,'NEXUS | MULTI-RESOURCE ROUTE',16,-16,'GameFontNormal')
+ title:SetTextColor(1,.8,.15)
+ local stored=self.db.settings.routeResources
+ local pending={}
+ if type(stored)=='table' then for k,v in pairs(stored) do if v then pending[k]=true end end end
+ local scroll=CreateFrame('ScrollFrame',nil,f,'UIPanelScrollFrameTemplate')
+ scroll:SetPoint('TOPLEFT',16,-48); scroll:SetPoint('BOTTOMRIGHT',-32,58)
+ local child=CreateFrame('Frame',nil,scroll); child:SetSize(325,math.max(1,#names)*26); scroll:SetScrollChild(child)
+ local boxes={}
+ for i,name in ipairs(names) do
+  local cb=CreateFrame('CheckButton',nil,child,'UICheckButtonTemplate')
+  cb:SetSize(24,24); cb:SetPoint('TOPLEFT',4,-(i-1)*26)
+  cb:SetChecked(pending[name]==true)
+  cb:SetScript('OnClick',function(w) pending[name]=w:GetChecked() and true or nil end)
+  local txt=label(child,name,33,-(i-1)*26-5,'GameFontHighlightSmall')
+  boxes[#boxes+1]=cb
+ end
+ button(f,'All herbs',15,-462,82,function()
+  for i,name in ipairs(names) do if entries[name]=='herb' then pending[name]=true; boxes[i]:SetChecked(true) end end
+ end)
+ button(f,'All ore',103,-462,75,function()
+  for i,name in ipairs(names) do if entries[name]=='ore' then pending[name]=true; boxes[i]:SetChecked(true) end end
+ end)
+ button(f,'Clear',184,-462,65,function()
+  for i,name in ipairs(names) do pending[name]=nil; boxes[i]:SetChecked(false) end
+ end)
+ button(f,'Apply',255,-462,55,function()
+  N.db.settings.kind='all'; N.db.settings.target=''
+  N.db.settings.routeSelectionMode='multi'
+  N.db.settings.routeResources=pending
+  if N.ui then N.ui.page=1; N.ui.selected=nil end
+  N.dirty=true; f:Hide()
+ end)
+ button(f,'X',340,-10,32,function() f:Hide() end)
+ self.resourcePicker=f
+end
 function N:CreateUI()
  local f=CreateFrame('Frame','VoidMarkNexusWindow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil); skin(f)
  f:SetSize(1060,660); f:SetFrameStrata('MEDIUM'); f:SetClampedToScreen(true); f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag('LeftButton')
@@ -116,40 +164,18 @@ function N:CreateUI()
   for id,c in pairs(N.db.characters) do if not u.character or id==u.character then for pid,p in pairs(c.professions) do if not seen[pid] then choices[#choices+1]={label=p.name,value=pid}; seen[pid]=true end end end end
   N:Choice(u.professionButton,choices,function(v) u.profession=v or nil; u.page=1 end)
  end)
- u.filterButton=button(f,'All',830,-55,210,function()
+ u.filterButton=button(f,'All nodes',830,-55,210,function()
   if u.tab=='Routes' then
-   local options={
-    {label='All gathering nodes',value='all'},
-    {label='All herbs',value='herb'},
-    {label='All mining',value='ore'},
-    {label='Custom selection (clear)',value='clear'}
-   }
-   local names={}
-   for _,node in pairs(N.nodeTypes or {}) do names[node.name]=node.kind end
-   local sorted={}; for name in pairs(names) do sorted[#sorted+1]=name end
-   table.sort(sorted)
-   local picked=N.db.settings.routeResources
-   for _,name in ipairs(sorted) do
-    options[#options+1]={label=(type(picked)=='table' and picked[name] and '[x] ' or '[ ] ')..name,value=name}
-   end
-   N:Choice(u.filterButton,options,function(v)
+   N:Choice(u.filterButton,{
+    {label='All gathering',value='all'},
+    {label='Herbs only',value='herb'},
+    {label='Mining only',value='ore'},
+    {label='Multi-select...',value='multi'}
+   },function(v)
     local settings=N.db.settings
-    if v=='all' or v=='herb' or v=='ore' then
-     settings.kind=v; settings.target=''; settings.routeResources=nil
-    elseif v=='clear' then
-     settings.kind='all'; settings.target=''; settings.routeResources={}
-    else
-     if type(settings.routeResources)~='table' then
-      settings.routeResources={}
-     end
-     settings.kind='all'; settings.target=''
-     settings.routeResources[v]=not settings.routeResources[v] or nil
-    end
+    if v=='multi' then N:ShowResourcePicker(); return end
+    settings.kind=v; settings.target=''; settings.routeSelectionMode=v; settings.routeResources=nil
     u.selected=nil; u.page=1; N.dirty=true
-    if v~='all' and v~='herb' and v~='ore' then
-     -- Keep picker open to allow several resource selections in one pass.
-     u.filterButton:Click()
-    end
    end)
   else
    local choices={}
@@ -250,7 +276,7 @@ function N:Render()
  self.renderStocks={}
  local rows,detail={},''; local selected=u.selected; local tab=u.tab
  local c=u.character and self.db.characters[u.character]
- u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Routes' and ((type(self.db.settings.routeResources)=='table' and next(self.db.settings.routeResources) and (function() local n=0; for _ in pairs(self.db.settings.routeResources) do n=n+1 end; return n..' selected' end)()) or (self.db.settings.target~='' and self.db.settings.target) or ({all='All nodes',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All nodes') or u.filter)
+ u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Routes' and (self.db.settings.routeSelectionMode=='multi' and 'Multi-select' or ({all='All gathering',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All gathering') or u.filter)
  u.heading:SetText(tab..'  |  '..(tab=='Settings' and 'Select setting; Apply uses the bottom value field' or 'Search above; quantity or action value below'))
  self:SetActions({},{}); u.footer:SetText('Offline data is cached. Open each profession and bank once to record it. /vmn native restores Blizzard access.')
  if tab=='Recipes' or tab=='Profitability' then
