@@ -163,25 +163,31 @@ function N:ShowRoutePreview(strategy)
   dot:SetVertexColor(index==0 and 1 or .73,index==0 and .76 or .47,index==0 and .2 or .94,1)
   dot:SetPoint('CENTER',canvas,'TOPLEFT',x,-y)
  end
- local function connect(a,b)
-  if type(canvas.CreateLine)~='function' then return end
-  local ok,line=pcall(canvas.CreateLine,canvas,nil,'ARTWORK')
-  if not ok or not line then return end
-  pcall(function()
-   local x1,y1=xy(a);local x2,y2=xy(b)
-   line:SetStartPoint('TOPLEFT',canvas,'TOPLEFT',x1,-y1)
-   line:SetEndPoint('TOPLEFT',canvas,'TOPLEFT',x2,-y2)
-   line:SetThickness(2)
-   line:SetVertexColor(.69,.38,1,.95)
-   line:Show()
-  end)
+ -- Use small solid textures for path segments. This works on Forever clients
+ -- where Frame:CreateLine is unavailable and avoids silent missing lines.
+ local segmentBudget=1200
+ local function connect(a,b,isFirst)
+  local x1,y1=xy(a); local x2,y2=xy(b)
+  local dx,dy=x2-x1,y2-y1
+  local length=math.sqrt(dx*dx+dy*dy)
+  local count=math.max(1,math.ceil(length/5))
+  count=math.min(count,segmentBudget)
+  for j=0,count do
+   if segmentBudget<=0 then break end
+   local t=canvas:CreateTexture(nil,'ARTWORK')
+   t:SetTexture('Interface\\Buttons\\WHITE8X8')
+   t:SetSize(isFirst and 4 or 3,isFirst and 4 or 3)
+   t:SetVertexColor(isFirst and 1 or .70,isFirst and .73 or .40,isFirst and .22 or .98,.9)
+   t:SetPoint('CENTER',canvas,'TOPLEFT',x1+dx*j/math.max(1,count),-(y1+dy*j/math.max(1,count)))
+   segmentBudget=segmentBudget-1
+  end
  end
  local previous=origin
- for _,p in ipairs(route.points) do connect(previous,p);previous=p end
+ for i,p in ipairs(route.points) do connect(previous,p,i==1);previous=p end
  if #route.points>1 then connect(previous,origin) end
  point(origin,0)
  for i,p in ipairs(route.points) do point(p,i) end
- local foot=label(w,'Schematic preview • Coordinates only • No terrain/pathfinding',18,-460,'GameFontHighlightSmall')
+ local foot=label(w,'Projected route • Dotted purple loop • Terrain not modeled',18,-460,'GameFontHighlightSmall')
  foot:SetWidth(490)
  button(w,'Activate route',182,-499,160,function()
   N.activeRoute=N:Copy(route);N.waypoint=1;N.dirty=true;N:ShowArrow();w:Hide()
