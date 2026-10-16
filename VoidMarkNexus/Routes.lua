@@ -322,21 +322,26 @@ function N:RefreshMap()
    end
   end
  end
+ -- Some Forever builds expose Line regions but reject one of their methods.
+ -- Never let decorative route strokes stop waypoint pins from rendering.
  for i=1,math.max(#segments,#self.mapRouteLines) do
   local line=self.mapRouteLines[i]
-  if not line and type(canvas.CreateLine)=='function' then
-   line=canvas:CreateLine(nil,'ARTWORK')
-   line:SetTexture('Interface\\Buttons\\WHITE8X8')
-   self.mapRouteLines[i]=line
+  if not line and segments[i] and type(canvas.CreateLine)=='function' then
+   local ok,created=pcall(canvas.CreateLine,canvas,nil,'ARTWORK')
+   if ok and created then line=created; self.mapRouteLines[i]=line end
   end
   if line then
    local leg=segments[i]
    if leg then
-    line:SetStartPoint('TOPLEFT',canvas,'TOPLEFT',leg.a.x*width,-leg.a.y*height)
-    line:SetEndPoint('TOPLEFT',canvas,'TOPLEFT',leg.b.x*width,-leg.b.y*height)
-    line:SetThickness(i==1 and 3 or 2)
-    line:SetVertexColor(i==1 and 1 or .65,i==1 and .75 or .32,i==1 and .25 or 1,.92)
-    line:Show()
+    local ok=pcall(function()
+     line:SetStartPoint('TOPLEFT',canvas,'TOPLEFT',leg.a.x*width,-leg.a.y*height)
+     line:SetEndPoint('TOPLEFT',canvas,'TOPLEFT',leg.b.x*width,-leg.b.y*height)
+     line:SetThickness(i==1 and 3 or 2)
+     if line.SetTexture then line:SetTexture('Interface\\Buttons\\WHITE8X8') end
+     line:SetVertexColor(i==1 and 1 or .65,i==1 and .75 or .32,i==1 and .25 or 1,.92)
+     line:Show()
+    end)
+    if not ok then line:Hide() end
    else line:Hide() end
   end
  end
