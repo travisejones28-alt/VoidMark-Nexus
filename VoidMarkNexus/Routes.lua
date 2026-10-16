@@ -181,7 +181,13 @@ function N:RankResourceZones(resource)
     local start=seeds[j]
     local route=self:BuildRoute(nodes,{map=map,x=start.x,y=start.y},width,height,self.db.settings)
     if route and #route.points>=3 then
-     local score=#route.points/math.max(60,route.seconds)
+     -- Score unique clustered stops, but penalize tiny loops with poor coverage.
+     -- A 10-minute reference window keeps one tiny dense patch from
+     -- dominating the rankings solely on an unrealistically short cycle.
+     local minimumCycle=600
+     local effectiveSeconds=math.max(minimumCycle,route.seconds)
+     local score=#route.points/effectiveSeconds
+     if #route.points<8 then score=score*(#route.points/8) end
      if not bestScore or score>bestScore then best,bestScore=route,score end
     end
    end
