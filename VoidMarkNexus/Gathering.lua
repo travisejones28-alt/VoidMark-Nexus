@@ -4,7 +4,23 @@ function N:Position()
  local map=self:Call(C_Map.GetBestMapForUnit,'player'); local p=map and self:Call(C_Map.GetPlayerMapPosition,map,'player')
  if p and p.GetXY then local x,y=p:GetXY(); if self:Finite(x,0,1) and self:Finite(y,0,1) then return map,x,y end end
 end
+-- City map entries in the imported gathering dataset are false positives.
+-- Keep their raw source data for auditability, but never use them for display or routes.
+local nexusCityMaps = {
+ [1453]=true, -- Stormwind
+ [1455]=true, -- Ironforge
+ [1454]=true, -- Orgrimmar
+ [1456]=true, -- Thunder Bluff
+ [1457]=true, -- Darnassus
+ [1458]=true, -- Undercity
+ [84]=true, [87]=true, -- modern client city UI map IDs
+ [85]=true, [88]=true, [89]=true, [90]=true
+}
+function N:IsGatheringCityMap(map)
+ return nexusCityMaps[tonumber(map)]==true
+end
 function N:ZoneNodes(map,kindOverride,targetOverride)
+ if self:IsGatheringCityMap(map) then return {} end
  local out,seen={},{}
  local s=self.db.settings
  local selectedKind=kindOverride or s.kind
