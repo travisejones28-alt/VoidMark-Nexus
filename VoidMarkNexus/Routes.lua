@@ -295,8 +295,8 @@ function N:RefreshMap()
  self.mapPins=self.mapPins or {}
  local width,height=canvas:GetWidth(),canvas:GetHeight()
  if width<=0 or height<=0 then return end
- -- Draw connected route lines underneath waypoint pins. Keep reusable textures
- -- to avoid recreating map objects every map refresh.
+ -- WoW Line regions draw actual connecting strokes; rotating a rectangular
+ -- Texture rotates its artwork, not the underlying rectangle geometry.
  self.mapRouteLines=self.mapRouteLines or {}
  local route=self.activeRoute
  local segments={}
@@ -309,30 +309,22 @@ function N:RefreshMap()
  end
  for i=1,math.max(#segments,#self.mapRouteLines) do
   local line=self.mapRouteLines[i]
-  if not line then
-   line=canvas:CreateTexture(nil,'ARTWORK',nil,-1)
-   line:SetColorTexture(.65,.24,1,.85)
+  if not line and type(canvas.CreateLine)=='function' then
+   line=canvas:CreateLine(nil,'ARTWORK')
+   line:SetTexture('Interface\\Buttons\\WHITE8X8')
    self.mapRouteLines[i]=line
   end
-  local segment=segments[i]
-  if segment then
-   local x1,y1=segment.a.x*width,-segment.a.y*height
-   local x2,y2=segment.b.x*width,-segment.b.y*height
-   local dx,dy=x2-x1,y2-y1
-   local length=math.sqrt(dx*dx+dy*dy)
-   if length>0.1 then
-    line:ClearAllPoints()
-    line:SetPoint('CENTER',canvas,'TOPLEFT',(x1+x2)/2,(y1+y2)/2)
-    line:SetSize(length,i==(self.waypoint or 1) and 3 or 2)
-    if line.SetRotation then
-     local angle=math.atan2 and math.atan2(dy,dx) or math.atan(dy/dx)
-     line:SetRotation(angle)
-    end
-    if i==(self.waypoint or 1) then line:SetColorTexture(1,.74,.14,.95)
-    else line:SetColorTexture(.65,.24,1,.85) end
+  if line then
+   local segment=segments[i]
+   if segment then
+    local active=i==(self.waypoint or 1)
+    line:SetStartPoint('TOPLEFT',canvas,'TOPLEFT',segment.a.x*width,-segment.a.y*height)
+    line:SetEndPoint('TOPLEFT',canvas,'TOPLEFT',segment.b.x*width,-segment.b.y*height)
+    line:SetThickness(active and 3 or 2)
+    line:SetVertexColor(active and 1 or .64,active and .74 or .25,active and .2 or 1,.9)
     line:Show()
    else line:Hide() end
-  else line:Hide() end
+  end
  end
  local points={}
  if s.routeVisible and route and route.map==map then
