@@ -1,4 +1,6 @@
-# Validation — 0.1.0 alpha
+# Validation - 0.2.0 alpha
+
+Current result: **47 tests pass**. See `DEVELOPMENT_V5.md` for terrain routing v5 tests, benchmark, known limitations and exact in-game steps. The historical baseline results and acceptance checks follow.
 
 **29 automated tests passed** using the installed OBS `lua51.dll`, LuaJIT 2.0.5 / Lua 5.1 language compatibility. Full output: `Tests/results.txt`. The DLL was used only as a test runtime, is not modified, and is not distributed.
 
@@ -22,3 +24,4 @@ These are automated and code-review results. **No live WoW testing or rendered i
 10. Check map pins at different zooms and screen scales; open bags and ElvUI panels. Confirm acceptable layering and frame rate in a dense zone. Potential-node pins are capped at 250.
 
 See README for substantial unfinished scope. Treat this build as an alpha for verification, not a complete production release.
+

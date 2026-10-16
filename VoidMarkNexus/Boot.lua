@@ -4,7 +4,13 @@ function N:Diagnostics()
  local lines={'VoidMark Nexus '..self.version,'Client '..tostring(version)..' / '..tostring(build)..' / interface '..tostring(toc),
  'Modern recipes: '..tostring(C_TradeSkillUI and type(C_TradeSkillUI.GetRecipeSchematic)=='function'),
  'Legacy recipes: '..tostring(type(GetTradeSkillInfo)=='function'),
- 'Container API: '..tostring(C_Container~=nil),'Map position: '..tostring(C_Map~=nil),
+ 'Container API: '..tostring(C_Container~=nil),'Map position: '..tostring(C_Map and type(C_Map.GetPlayerMapPosition)=='function'),
+ 'Map dimensions: '..tostring(C_Map and type(C_Map.GetMapWorldSize)=='function'),
+ 'Map artwork: '..tostring(C_Map and type(C_Map.GetMapArtLayers)=='function'),
+ 'Exploration artwork: '..tostring(C_MapExplorationInfo and type(C_MapExplorationInfo.GetExploredMapTextures)=='function'),
+ 'Movement speed: '..tostring(type(GetUnitSpeed)=='function'),
+ 'Taxi / flight / swimming: '..tostring(type(UnitOnTaxi)=='function')..' / '..tostring(type(IsFlying)=='function')..' / '..tostring(type(IsSwimming)=='function'),
+ 'Terrain: observed directional trails only; no collision/elevation API used. Limits: 50 zones / 600 samples / 2400 edges each.',
  'Market adapter: schema 1, integration v'..self.integrationVersion,'Recent errors:'}
  for _,e in ipairs(self.errors) do lines[#lines+1]=e end
  return table.concat(lines,'\n')
@@ -22,6 +28,15 @@ function N:Slash(msg)
   self:Print('Native profession UI enabled. Open your profession normally.')
  elseif command=='block' then self:MarkRouteObstacle(args)
  elseif command=='clearblocks' then self:ClearRouteObstacles()
+ elseif command=='terrain' then
+  if args=='clear' then self:ClearTerrain()
+  elseif args=='on' or args=='off' then self.db.settings.terrainLearn=args=='on';self.trailPrevious=nil
+  else local map=self:Position();local z=map and self:TerrainZone(map);self:Print('Learned samples: '..(z and #z.points or 0)..'; directed connections: '..(z and z.edgeCount or 0)..'. /vmn terrain on|off|clear') end
+ elseif command=='check' then
+  if args=='empty' or args=='available' then self:CheckGatherStop(args=='available') else self:Print('/vmn check empty|available') end
+ elseif command=='pause' then self.routePaused=not self.routePaused
+ elseif command=='restart' then self.waypoint=1;self.terrainIndex=1;self.routePaused=false
+ elseif command=='cancelplan' then self.planningThread=nil
  elseif command=='route' then self:GenerateRoute()
  elseif command=='skip' then self:SkipWaypoint()
  elseif command=='stop' then self.activeRoute=nil; if self.arrow then self.arrow:Hide() end
@@ -111,6 +126,7 @@ frame:SetScript('OnEvent',function(_,event,...)
   N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:StartSession(); N:MinimapButton() end)
   if C_Timer and C_Timer.NewTicker then
    C_Timer.NewTicker(1,function() if WorldMapFrame and WorldMapFrame:IsShown() then N:Guard('map',function() N:RefreshMap() end) end end)
+   C_Timer.NewTicker(.5,function() N:Guard('terrain sampling',function() N:SampleTerrain();N:TrackRouteSession() end) end)
   end
  elseif N.ready then for _,fn in ipairs(N.handlers[event] or {}) do N:Guard(event,fn,...) end end
 end)
@@ -118,3 +134,4 @@ SLASH_VOIDMARKNEXUS1='/vmn'
 SlashCmdList.VOIDMARKNEXUS=function(msg) N:Guard('command',function() N:Slash(msg) end) end
 BINDING_HEADER_VOIDMARKNEXUS='VoidMark Nexus'
 BINDING_NAME_VOIDMARKNEXUS_TOGGLE='Open VoidMark Nexus'
+

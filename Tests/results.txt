@@ -27,4 +27,22 @@ PASS All three primary UI actions are bound to their own handler
 PASS Arrow update and map pin creation
 PASS Market navigation opens its existing view without hiding it
 PASS Newer database schema remains untouched
-PASS: 29 tests; Lua 5.1 / LuaJIT 2.0.5
+PASS Terrain migration sanitizes corrupt graphs and preserves newer versions
+PASS Only actual directed movement creates trail edges; discontinuities rejected
+PASS Directed learned path uses measured time and selected speed
+PASS Manual obstacles generate clear detours and reject unreachable endpoints
+PASS Prepared geometry includes closing detours and exact loop duration
+PASS Corrupt and duplicate nodes cannot inflate route coverage
+PASS Terrain-aware route budgets include detours and closing leg
+PASS Two-opt and candidate selection keep compact circuit within budget
+PASS Manual stop confirmation, detour progression, pause and restart
+PASS Harvest-only evidence never invents availability; explicit checks enable estimates
+PASS Cross-zone ranking uses in-zone efficiency, not spawn count
+PASS Planner yields, completes and rejects combat without executing work
+PASS World-map layering retains high-strata pins and exact detour geometry
+PASS Empty readable containers clear stale stock; unavailable API preserves it
+PASS A different loot source after gathering is not counted
+PASS Route performance measures active time and excludes pause
+PASS Graph storage bounds reject additional samples without deleting history
+PASS Real imported-zone planning completes through the incremental queue
+PASS: 47 tests; Lua 5.1 / LuaJIT 2.0.5

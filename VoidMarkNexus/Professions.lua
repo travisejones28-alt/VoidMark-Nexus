@@ -125,7 +125,7 @@ function N:Craft(ref,qty)
  if r.cooldown and r.cooldown>0 then return self:Print('Refresh the profession cooldown before crafting.') end
  if r.adapter=='modern' and C_TradeSkillUI then
   local current=self:Call(C_TradeSkillUI.GetRecipeInfo,r.spell)
-  if not current or not current.learned then return self:Print('Recipe is no longer available.') end
+  if not current or not (current.learned or current.isLearned) then return self:Print('Recipe is no longer available.') end
   local ok,err=pcall(C_TradeSkillUI.CraftRecipe,r.spell,qty); if not ok then self:Print('Use the native crafting button: '..tostring(err)) end
  else
   local fn=r.adapter=='craft' and GetCraftInfo or GetTradeSkillInfo
@@ -149,3 +149,4 @@ end
 N:On('CRAFT_SHOW',function() N:ScanRecipes(true) end)
 N:On('TRADE_SKILL_CLOSE',function() N.activeProfession=nil; N.scanToken=(N.scanToken or 0)+1 end)
 N:On('CRAFT_CLOSE',function() N.activeProfession=nil end)
+

@@ -26,6 +26,7 @@ function N:ZoneNodes(map,kindOverride,targetOverride)
  local selectedKind=kindOverride or s.kind
  local selectedTarget=targetOverride~=nil and targetOverride or s.target
  local function add(object,x,y,source,at)
+  if not self:Finite(x,0,1) or not self:Finite(y,0,1) then return end
   local kind=self.nodeTypes[object]; if not kind or (selectedKind~='all' and kind.kind~=selectedKind) then return end
   if selectedTarget~='' and not kind.name:lower():find(selectedTarget:lower(),1,true) then return end
   if kindOverride==nil and targetOverride==nil and s.routeSelectionMode=='multi' then
@@ -38,10 +39,11 @@ function N:ZoneNodes(map,kindOverride,targetOverride)
  if s.importedNodes then for object,maps in pairs(self.spawns or {}) do
   local points=maps[map]; if points then for i=1,#points,2 do add(object,points[i],points[i+1],'Potential spawn') end end
  end end
- if s.observedNodes then for _,p in pairs(self.db.nodes[map] or {}) do add(p.object,p.x,p.y,'Observed',p.at) end end
+ if s.observedNodes then for _,p in pairs(type(self.db.nodes[map])=='table' and self.db.nodes[map] or {}) do if type(p)=='table' then add(p.object,p.x,p.y,'Observed',p.at) end end end
  return out
 end
 function N:LearnNode(object,map,x,y)
+ if not self:Finite(map,1,100000) or not self:Finite(x,0,1) or not self:Finite(y,0,1) then return end
  if not self.db.settings.learn or not self.nodeTypes[object] then return end
  self.db.nodes[map]=self.db.nodes[map] or {}; local nodes=self.db.nodes[map]
  local key=object..':'..math.floor(x*500+.5)..':'..math.floor(y*500+.5)
@@ -50,6 +52,7 @@ function N:LearnNode(object,map,x,y)
  nodes[key]={object=object,x=x,y=y,at=self:Now()}; self.dirty=true
 end
 function N:StartSession()
+ self.routeSessionAt=nil
  self.session={started=self:Now(),character=self.characterID,items={},zones={},kinds={},total=0}
  self.dirty=true
 end
@@ -73,7 +76,7 @@ N:On('UNIT_SPELLCAST_SENT',function(unit,target,cast,spell)
  local map,x,y=N:Position(); if not map then return end
  local object
  for id,kind in pairs(N.nodeTypes) do if kind.name:lower()==tostring(target):lower() then object=id; break end end
- N.gatherCast={cast=cast,spell=spell,kind=spells[spell],object=object,map=map,x=x,y=y}
+ N.gatherCast={cast=cast,spell=spell,kind=spells[spell],object=object,map=map,x=x,y=y,started=N:Now()}
 end)
 N:On('UNIT_SPELLCAST_SUCCEEDED',function(unit,cast,spell)
  local g=N.gatherCast
@@ -87,6 +90,26 @@ end
 N:On('LOOT_OPENED',function()
  local g=N.gatherCast; N.lootSlots={}; N.lootGather=nil
  if not g or not g.at or N:Now()-g.at>3 then return end
+ local map,x,y=N:Position()
+ local width,height
+ if map then width,height=N:MapSize(map) end
+ if map~=g.map or not x or (width and N:Distance(g,{x=x,y=y},width,height)>20) then N.gatherCast=nil;return end
+ -- If the client supplies loot-source GUIDs, reject a different source instead
+ -- of attributing a nearby corpse/container to the just-completed gather cast.
+ if g.object and type(GetLootSourceInfo)=='function' then
+  local sources={N:Call(GetLootSourceInfo,1)}
+  local matched,recognized=false,false
+  for i=1,#sources,2 do
+   local guid=N:Text(sources[i])
+   local object=guid and tonumber(guid:match('^GameObject%-%d+%-%d+%-%d+%-%d+%-(%d+)%-'))
+   if object then
+    recognized=true
+    local expected,source=N.nodeTypes[g.object],N.nodeTypes[object]
+    if object==g.object or (expected and source and expected.name==source.name) then matched=true;g.object=object end
+   elseif guid and guid:match('^Creature%-') then recognized=true end
+  end
+  if recognized and not matched then N.gatherCast=nil;return end
+ end
  N.lootGather=g; N.gatherCast=nil
  for slot=1,(N:Call(GetNumLootItems) or 0) do
   local id=N:ItemID(N:Call(GetLootSlotLink,slot)); local _,name,qty=N:Call(GetLootSlotInfo,slot)
@@ -100,7 +123,9 @@ N:On('LOOT_SLOT_CLEARED',function(slot)
  if not N.db.settings.stats then return end
  if not N.session then N:StartSession() end
  local s=N.session; s.items[item.id]=(s.items[item.id] or 0)+item.qty; s.total=s.total+item.qty
+ if g.object then N:RecordHarvest(g,item.qty) end
  s.zones[g.map]=(s.zones[g.map] or 0)+item.qty; s.kinds[g.kind]=(s.kinds[g.kind] or 0)+item.qty
  N.db.itemNames[item.id]=item.name; N.dirty=true
 end)
 N:On('LOOT_CLOSED',function() N.lootSlots=nil; N.lootGather=nil end)
+

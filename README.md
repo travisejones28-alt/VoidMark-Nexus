@@ -1,4 +1,6 @@
-# VoidMark Nexus 0.1.0 alpha
+# VoidMark Nexus 0.2.0 alpha
+
+Terrain routing v5 adds learned directional trails, shared detour geometry, incremental planning, explicit gathering evidence and route performance. See [DEVELOPMENT_V5.md](DEVELOPMENT_V5.md) for current features, limits, 47-test validation and in-game steps. The older feature notes below describe the original baseline where they conflict with that update.
 
 Standalone profession, offline-alt, inventory, crafting and gathering workspace for Forever interface **16001**. This is an initial testable implementation, not a claim that the entire requested product is complete. No actual game-client testing was performed during development.
 
@@ -66,3 +68,4 @@ Nexus reads `VoidMarkMarketDB.schemaVersion == 1`, `economies[normalizedRealm ..
 ## Licensing
 
 VoidMark Nexus implementation: see LICENSE. The bundled gathering dataset and resource definitions retain the source notice in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. VoidMark's interface and routing remain standalone; no third-party addon is required.
+

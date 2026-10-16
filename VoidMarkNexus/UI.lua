@@ -126,6 +126,11 @@ end
 
 -- Schematic zone-coordinate route preview; never claims to show terrain or roads.
 function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
+ if not prebuiltRoute then
+  return self:RunPlanner(function() return self:PlanRoute(strategy) end,function(route)
+   if route then self:ShowRoutePreview(strategy,displayMode,route) end
+  end)
+ end
  local route=prebuiltRoute or self:PlanRoute(strategy)
  if not route then return end
  displayMode=displayMode or self.db.settings.previewMode or 'map'
@@ -147,7 +152,7 @@ function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
  local artLoaded=false
  local origin=route.origin
  local all={origin}
- for _,p in ipairs(route.points) do all[#all+1]=p end
+ for _,p in ipairs(route.travelPoints or route.points) do all[#all+1]=p end
  local boundMinX,boundMaxX,boundMinY,boundMaxY=1,0,1,0
  for _,p in ipairs(all) do
   boundMinX=math.min(boundMinX,p.x); boundMaxX=math.max(boundMaxX,p.x)
@@ -253,6 +258,9 @@ function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
   dot:SetSize(index==0 and 10 or 5,index==0 and 10 or 5)
   dot:SetVertexColor(index==0 and 1 or .73,index==0 and .76 or .47,index==0 and .2 or .94,1)
   dot:SetPoint('CENTER',canvas,'TOPLEFT',x,-y)
+  local number=canvas:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
+  number:SetPoint('BOTTOMLEFT',canvas,'TOPLEFT',x+4,-y+4)
+  number:SetText(index==0 and 'S' or tostring(index))
  end
  -- Use small solid textures for path segments. This works on Forever clients
  -- where Frame:CreateLine is unavailable and avoids silent missing lines.
@@ -268,17 +276,17 @@ function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
    local t=canvas:CreateTexture(nil,'ARTWORK')
    t:SetTexture('Interface\\Buttons\\WHITE8X8')
    t:SetSize(isFirst and 4 or 3,isFirst and 4 or 3)
-   t:SetVertexColor(isFirst and 1 or .70,isFirst and .73 or .40,isFirst and .22 or .98,.9)
+   t:SetVertexColor(isFirst and .4 or .73,isFirst and .9 or .37,1,.9)
    t:SetPoint('CENTER',canvas,'TOPLEFT',x1+dx*j/math.max(1,count),-(y1+dy*j/math.max(1,count)))
    segmentBudget=segmentBudget-1
   end
  end
  local previous=origin
- for i,p in ipairs(route.points) do connect(previous,p,i==1);previous=p end
- if #route.points>1 then connect(previous,origin) end
+ for i,p in ipairs(route.travelPoints or route.points) do connect(previous,p,p.validated);previous=p end
+ if not route.travelPoints and #route.points>1 then connect(previous,origin) end
  point(origin,0)
  for i,p in ipairs(route.points) do point(p,i) end
- local foot=label(w,artLoaded and ('Zone map + '..overlaysShown..' explored detail tiles • Not terrain-aware') or 'Diagram view • Map art unavailable or disabled',18,-460,'GameFontHighlightSmall')
+ local foot=label(w,string.format('%.0f yd | %.0f%% learned corridors; remaining travel unverified.\n%s',route.length or 0,(route.traversalConfidence or 0)*100,route.dataQuality or 'Potential spawn route'),18,-460,'GameFontHighlightSmall')
  foot:SetWidth(490)
  button(w,displayMode=='map' and 'Diagram view' or 'Map view',20,-499,125,function()
   local newMode=displayMode=='map' and 'diagram' or 'map'
@@ -286,7 +294,7 @@ function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
   N:ShowRoutePreview(strategy,newMode,route)
  end)
   button(w,'Activate route',182,-499,160,function()
-  N.activeRoute=N:PrepareTerrainRoute(N:Copy(route));N.waypoint=1;N.terrainIndex=1;N.dirty=true;N:ShowArrow();w:Hide()
+  N.activeRoute=N:Copy(route);N.waypoint=1;N.terrainIndex=1;N.routePaused=false;N.dirty=true;N:ShowArrow();w:Hide()
  end)
  self.previewWindow=w
 end
@@ -304,7 +312,7 @@ function N:ShowTopGatheringZones()
  table.sort(choices,function(a,b) return a.label<b.label end)
  if not self.ui then return end
  self:Choice(self.ui.zoneButton,choices,function(resource)
-  local ranking=self:RankResourceZones(resource)
+  self:RunPlanner(function() return self:RankResourceZones(resource) end,function(ranking)
   if #ranking==0 then self:Print('No comparable zones with available map dimensions for '..resource); return end
   if self.zoneRankingWindow then self.zoneRankingWindow:Hide() end
   local w=CreateFrame('Frame',nil,UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
@@ -321,19 +329,23 @@ function N:ShowTopGatheringZones()
   for i,r in ipairs(ranking) do
    local y=-68-(i-1)*43
    local name=r.name
-   if #name>26 then name=name:sub(1,25)..'…' end
+   if #name>26 then name=name:sub(1,25)..'.' end
    label(w,i..'. '..name,20,y-7,'GameFontHighlightSmall')
-   label(w,string.format('%.0f',r.score),285,y-7,'GameFontHighlightSmall')
+   label(w,string.format('%.0f%s',r.score,r.metric=='resources' and ' res' or ' stops'),285,y-7,'GameFontHighlightSmall')
    label(w,string.format('%.1f min',(r.route.seconds or 0)/60),400,y-7,'GameFontHighlightSmall')
    label(w,tostring(#r.route.points),500,y-7,'GameFontHighlightSmall')
+   label(w,string.format('%d spawns | %.0f yd | %.0f%% trail | %d/%d observed stops',r.rawCount,r.route.length or 0,(r.route.traversalConfidence or 0)*100,r.route.observedStops or 0,#r.route.points),20,y-25,'GameFontHighlightSmall')
    button(w,'Preview',565,y,85,function()
-    w:Hide()
-    r.route.strategy='optimal'
-    N:ShowRoutePreview('optimal',nil,r.route)
+    local choices={{label='Best ranked loop',value=r.route}}
+    for j,route in ipairs(r.alternatives or {}) do
+     if route~=r.route then choices[#choices+1]={label=string.format('Alternative %d: %d stops / %.1f min',j,#route.points,route.seconds/60),value=route} end
+    end
+    N:Choice(w,choices,function(route) w:Hide();route.strategy='optimal';N:ShowRoutePreview('optimal',nil,route) end)
    end)
   end
-  label(w,'Estimates use potential spawn locations and direct travel; not guaranteed harvests.',18,-300,'GameFontHighlightSmall')
+  label(w,'In-zone loops only; travel to zone excluded. Stops are potential; res uses sampled checks.',18,-300,'GameFontHighlightSmall')
   self.zoneRankingWindow=w
+  end)
  end)
 end
 function N:CreateUI()
@@ -481,7 +493,7 @@ end
 function N:SettingsRows()
  local rows={}; local s=self.db.settings
  local booleans={{'native','Open native profession UI'},{'learn','Learn gathering nodes'},{'importedNodes','Show potential spawns'},{'observedNodes','Show observed nodes'},
- {'nodesVisible','Map nodes'},{'routeVisible','Route guidance'},{'stats','Gathering statistics'},{'includeAlts','Use alt inventory'},{'includeBanks','Use bank inventory'},
+ {'nodesVisible','Map nodes'},{'routeVisible','Route guidance'},{'terrainLearn','Learn movement corridors'},{'manualStops','Require manual skip at gathering stops'},{'stats','Gathering statistics'},{'includeAlts','Use alt inventory'},{'includeBanks','Use bank inventory'},
  {'includeImports','Use imported inventory'},{'includeStale','Use stale inventory'},{'market','VoidMark Market prices'},{'auctionator','Auctionator prices (age unknown)'},{'manualFirst','Prefer manual prices'},{'minimap','Minimap button'}}
  for _,v in ipairs(booleans) do rows[#rows+1]={text=v[2]..': '..tostring(s[v[1]]),key=v[1],boolean=true,detail='Select and press Apply to toggle. Foreign realms/factions remain excluded. Item binding/transfer restrictions must be checked in game.'} end
  for _,v in ipairs({{'maxAge','Price expiration (seconds)',60,2592000},{'inventoryAge','Inventory expiration (seconds)',60,2592000},
@@ -551,18 +563,27 @@ function N:Render()
   end,function() N.db.sessions={}; N:Print('Saved gathering sessions cleared.') end,function() N:TextDialog('Compatibility diagnostics',N:Diagnostics()) end})
  elseif tab=='Gathering' then
   local seconds,rate,gph=self:SessionStats(); detail=string.format('Current session\n%.1f minutes\n%.1f materials/hour\nEstimated value/hour: %s\nOnly confirmed gathering loot is counted. Prices are estimates; unpriced items make total value unknown.',seconds/60,rate,self:Money(gph))
-  if self.session then for id,qty in pairs(self.session.items) do rows[#rows+1]={text=self:ItemName(id)..' x'..qty,item=id} end end
-  for i,s in ipairs(self.db.sessions) do local secs,r,g=self:SessionStats(s); rows[#rows+1]={text='Saved session '..i..': '..s.total..' items / '..math.floor(secs/60)..' min',detail='Measured rate: '..math.floor(r)..'/hour\nEstimated value/hour: '..self:Money(g)..'\nCharacter: '..s.character} end
+  if self.session then
+   detail=detail..'\n\n'..self:RouteSessionText(self.session)
+   for id,qty in pairs(self.session.items) do rows[#rows+1]={text=self:ItemName(id)..' x'..qty,item=id} end
+  end
+  for i,s in ipairs(self.db.sessions) do local secs,r,g=self:SessionStats(s); rows[#rows+1]={text='Saved session '..i..': '..s.total..' items / '..math.floor(secs/60)..' min',detail='Measured rate: '..math.floor(r)..'/hour\nEstimated value/hour: '..self:Money(g)..'\nCharacter: '..s.character..'\n'..self:RouteSessionText(s)} end
   self:SetActions({'Save/reset','Discard/reset','Routes'},{function() N:SaveSession() end,function() N:StartSession() end,function() u.tab='Routes'; u.selected=nil end})
  elseif tab=='Routes' then
   local map=self:Position(); local nodes=map and self:ZoneNodes(map) or {}; local s=self.db.settings
-  detail='Strategy: '..({optimal='Optimal Loop',nearest='Nearest Efficient Loop',here='Start Here'})[s.routeStrategy or 'optimal']..'\nResource: '..(s.target~='' and s.target or ({all='All nodes',herb='Herbs',ore='Mining'})[s.kind] or 'All nodes')..'\nTravel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use direct distances and a bounded 2-opt improvement. Terrain, cliffs, roads and live competition are not known. Waypoints are potential spawns, not guaranteed resources.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
+  detail='Strategy: '..({optimal='Optimal Loop',nearest='Nearest Efficient Loop',here='Start Here'})[s.routeStrategy or 'optimal']..'\nResource: '..(s.target~='' and s.target or ({all='All nodes',herb='Herbs',ore='Mining'})[s.kind] or 'All nodes')..'\nTravel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use learned directional corridors, marked obstacle detours and bounded 2-opt. Cyan segments are observed trails; purple segments are unverified. Cliffs and live availability cannot be read from artwork. Waypoints remain potential spawns.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn terrain on|off|clear\n/vmn pause\n/vmn restart\n/vmn check empty|available\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
   for name,r in pairs(self.db.routes) do rows[#rows+1]={text='Saved: '..name..' | '..#r.points..' waypoints',routeName=name,detail='Use Load selected to navigate this saved route.'} end
   if self.activeRoute then for i,p in ipairs(self.activeRoute.points) do rows[#rows+1]={text=i..'. '..(p.name or 'Waypoint')..string.format(' (%.1f, %.1f)',p.x*100,p.y*100),icon=self:ResourceNodeIcon(p),detail=p.source or 'Custom waypoint'} end end
   self:SetActions({'Travel mode','Generate','Load selected'},{function()
    local choices={}; for i,m in ipairs(N.travelModes) do choices[#choices+1]={label=m[1],value=i} end
-   N:Choice(u.actions[1],choices,function(i) local m=N.travelModes[i]; s.travel=m[1]; s.speed=m[2]; s.mountDelay=m[3] end)
-  end,function() N:GenerateRoute() end,function() if u.selected and u.selected.routeName then N.activeRoute=N:Copy(N.db.routes[u.selected.routeName]); N.waypoint=1; N:ShowArrow() end end})
+   N:Choice(u.actions[1],choices,function(i) local m=N.travelModes[i]; s.travel=m[1]; if m[1]~='Custom' then s.speed=m[2]; s.mountDelay=m[3] end end)
+  end,function() N:GenerateRoute() end,function() if u.selected and u.selected.routeName then
+   local saved=N:Copy(N.db.routes[u.selected.routeName])
+   N:RunPlanner(function() return N:PrepareTerrainRoute(saved) end,function(route)
+    if route.unreachable then return N:Print('Saved route contains an unreachable leg. Regenerate it.') end
+    N.activeRoute=route;N.waypoint=1;N.terrainIndex=1;N.routePaused=false;N:ShowArrow()
+   end)
+  end end})
  else
   local n=0; for _ in pairs(self.db.characters) do n=n+1 end
   rows={{text=self.character.name..' - '..self.character.realm..' / '..self.character.faction},
@@ -603,3 +624,4 @@ function N:ShowLeveling(mode)
  if #result==0 then lines[#lines+1]='No priced, known, non-gray recipes with readable materials. Open the profession or supply manual prices.' end
  self:TextDialog('Leveling: '..mode,table.concat(lines,'\n'))
 end
+

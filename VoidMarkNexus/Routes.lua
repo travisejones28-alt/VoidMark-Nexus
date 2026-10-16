@@ -13,6 +13,7 @@ end
 -- Player-marked obstacles provide local geometry absent from the WoW map API.
 -- Each circle uses normalized map coordinates and a radius in world yards.
 function N:MarkRouteObstacle(radius)
+ self.planningThread=nil
  local map,x,y=self:Position()
  if not map then return self:Print('Current zone position unavailable.') end
  local r=math.max(15,math.min(500,tonumber(radius) or 90))
@@ -25,6 +26,7 @@ function N:MarkRouteObstacle(radius)
  self:Print('Marked obstacle ('..r..' yards) at your location. Regenerate route.')
 end
 function N:ClearRouteObstacles()
+ self.planningThread=nil
  local map=self:Position()
  if not map then return end
  self.db.terrainBlocks=self.db.terrainBlocks or {}
@@ -47,7 +49,9 @@ function N:TerrainIntersects(a,b,width,height,map)
  end
  return false
 end
-function N:TerrainLeg(a,b,width,height,map)
+function N:TerrainLeg(a,b,width,height,map,speed)
+ local learned,via,evidence=self:LearnedTerrainLeg(a,b,width,height,map,speed)
+ if learned then return learned,via,evidence end
  local direct=self:Distance(a,b,width,height)
  local blocks=self.db and self.db.terrainBlocks and self.db.terrainBlocks[map]
  if not blocks or #blocks==0 or not self:TerrainIntersects(a,b,width,height,map) then return direct,{} end
@@ -56,7 +60,7 @@ function N:TerrainLeg(a,b,width,height,map)
  local vertices={{x=a.x,y=a.y},{x=b.x,y=b.y}}
  for _,o in ipairs(blocks) do
   if #vertices>=98 then break end
-  local radius=o.r+20
+  local radius=(o.r+14)/math.cos(math.pi/8)+2
   for k=0,7 do
    local angle=k*math.pi/4
    local x=o.x+math.cos(angle)*radius/width
@@ -74,8 +78,10 @@ function N:TerrainLeg(a,b,width,height,map)
  local cost={[1]=0}
  local previous,done={},{}
  for step=1,#vertices do
+  self:PlannerCheckpoint()
   local chosen,best
   for k=1,#vertices do
+   self:PlannerCheckpoint()
    if not done[k] and cost[k] and (not best or cost[k]<best) then chosen,best=k,cost[k] end
   end
   if not chosen or chosen==2 then break end
@@ -87,7 +93,7 @@ function N:TerrainLeg(a,b,width,height,map)
    end
   end
  end
- if not cost[2] then return direct+5000,{} end
+ if not cost[2] then return math.huge,{}, {kind='unreachable'} end
  local reverse={}
  local i=previous[2]
  while i and i~=1 and #reverse<100 do
@@ -107,29 +113,46 @@ function N:BuildRoute(nodes,start,width,height,s)
  if not width or not height then return nil,'Client map dimensions unavailable; cannot calculate reliable distance.' end
  -- The imported spawn database can contain several records for one farming patch.
  -- Collapse near-identical/adjacent candidates before constructing navigation.
- local function distance(a,b) return self:TerrainSegmentDistance(a,b,width,height,start.map) end
+ local cache={}
+ local function distance(a,b)
+  self:PlannerCheckpoint()
+  local row=cache[a]
+  if row and row[b] then return row[b] end
+  local d,_,info=self:TerrainLeg(a,b,width,height,start.map,s.speed)
+  local value=info and info.seconds and info.seconds*s.speed or d
+  -- Cache is local to this build: changes to speed, learned trails or obstacles
+  -- cannot leak into subsequent calculations.
+  row=row or {};cache[a]=row;row[b]=value;return value
+ end
  local speed=math.max(1,s.speed)
  local stop=math.max(0,s.mountDelay)+math.max(0,s.gatherDelay)
  local spacing=math.max(40,math.min(85,speed*7)) -- 49 yards on foot, 78 on a 100% mount
  local candidates={}
  local ordered={}
  for _,node in ipairs(nodes) do
+  self:PlannerCheckpoint()
+  if type(node)=='table' and self:Finite(node.x,0,1) and self:Finite(node.y,0,1) then
   local blocked=false
   for _,o in ipairs((self.db.terrainBlocks or {})[start.map] or {}) do
    if ((node.x-o.x)*width)^2+((node.y-o.y)*height)^2 < o.r*o.r then blocked=true; break end
   end
   if not blocked then ordered[#ordered+1]=node end
+  end
  end
+ local fromStart={}
+ for _,p in ipairs(ordered) do fromStart[p]=distance(start,p) end
  table.sort(ordered,function(a,b)
-  local da=distance(a,start,width,height)
-  local db=distance(b,start,width,height)
+  local da=fromStart[a]
+  local db=fromStart[b]
   if da==db then return (a.object or 0)<(b.object or 0) end
   return da<db
  end)
  for _,n in ipairs(ordered) do
+  self:PlannerCheckpoint()
+  if #candidates>=250 then break end
   local nearby
   for _,c in ipairs(candidates) do
-   if distance(c,n,width,height)<spacing then nearby=c; break end
+   if self:Distance(c,n,width,height)<spacing and not self:TerrainIntersects(c,n,width,height,start.map) then nearby=c; break end
   end
   if nearby then
    nearby.spawnCount=(nearby.spawnCount or 1)+1
@@ -160,12 +183,10 @@ function N:BuildRoute(nodes,start,width,height,s)
    local improved=false
    for i=1,#path-1 do
     for j=i+1,#path do
-     local a=i==1 and start or path[i-1]
-     local b=path[i]
-     local c=path[j]
-     local d=path[j+1] or start
-     if distance(a,c,width,height)+distance(b,d,width,height)+.01 <
-       distance(a,b,width,height)+distance(c,d,width,height) then
+     -- Learned trails are directed; compare the whole reversed circuit.
+     local trial={};for k,p in ipairs(path) do trial[k]=p end
+     local l,r=i,j;while l<r do trial[l],trial[r]=trial[r],trial[l];l=l+1;r=r-1 end
+     if duration(trial)+.01<duration(path) then
       local left,right=i,j
       while left<right do path[left],path[right]=path[right],path[left];left=left+1;right=right-1 end
       improved=true
@@ -176,14 +197,19 @@ function N:BuildRoute(nodes,start,width,height,s)
   end
   return path
  end
+ local useYield=#candidates>0
+ for _,p in ipairs(candidates) do
+  local e=self:GatherEvidence(start.map,p)
+  if not e or e.checks<5 or e.harvests<3 then useYield=false;break end
+ end
  local function value(path)
   local seconds=duration(path)
   if seconds>budget+.01 or #path==0 then return -1,seconds end
-  local observed=0
-  for _,p in ipairs(path) do if p.source=='Observed' then observed=observed+1 end end
+  local evidence={points=path,map=start.map,seconds=seconds}
+  self:ScoreRouteEvidence(evidence)
   -- Penalize tiny repeat circuits; density is not treated as extra spawns.
   local coverage=math.min(1,#path/10)
-  local score=(#path+observed*.25)*coverage/math.max(600,seconds)
+  local score=(useYield and evidence.expectedResourcesPerHour and evidence.expectedResourcesPerHour/3600 or #path/math.max(600,seconds))*coverage
   return score,seconds
  end
  local best,bestScore,bestSeconds={},-1,0
@@ -224,7 +250,10 @@ function N:BuildRoute(nodes,start,width,height,s)
    end
   end
  end
- return {points=best,origin=self:Copy(start),seconds=bestSeconds,width=width,height=height,mode=s.travel,created=self:Now(),map=start.map,merged=true,optimizer='multi-seed-2opt-v4'}
+ local route={points=best,origin=self:Copy(start),seconds=bestSeconds,width=width,height=height,mode=s.travel,speed=s.speed,mountDelay=s.mountDelay,gatherDelay=s.gatherDelay,created=self:Now(),map=start.map,merged=true,optimizer='terrain-multi-seed-2opt-v5'}
+ self:PrepareTerrainRoute(route)
+ self:ScoreRouteEvidence(route)
+ return route
 
 end
 -- Compare a small, geographically distributed set of candidate loop starts.
@@ -237,7 +266,7 @@ function N:PlanRoute(strategy)
  local w,h=self:MapSize(map)
  if not w then return self:Print('Map dimensions unavailable.') end
  local here={map=map,x=x,y=y}
- local settings=self.db.settings
+ local settings=self:Copy(self.db.settings)
  strategy=strategy or settings.routeStrategy or 'optimal'
  local starts={here}
  if strategy~='here' then
@@ -264,7 +293,7 @@ function N:PlanRoute(strategy)
  local best,bestScore
  for _,origin in ipairs(starts) do
   local route=self:BuildRoute(nodes,origin,w,h,settings)
-  if route and #route.points>0 then
+  if route and not route.unreachable and #route.points>0 then
    local seconds=math.max(1,route.seconds or settings.routeMinutes*60)
    local travel=self:Distance(here,origin,w,h)/math.max(1,settings.speed)
    -- For 'nearest', include getting to the circuit; for 'optimal', do not.
@@ -276,12 +305,13 @@ function N:PlanRoute(strategy)
  end
  if not best then return self:Print('No circuit fits your filters and time budget.') end
  best.strategy=strategy
- best.estimatedStopsPerHour=bestScore*3600
+ best.estimatedStopsPerHour=best.potentialStopsPerHour
  return best
 end
 -- Cross-zone comparisons are based on accessible imported coordinates, not active spawns.
 function N:RankResourceZones(resource)
  if not resource or resource=='' then return {} end
+ local settings=self:Copy(self.db.settings)
  local maps={}
  for object,kind in pairs(self.nodeTypes or {}) do
   if kind.name==resource then
@@ -293,11 +323,16 @@ function N:RankResourceZones(resource)
   end
  end
  local eligible={}
+ for map in pairs(self.db.nodes or {}) do
+  if not maps[map] and not self:IsGatheringCityMap(map) then
+   local nodes=self:ZoneNodes(map,'all',resource);if #nodes>0 then maps[map]=#nodes end
+  end
+ end
  for map,count in pairs(maps) do if count>=4 then eligible[#eligible+1]={map=map,count=count} end end
  table.sort(eligible,function(a,b) return a.count>b.count end)
- -- Preselect up to 20 plausible zones before running the expensive optimizer.
+ -- Every eligible zone is compared; the UI runs this through the incremental queue.
  local results={}
- for index=1,math.min(20,#eligible) do
+ for index=1,#eligible do
   local map=eligible[index].map
   local width,height=self:MapSize(map)
   if width and height then
@@ -316,16 +351,15 @@ function N:RankResourceZones(resource)
     if a.point.x~=b.point.x then return a.point.x<b.point.x end
     return a.point.y<b.point.y
    end)
-   local best,bestScore
+   local best,bestScore;local alternatives={}
    for j=1,math.min(5,#seeds) do
     local start=seeds[j].point
-    local route=self:BuildRoute(nodes,{map=map,x=start.x,y=start.y},width,height,self.db.settings)
-    if route and #route.points>=3 then
+    local route=self:BuildRoute(nodes,{map=map,x=start.x,y=start.y},width,height,settings)
+    if route and not route.unreachable and #route.points>=3 then
      local seconds=math.max(600,route.seconds)
-     local observed=0
-     for _,p in ipairs(route.points) do if p.source=='Observed' then observed=observed+1 end end
      local coverage=math.min(1,#route.points/10)
-     local score=(#route.points+observed*.25)*coverage/seconds
+     local score=#route.points*coverage/seconds
+     alternatives[#alternatives+1]=route
      if not bestScore or score>bestScore then best,bestScore=route,score end
     end
    end
@@ -335,49 +369,75 @@ function N:RankResourceZones(resource)
      local info=self:Call(C_Map.GetMapInfo,map)
      if info and type(info.name)=='string' then name=info.name end
     end
-    results[#results+1]={map=map,name=name,route=best,score=bestScore*3600,rawCount=eligible[index].count}
+    best.alternatives=nil
+    results[#results+1]={map=map,name=name,route=best,score=bestScore*3600,rawCount=eligible[index].count,alternatives=alternatives}
    end
   end
  end
+ local allObserved=#results>0
+ for _,r in ipairs(results) do if not r.route.expectedResourcesPerHour then allObserved=false end end
+ for _,r in ipairs(results) do
+  r.metric=allObserved and 'resources' or 'potential stops'
+  r.rankScore=allObserved and r.route.expectedResourcesPerHour or r.score
+  r.score=allObserved and r.route.expectedResourcesPerHour or r.route.potentialStopsPerHour
+ end
  table.sort(results,function(a,b)
-  if a.score==b.score then return a.map<b.map end
-  return a.score>b.score
+  if a.rankScore==b.rankScore then return a.map<b.map end
+  return a.rankScore>b.rankScore
  end)
  while #results>5 do table.remove(results) end
  return results
 end
 function N:PrepareTerrainRoute(route)
- if not route or not route.points or not route.width or not route.height then return route end
- local blocks=self.db and self.db.terrainBlocks and self.db.terrainBlocks[route.map]
- if not blocks or #blocks==0 then route.travelPoints=nil;return route end
- local points={}
- local indices={}
+ if not route or not route.points or not route.width or not route.height or not route.origin then return route end
+ local points,indices={{x=route.origin.x,y=route.origin.y,map=route.map,transit=true,starting=true,name='Route start'}},{}
  local previous=route.origin
- local seconds=0
- local speed=math.max(1,self.db.settings.speed)
- for _,destination in ipairs(route.points) do
-  local distance,detour=self:TerrainLeg(previous,destination,route.width,route.height,route.map)
-  for _,via in ipairs(detour) do points[#points+1]={x=via.x,y=via.y,map=route.map,transit=true,name='Terrain detour'} end
-  points[#points+1]=destination
-  indices[#indices+1]=#points
-  seconds=seconds+distance/speed+math.max(0,self.db.settings.gatherDelay)+math.max(0,self.db.settings.mountDelay)
-  previous=destination
+ local seconds,length,validated=0,0,0
+ local speed=math.max(1,route.speed or self.db.settings.speed)
+ route.unreachable=nil
+ local function append(destination,closing)
+  local distance,detour,info=self:TerrainLeg(previous,destination,route.width,route.height,route.map,speed)
+  if distance==math.huge then route.unreachable=true;return false end
+  for _,via in ipairs(detour) do
+   if #points>=2048 then route.unreachable=true;return false end
+   points[#points+1]={x=via.x,y=via.y,map=route.map,transit=true,closing=closing,name='Trail / detour',validated=via.validated==true}
+  end
+  local p=self:Copy(destination);p.validated=false
+  if closing then p.transit=true;p.closing=true;p.name='Return to start' end
+  points[#points+1]=p
+  if not closing then indices[#indices+1]=#points end
+  seconds=seconds+(info and info.seconds or distance/speed)
+  if not closing then seconds=seconds+math.max(0,route.gatherDelay or self.db.settings.gatherDelay)+math.max(0,route.mountDelay or self.db.settings.mountDelay) end
+  length=length+distance;validated=validated+(info and info.validatedDistance or 0)
+  previous=destination;return true
  end
- local last=self:TerrainLeg(previous,route.origin,route.width,route.height,route.map)
- route.travelPoints=points
+ for _,destination in ipairs(route.points) do if not append(destination,false) then break end end
+ if not route.unreachable and #route.points>0 then append(route.origin,true) end
+ route.travelPoints=route.unreachable and {} or points
  route.travelStopIndices=indices
- route.terrainSeconds=seconds+last/speed
- route.terrainMode='marked-obstacles'
+ route.terrainSeconds=route.unreachable and math.huge or seconds
+ route.seconds=route.terrainSeconds
+ route.length=length
+ route.traversalConfidence=length>0 and validated/length or 0
+ route.terrainMode='learned-and-estimated'
  return route
 end
 function N:GenerateRoute()
- local best=self:PlanRoute()
- if not best then return end
- self.activeRoute=self:PrepareTerrainRoute(best); self.waypoint=1; self.terrainIndex=1; self.dirty=true; self:ShowArrow()
- self:Print(string.format('%s: %d stops, approx %.1f minute loop (straight-line estimate).',best.strategy,#best.points,(best.seconds or 0)/60))
+ self:RunPlanner(function() return self:PlanRoute() end,function(best)
+  if not best then return end
+  self.activeRoute=best; self.waypoint=1; self.terrainIndex=1;self.routePaused=false; self.dirty=true; self:ShowArrow()
+  self:Print(string.format('%s: %d stops, %.1f minute loop; %.0f%% learned corridor distance. Unverified connectors remain estimates.',best.strategy,#best.points,(best.seconds or 0)/60,(best.traversalConfidence or 0)*100))
+ end)
 end
 function N:SkipWaypoint()
  if not self.activeRoute then return end
+ if self.activeRoute.travelStopIndices then
+  local route=self.activeRoute
+  if (self.waypoint or 1)>#route.points then self.activeRoute=nil;if self.arrow then self.arrow:Hide() end;self.dirty=true;return end
+  self.terrainIndex=(route.travelStopIndices[self.waypoint or 1] or #(route.travelPoints or {}))+1
+  self.waypoint=math.min(#route.points+1,(self.waypoint or 1)+1)
+  self.dirty=true;return
+ end
  self.waypoint=(self.waypoint or 1)+1
  local ids=self.activeRoute.travelStopIndices
  if ids then self.terrainIndex=((ids[self.waypoint-1] or 0)+1) end
@@ -437,10 +497,12 @@ function N:ShowArrow()
    N:Choice(f,{
     {label='Skip waypoint',value='skip'},
     {label='Restart from waypoint 1',value='restart'},
+    {label='Pause / resume',value='pause'},
     {label='Cancel route',value='cancel'}
    },function(action)
     if action=='skip' then N:SkipWaypoint()
-    elseif action=='restart' and N.activeRoute then N.waypoint=1; N.dirty=true
+    elseif action=='restart' and N.activeRoute then N.waypoint=1;N.terrainIndex=1;N.routePaused=false; N.dirty=true
+    elseif action=='pause' then N.routePaused=not N.routePaused
     elseif action=='cancel' then N.activeRoute=nil; N.waypoint=nil; f:Hide(); N.dirty=true end
     f.refreshAt=0
     if WorldMapFrame and WorldMapFrame:IsShown() then N:RefreshMap() end
@@ -458,7 +520,7 @@ function N:ShowArrow()
   f:SetScript('OnEnter',function()
    GameTooltip:SetOwner(f,'ANCHOR_RIGHT')
    GameTooltip:SetText('VoidMark Nexus navigation')
-   GameTooltip:AddLine('Right-click: Skip / Restart / Cancel')
+   GameTooltip:AddLine('Right-click: Skip / Restart / Pause / Cancel')
    GameTooltip:AddLine('Left-drag: Move',.8,.8,.8)
    GameTooltip:Show()
   end)
@@ -477,7 +539,7 @@ function N:ShowArrow()
     if not w.angle then w.angle=goal end
     local fraction=math.min(1,dt*13)
     w.angle=w.angle+nexusDeltaAngle(w.angle,goal)*fraction
-    w.texture:SetRotation(w.angle)
+    if type(w.texture.SetRotation)=='function' then w.texture:SetRotation(w.angle) end
    end
   end)
   self.arrow=f
@@ -489,6 +551,7 @@ function N:UpdateArrow()
  local arrow=self.arrow
  if not arrow then return end
  local route=self.activeRoute
+ if self.routePaused and route then arrow.label:SetText('Route paused');arrow.bearing=nil;return end
  local node=route and route.points[self.waypoint or 1]
  local transit=route and route.travelPoints and route.travelPoints[self.terrainIndex or 1]
  local point=transit or node
@@ -505,10 +568,13 @@ function N:UpdateArrow()
  local distance=math.sqrt(dx*dx+dy*dy)
  arrow.bearing=nexusAngle(-dx,-dy)
  arrow.texture:Show()
- arrow.label:SetText(string.format('%s  |  %d/%d\n%.0f yd · ~%.0f sec',point.transit and 'Detour' or (point.name or 'Waypoint'),self.waypoint,#route.points,distance,distance/math.max(1,self.db.settings.speed)))
+ arrow.label:SetText(string.format('%s  |  %d/%d\n%.0f yd � ~%.0f sec',point.transit and (point.closing and 'Return to start' or 'Trail / detour') or (point.name or 'Waypoint'),math.min(self.waypoint,#route.points),#route.points,distance,distance/math.max(1,route.speed or self.db.settings.speed)))
  if distance<8 then
-  if point.transit then self.terrainIndex=(self.terrainIndex or 1)+1
-  else self:SkipWaypoint() end
+  if point.transit then
+   self.terrainIndex=(self.terrainIndex or 1)+1
+   if self.terrainIndex>#route.travelPoints then self.activeRoute=nil;arrow:Hide();self:Print('Route loop complete.') end
+  elseif not self.db.settings.manualStops then self:SkipWaypoint() end
+  self.dirty=true
   arrow.refreshAt=0
  end
 end
@@ -679,19 +745,19 @@ function N:RefreshMap()
  local points={}
  local segments={}
  if s.routeVisible and route and route.map==map then
-  local current=math.max(1,self.waypoint or 1)
-  local last=math.min(#route.points,current+4)
-  local prev
-  -- Starting at the player's live map position avoids a line to an old origin.
-  local liveMap,px,py=self:Position()
-  if liveMap==map and px and py then prev={x=px,y=py}
-  else prev=route.points[current-1] or route.origin end
+  local geometry=route.travelPoints or route.points
+  local current=route.travelPoints and (self.terrainIndex or 1) or math.max(1,self.waypoint or 1)
+  local last=math.min(#geometry,current+100)
+  local prev=geometry[current-1] or route.origin
+  local stop=self.waypoint or 1
   for i=current,last do
-   local node=route.points[i]
+   local node=geometry[i]
    if node then
-    points[#points+1]={n=node,label=tostring(i),route=true}
-    if prev then segments[#segments+1]={a=prev,b=node} end
+    points[#points+1]={n=node,label=node.transit and ((node.closing or node.starting) and 'S' or '�') or tostring(stop),route=true}
+    if prev then segments[#segments+1]={a=prev,b=node,validated=node.validated==true} end
     prev=node
+    if not node.transit then stop=stop+1 end
+    if stop>(self.waypoint or 1)+4 then break end
    end
   end
  end
@@ -700,7 +766,7 @@ function N:RefreshMap()
  for i=1,math.max(#segments,#self.mapRouteLines) do
   local line=self.mapRouteLines[i]
   if not line and segments[i] and type(canvas.CreateLine)=='function' then
-   local ok,created=pcall(canvas.CreateLine,canvas,nil,'ARTWORK')
+   local ok,created=pcall(canvas.CreateLine,self.mapPinOverlay,nil,'ARTWORK')
    if ok and created then line=created; self.mapRouteLines[i]=line end
   end
   if line then
@@ -711,7 +777,7 @@ function N:RefreshMap()
      line:SetEndPoint('TOPLEFT',canvas,'TOPLEFT',leg.b.x*width,-leg.b.y*height)
      line:SetThickness(i==1 and 3 or 2)
      if line.SetTexture then line:SetTexture('Interface\\Buttons\\WHITE8X8') end
-     line:SetVertexColor(i==1 and 1 or .65,i==1 and .75 or .32,i==1 and .25 or 1,.92)
+     line:SetVertexColor(leg.validated and .4 or .73,leg.validated and .9 or .37,1,.92)
      line:Show()
     end)
     if not ok then line:Hide() end
@@ -729,20 +795,21 @@ function N:RefreshMap()
   local distance=math.sqrt(dx*dx+dy*dy)
   local count=math.min(70,math.floor(distance/6))
   for j=0,count do
+   if usedDots>=350 then break end
    local t=j/math.max(1,count)
    local x,y=ax+dx*t,ay+dy*t
    if x>=0 and y>=0 and x<=width and y<=height then
     usedDots=usedDots+1
     local dot=self.mapRouteDots[usedDots]
     if not dot then
-     dot=canvas:CreateTexture(nil,'OVERLAY')
+     dot=self.mapPinOverlay:CreateTexture(nil,'OVERLAY')
      dot:SetTexture('Interface\\Buttons\\WHITE8X8')
      dot:SetSize(3,3)
      self.mapRouteDots[usedDots]=dot
     end
     dot:ClearAllPoints()
     dot:SetPoint('CENTER',canvas,'TOPLEFT',x,-y)
-    dot:SetVertexColor(.73,.37,1,.96)
+    dot:SetVertexColor(leg.validated and .4 or .73,leg.validated and .9 or .37,1,.96)
     dot:Show()
    end
   end
@@ -822,7 +889,7 @@ function N:RefreshMap()
    pin.node=p.n
    pin.isRoute=p.route or false
    pin:SetFrameLevel(self.mapPinOverlay:GetFrameLevel()+(p.route and 3 or 2))
-   pin.normalSize=p.route and 24 or math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
+   pin.normalSize=p.route and (p.n.transit and 9 or 24) or math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
    pin:SetSize(pin.normalSize,pin.normalSize)
    pin.tex:SetAlpha(1)
    if p.route then pin.label:SetTextColor(1,.95,.1,1) end
@@ -842,3 +909,4 @@ function N:RefreshMap()
   else pin:Hide() end
  end
 end
+

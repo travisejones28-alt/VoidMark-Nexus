@@ -10,7 +10,7 @@ function N:ScanStorage(bank)
  else for i=0,(NUM_BAG_SLOTS or 4) do bags[#bags+1]=i end end
  for _,bag in ipairs(bags) do
   local size=self:Call(slots,bag)
-  if self:Finite(size,0,200) then for slot=1,size do
+  if self:Finite(size,0,200) then readable=true; for slot=1,size do
    readable=true
    local a,count,_,_,_,_,link=self:Call(info,bag,slot); local id
    if type(a)=='table' then id=a.itemID or self:ItemID(a.hyperlink); count=a.stackCount; link=a.hyperlink else id=self:ItemID(link) end
@@ -23,3 +23,4 @@ end
 N:On('BAG_UPDATE_DELAYED',function() N:Later('bags',function() N:ScanStorage(false); if N.bankOpen then N:ScanStorage(true) end end) end)
 N:On('BANKFRAME_OPENED',function() N.bankOpen=true; N:ScanStorage(true) end)
 N:On('BANKFRAME_CLOSED',function() N.bankOpen=false end)
+

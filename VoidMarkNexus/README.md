@@ -1,4 +1,6 @@
-# VoidMark Nexus 0.1.0 alpha
+# VoidMark Nexus 0.2.0 alpha
+
+Terrain routing v5: `/vmn terrain on|off|clear`, `/vmn pause`, `/vmn restart`, `/vmn check empty|available`. Learned corridors are cyan; unverified segments are purple. Enable manual stop confirmation in Settings if desired. Top 5 excludes travel between zones. See the repository's DEVELOPMENT_V5.md for validation and limitations; older notes below describe the original baseline.
 
 Standalone profession, offline-alt, inventory, crafting and gathering workspace for Forever interface **16001**. This is an initial testable implementation, not a claim that the entire requested product is complete. No actual game-client testing was performed during development.
 
@@ -58,3 +60,4 @@ Nexus reads `VoidMarkMarketDB.schemaVersion == 1`, `economies[normalizedRealm ..
 ## Licensing
 
 Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and data: Copyright (c) 2019 Wuild, MIT; full license in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. Other reference addons and TomTom artwork are not redistributed.
+
