@@ -28,6 +28,9 @@ function N:ZoneNodes(map,kindOverride,targetOverride)
  local function add(object,x,y,source,at)
   local kind=self.nodeTypes[object]; if not kind or (selectedKind~='all' and kind.kind~=selectedKind) then return end
   if selectedTarget~='' and not kind.name:lower():find(selectedTarget:lower(),1,true) then return end
+  if kindOverride==nil and targetOverride==nil and type(s.routeResources)=='table' and next(s.routeResources) then
+   if not s.routeResources[kind.name] then return end
+  end
   local key=tostring(object)..':'..math.floor(x*500+.5)..':'..math.floor(y*500+.5)
   if seen[key] then if source=='Observed' then out[seen[key]].source=source; out[seen[key]].at=at end; return end
   out[#out+1]={object=object,x=x,y=y,source=source,at=at,map=map,name=kind.name,kind=kind.kind,skill=kind.skill}; seen[key]=#out
