@@ -33,12 +33,55 @@ function N:Slash(msg)
 end
 function N:MinimapButton()
  if not Minimap then return end
- local b=CreateFrame('Button','VoidMarkNexusMinimap',Minimap); b:SetSize(28,28); b:SetPoint('TOPLEFT',Minimap,'TOPLEFT',-4,4)
- b:SetFrameStrata('MEDIUM'); local icon=b:CreateTexture(nil,'ARTWORK'); icon:SetAllPoints(); icon:SetTexture('Interface\\Icons\\INV_Misc_Gem_Amethyst_02')
- b:RegisterForClicks('LeftButtonUp','RightButtonUp'); b:SetScript('OnClick',function(_,key) if key=='RightButton' then N:Show('Settings') else N:Slash('') end end)
- b:SetScript('OnEnter',function() GameTooltip:SetOwner(b,'ANCHOR_LEFT'); GameTooltip:SetText('VoidMark Nexus'); GameTooltip:AddLine('Left: Open | Right: Settings'); GameTooltip:Show() end)
- b:SetScript('OnLeave',function() GameTooltip:Hide() end); b:SetShown(self.db.settings.minimap); self.minimap=b
+ local b=CreateFrame('Button','VoidMarkNexusMinimap',Minimap)
+ b:SetSize(28,28)
+ b:SetFrameStrata('MEDIUM')
+ local icon=b:CreateTexture(nil,'ARTWORK')
+ icon:SetAllPoints()
+ icon:SetTexture('Interface\\Icons\\INV_Misc_Gem_Amethyst_02')
+ local function position()
+  local angle=math.rad(tonumber(N.db.settings.minimapAngle) or 135)
+  local radius=(Minimap:GetWidth() or 140)/2+8
+  b:ClearAllPoints()
+  b:SetPoint('CENTER',Minimap,'CENTER',math.cos(angle)*radius,math.sin(angle)*radius)
+ end
+ b:RegisterForClicks('LeftButtonUp','RightButtonUp')
+ b:RegisterForDrag('LeftButton')
+ b:SetScript('OnDragStart',function()
+  b.dragging=true
+  b:SetScript('OnUpdate',function()
+   local scale=Minimap:GetEffectiveScale()
+   if not scale or scale==0 then return end
+   local mx,my=Minimap:GetCenter()
+   local cx,cy=GetCursorPosition()
+   if not mx or not my or not cx or not cy then return end
+   local dx,dy=cx/scale-mx,cy/scale-my
+   local angle=math.deg((math.atan2 and math.atan2(dy,dx)) or math.atan(dy,dx))
+   N.db.settings.minimapAngle=angle
+   position()
+  end)
+ end)
+ b:SetScript('OnDragStop',function()
+  b:SetScript('OnUpdate',nil)
+  b.dragging=false
+ end)
+ b:SetScript('OnClick',function(_,key)
+  if b.dragging then return end
+  if key=='RightButton' then N:Show('Settings') else N:Slash('') end
+ end)
+ b:SetScript('OnEnter',function()
+  GameTooltip:SetOwner(b,'ANCHOR_LEFT')
+  GameTooltip:SetText('VoidMark Nexus')
+  GameTooltip:AddLine('Left: Open | Right: Settings')
+  GameTooltip:AddLine('Left-drag: Move around minimap')
+  GameTooltip:Show()
+ end)
+ b:SetScript('OnLeave',function() GameTooltip:Hide() end)
+ position()
+ b:SetShown(self.db.settings.minimap)
+ self.minimap=b
 end
+
 local frame=CreateFrame('Frame')
 frame:RegisterEvent('ADDON_LOADED'); frame:RegisterEvent('PLAYER_LOGIN')
 for event in pairs(N.handlers) do pcall(frame.RegisterEvent,frame,event) end
