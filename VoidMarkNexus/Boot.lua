@@ -20,6 +20,8 @@ function N:Slash(msg)
   local f=ProfessionsFrame or TradeSkillFrame or CraftFrame
   if f and not self:Call(InCombatLockdown) then f:Show() end
   self:Print('Native profession UI enabled. Open your profession normally.')
+ elseif command=='block' then self:MarkRouteObstacle(args)
+ elseif command=='clearblocks' then self:ClearRouteObstacles()
  elseif command=='route' then self:GenerateRoute()
  elseif command=='skip' then self:SkipWaypoint()
  elseif command=='stop' then self.activeRoute=nil; if self.arrow then self.arrow:Hide() end
