@@ -1,0 +1,21 @@
+## Interface: 16001
+## Title: VoidMark Nexus
+## Notes: Professions, offline alts, planning, profitability and gathering navigation.
+## Author: Travis Jones / OpenAI
+## Version: 0.1.0-alpha
+## SavedVariables: VoidMarkNexusDB
+## OptionalDeps: VoidMarkMarket, Auctionator
+## IconTexture: Interface\Icons\INV_Misc_Gem_Amethyst_02
+Core.lua
+Data\Nodes.lua
+Data\Spawns.lua
+Model.lua
+Transfer.lua
+Professions.lua
+Inventory.lua
+Prices.lua
+Gathering.lua
+Routes.lua
+UI.lua
+Boot.lua
+Bindings.xml

@@ -1,0 +1,30 @@
+PASS All TOC Lua files compile and load under Lua 5.1 compatible runtime
+PASS Initialize and retain existing characters
+PASS Profession separation and offline search
+PASS Known stock, economic profit and missing cash are separate
+PASS Unknown price never becomes free
+PASS No double allocation across planned crafts
+PASS Stale inventory excluded unless opted in; bank separate
+PASS Physical-character duplicates and foreign realms excluded
+PASS Cross-account serialization preserves delimiters and previews before changes
+PASS Malformed, executable, duplicate-key, huge and unsupported imports rejected
+PASS Read-only Market adapter preserves age and respects economy/schema
+PASS Deposits, sale fraction and variable output
+PASS Bounded route, distinct waypoints, budget, mount mode
+PASS Forever node database and observed deduplication
+PASS Leveling recommendations omit unpriced and gray recipes
+PASS Modern profession scan and linked-view protection
+PASS Bag and bank scanning use distinct containers
+PASS Gather loot counted once only after matched gathering success
+PASS UI construction and every page render against frame mocks
+PASS Nil slots in multi-return APIs preserve later professions
+PASS Forever difficulty enum starts at zero; gray never recommended
+PASS Offline crafting never calls a game action
+PASS Import rejects invalid quantity and sanitizes unknown fields
+PASS Malformed saved settings are repaired without losing characters
+PASS Missing storage data preserves the previous snapshot
+PASS All three primary UI actions are bound to their own handler
+PASS Arrow update and map pin creation
+PASS Market navigation opens its existing view without hiding it
+PASS Newer database schema remains untouched
+PASS: 29 tests; Lua 5.1 / LuaJIT 2.0.5

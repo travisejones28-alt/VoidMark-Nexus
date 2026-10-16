@@ -1,0 +1,5 @@
+<Bindings>
+ <Binding name="VOIDMARKNEXUS_TOGGLE" header="VOIDMARKNEXUS">
+  if VoidMarkNexus then VoidMarkNexus:Slash("") end
+ </Binding>
+</Bindings>
