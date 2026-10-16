@@ -195,7 +195,25 @@ function N:RefreshMap()
  if s.routeVisible and route and route.map==map then
   for i,n in ipairs(route.points) do points[#points+1]={n=n,label=tostring(i),route=true} end
  end
- for i=1,math.min(250,#nodes) do points[#points+1]={n=nodes[i],label=''} end
+ -- Merge nearby display-only markers; keep full node records for farming calculations.
+ local clusters={}
+ for _,node in ipairs(nodes) do
+  local match
+  for _,c in ipairs(clusters) do
+   local dx=(node.x-c.n.x)*width
+   local dy=(node.y-c.n.y)*height
+   if dx*dx+dy*dy<100 then match=c; break end
+  end
+  if match then
+   match.count=match.count+1
+   match.names[node.name or 'Unknown']=true
+   -- Prefer observed node information over imported potential spawns.
+   if node.source=='Observed' and match.n.source~='Observed' then match.n=node end
+  else
+   clusters[#clusters+1]={n=node,label='',count=1,names={[node.name or 'Unknown']=true}}
+  end
+ end
+ for i=1,math.min(250,#clusters) do points[#points+1]=clusters[i] end
  for i=1,math.max(#points,#self.mapPins) do
   local pin=self.mapPins[i]
   if not pin then
@@ -209,6 +227,10 @@ function N:RefreshMap()
     GameTooltip:SetOwner(p,'ANCHOR_RIGHT')
     GameTooltip:SetText(p.node.name or 'Waypoint')
     GameTooltip:AddLine(p.node.source or 'Route')
+    if p.clusterCount and p.clusterCount>1 then
+     GameTooltip:AddLine(tostring(p.clusterCount)..' nearby spawn records')
+     if p.clusterNames then for name in pairs(p.clusterNames) do GameTooltip:AddLine(name,1,0.85,0.45) end end
+    end
     GameTooltip:Show()
    end)
    pin:SetScript('OnLeave',function() GameTooltip:Hide() end)
@@ -217,6 +239,8 @@ function N:RefreshMap()
   local p=points[i]
   if p then
    pin.node=p.n
+   pin.clusterCount=p.count
+   pin.clusterNames=p.names
    pin:ClearAllPoints()
    pin:SetPoint('CENTER',canvas,'TOPLEFT',p.n.x*width,-p.n.y*height)
    local texture
