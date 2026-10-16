@@ -178,6 +178,29 @@ function N:RefreshMap()
   self.mapNodeFilterButton=b
  end
  local names={all='Herbs + Ore',herb='Herbs',ore='Mining',none='Hidden'}
+ -- Compact map-size slider, stored in account settings.
+ if not self.mapIconSizeSlider then
+  local slider=CreateFrame('Slider',nil,canvas,'OptionsSliderTemplate')
+  slider:SetSize(120,16)
+  slider:SetPoint('TOPLEFT',canvas,'TOPLEFT',18,-49)
+  slider:SetMinMaxValues(5,16); slider:SetValueStep(1)
+  if slider.SetObeyStepOnDrag then slider:SetObeyStepOnDrag(true) end
+  slider:SetScript('OnValueChanged',function(_,value)
+   local n=math.floor(value+0.5)
+   if N.db.settings.mapIconSize~=n then
+    N.db.settings.mapIconSize=n
+    N:RefreshMap()
+   end
+  end)
+  local caption=canvas:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
+  caption:SetPoint('BOTTOM',slider,'TOP',0,3)
+  slider.caption=caption
+  self.mapIconSizeSlider=slider
+ end
+ local selectedSize=math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
+ self.mapIconSizeSlider.caption:SetText('Icon size: '..selectedSize)
+ self.mapIconSizeSlider:SetValue(selectedSize)
+ self.mapIconSizeSlider:SetShown(filter~='none' and s.nodesVisible)
  self.mapNodeFilterButton:SetText('Nexus: '..(names[filter] or names.all)..'  v')
  self.mapNodeFilterButton:Show()
  local nodes={}
@@ -202,7 +225,7 @@ function N:RefreshMap()
   for _,c in ipairs(clusters) do
    local dx=(node.x-c.n.x)*width
    local dy=(node.y-c.n.y)*height
-   if dx*dx+dy*dy<100 then match=c; break end
+   if dx*dx+dy*dy<64 then match=c; break end
   end
   if match then
    match.count=match.count+1
@@ -218,12 +241,14 @@ function N:RefreshMap()
   local pin=self.mapPins[i]
   if not pin then
    pin=CreateFrame('Button',nil,canvas)
-   pin:SetSize(11,11)
+   pin:SetSize(7,7)
    pin.tex=pin:CreateTexture(nil,'ARTWORK')
    pin.tex:SetAllPoints()
    pin.label=pin:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
    pin.label:SetPoint('CENTER')
    pin:SetScript('OnEnter',function(p)
+    p:SetSize(16,16)
+    p.tex:SetAlpha(1)
     GameTooltip:SetOwner(p,'ANCHOR_RIGHT')
     GameTooltip:SetText(p.node.name or 'Waypoint')
     GameTooltip:AddLine(p.node.source or 'Route')
@@ -233,12 +258,16 @@ function N:RefreshMap()
     end
     GameTooltip:Show()
    end)
-   pin:SetScript('OnLeave',function() GameTooltip:Hide() end)
+   pin:SetScript('OnLeave',function(p) p:SetSize(p.normalSize or 7,p.normalSize or 7); p.tex:SetAlpha(p.isRoute and 1 or .7); GameTooltip:Hide() end)
    self.mapPins[i]=pin
   end
   local p=points[i]
   if p then
    pin.node=p.n
+   pin.isRoute=p.route or false
+   pin.normalSize=p.route and 12 or math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
+   pin:SetSize(pin.normalSize,pin.normalSize)
+   pin.tex:SetAlpha(p.route and 1 or .7)
    pin.clusterCount=p.count
    pin.clusterNames=p.names
    pin:ClearAllPoints()
