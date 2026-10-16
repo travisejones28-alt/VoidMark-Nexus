@@ -49,7 +49,7 @@ end
 function N:SkipWaypoint()
  if not self.activeRoute then return end
  self.waypoint=(self.waypoint or 1)+1
- if self.waypoint>#self.activeRoute.points then self.activeRoute=nil; self:Print('Route complete.') end
+ if self.waypoint>#self.activeRoute.points then self.activeRoute=nil; if self.arrow then self.arrow:Hide() end; self:Print('Route complete.') end
  self.dirty=true
 end
 function N:SaveRoute(name)
@@ -74,6 +74,19 @@ function N:ShowArrow()
   local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent); f:SetSize(170,110); f:SetPoint('TOP',UIParent,'TOP',0,-140)
   f:SetFrameStrata('LOW'); f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag('LeftButton')
   f:SetScript('OnDragStart',function() f:StartMoving() end); f:SetScript('OnDragStop',function() f:StopMovingOrSizing() end)
+  f:SetScript('OnMouseUp',function(_,button)
+   if button~='RightButton' then return end
+   N:Choice(f,{
+    {label='Skip next waypoint',value='skip'},
+    {label='Restart route from waypoint 1',value='restart'},
+    {label='Cancel current route',value='cancel'}
+   },function(action)
+    if action=='skip' then N:SkipWaypoint()
+    elseif action=='restart' and N.activeRoute then N.waypoint=1; N.dirty=true
+    elseif action=='cancel' then N.activeRoute=nil; N.waypoint=nil; f:Hide(); N.dirty=true end
+    if WorldMapFrame and WorldMapFrame:IsShown() then N:RefreshMap() end
+   end)
+  end)
   f.texture=f:CreateTexture(nil,'ARTWORK'); f.texture:SetSize(48,48); f.texture:SetPoint('TOP'); f.texture:SetTexture('Interface\\AddOns\\VoidMarkNexus\\Media\\Arrow.tga')
   f.label=f:CreateFontString(nil,'OVERLAY','GameFontNormalSmall'); f.label:SetPoint('TOP',0,-52); f.label:SetWidth(170)
   local elapsed=0
@@ -218,8 +231,46 @@ function N:RefreshMap()
  self.mapPins=self.mapPins or {}
  local width,height=canvas:GetWidth(),canvas:GetHeight()
  if width<=0 or height<=0 then return end
- local points={}
+ -- Draw connected route lines underneath waypoint pins. Keep reusable textures
+ -- to avoid recreating map objects every map refresh.
+ self.mapRouteLines=self.mapRouteLines or {}
  local route=self.activeRoute
+ local segments={}
+ if s.routeVisible and route and route.map==map then
+  local prev=route.origin
+  for _,node in ipairs(route.points) do
+   if prev and node then segments[#segments+1]={a=prev,b=node} end
+   prev=node
+  end
+ end
+ for i=1,math.max(#segments,#self.mapRouteLines) do
+  local line=self.mapRouteLines[i]
+  if not line then
+   line=canvas:CreateTexture(nil,'ARTWORK',nil,-1)
+   line:SetColorTexture(.65,.24,1,.85)
+   self.mapRouteLines[i]=line
+  end
+  local segment=segments[i]
+  if segment then
+   local x1,y1=segment.a.x*width,-segment.a.y*height
+   local x2,y2=segment.b.x*width,-segment.b.y*height
+   local dx,dy=x2-x1,y2-y1
+   local length=math.sqrt(dx*dx+dy*dy)
+   if length>0.1 then
+    line:ClearAllPoints()
+    line:SetPoint('CENTER',canvas,'TOPLEFT',(x1+x2)/2,(y1+y2)/2)
+    line:SetSize(length,i==(self.waypoint or 1) and 3 or 2)
+    if line.SetRotation then
+     local angle=math.atan2 and math.atan2(dy,dx) or math.atan(dy/dx)
+     line:SetRotation(angle)
+    end
+    if i==(self.waypoint or 1) then line:SetColorTexture(1,.74,.14,.95)
+    else line:SetColorTexture(.65,.24,1,.85) end
+    line:Show()
+   else line:Hide() end
+  else line:Hide() end
+ end
+ local points={}
  if s.routeVisible and route and route.map==map then
   for i,n in ipairs(route.points) do points[#points+1]={n=n,label=tostring(i),route=true} end
  end
