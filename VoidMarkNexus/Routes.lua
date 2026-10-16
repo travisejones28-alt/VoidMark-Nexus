@@ -576,6 +576,17 @@ function N:RefreshMap()
   end
  end
  self.mapPins=self.mapPins or {}
+ -- Exploration detail textures can be added above ordinary canvas children.
+ -- A full-screen high-strata overlay keeps Nexus markers visible on revealed terrain.
+ if not self.mapPinOverlay or self.mapPinOverlay:GetParent()~=canvas then
+  local overlay=CreateFrame('Frame',nil,canvas)
+  overlay:SetAllPoints(canvas)
+  overlay:SetFrameStrata('HIGH')
+  overlay:SetFrameLevel(math.max(canvas:GetFrameLevel()+120,world:GetFrameLevel()+120))
+  overlay:EnableMouse(false)
+  self.mapPinOverlay=overlay
+  for _,pin in ipairs(self.mapPins or {}) do pin:SetParent(overlay) end
+ end
  local width,height=canvas:GetWidth(),canvas:GetHeight()
  if width<=0 or height<=0 then return end
  -- Only the next five waypoints and connecting legs appear on the world map.
@@ -701,7 +712,7 @@ function N:RefreshMap()
  for i=1,math.max(#points,#self.mapPins) do
   local pin=self.mapPins[i]
   if not pin then
-   pin=CreateFrame('Button',nil,canvas)
+   pin=CreateFrame('Button',nil,self.mapPinOverlay)
    pin:SetSize(7,7)
    pin.tex=pin:CreateTexture(nil,'OVERLAY',nil,5)
    pin.tex:SetAllPoints()
@@ -727,7 +738,7 @@ function N:RefreshMap()
   if p then
    pin.node=p.n
    pin.isRoute=p.route or false
-   pin:SetFrameLevel(math.max(canvas:GetFrameLevel(),world:GetFrameLevel())+(p.route and 110 or 90))
+   pin:SetFrameLevel(self.mapPinOverlay:GetFrameLevel()+(p.route and 3 or 2))
    pin.normalSize=p.route and 24 or math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
    pin:SetSize(pin.normalSize,pin.normalSize)
    pin.tex:SetAlpha(1)
