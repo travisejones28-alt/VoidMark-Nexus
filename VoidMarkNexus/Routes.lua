@@ -54,11 +54,11 @@ function N:BuildRoute(nodes,start,width,height,s)
     local home=self:Distance(n,start,width,height)
     local cost=distance/speed+stop
     if elapsed+cost+home/speed<=s.routeMinutes*60 then
-     -- Prefer a coherent circuit, with mild weighting for observed and denser
-     -- patches instead of chasing every overlapping potential spawn point.
-     local bias=math.min(20,(n.spawnCount or 1)*2)
-     if n.source=='Observed' then bias=bias+10 end
-     local score=cost+bias*-1
+     -- Prefer confirmed locations and compact loops. Duplicate database
+     -- coordinates do not count as separate harvest opportunities.
+     local verified=n.source=='Observed' and 7 or 0
+     local density=math.min(5,math.log(1+(n.spawnCount or 1))*2)
+     local score=cost+(home/speed)*.16-verified-density
      if not bestCost or score<bestCost then
       best,bestCost,bestDistance=i,score,distance
      end
@@ -91,10 +91,18 @@ function N:BuildRoute(nodes,start,width,height,s)
    if not improved then break end
   end
  end
+ -- Recheck actual loop duration after optimization, including the return leg.
  elapsed=0; last=start
- for _,p in ipairs(path) do elapsed=elapsed+self:Distance(last,p,width,height)/speed+stop; last=p end
+ local retained={}
+ for _,p in ipairs(path) do
+  local leg=self:Distance(last,p,width,height)/speed+stop
+  local home=self:Distance(p,start,width,height)/speed
+  if elapsed+leg+home<=s.routeMinutes*60 then
+   retained[#retained+1]=p;elapsed=elapsed+leg;last=p
+  end
+ end
  elapsed=elapsed+self:Distance(last,start,width,height)/speed
- return {points=path,origin=self:Copy(start),seconds=elapsed,width=width,height=height,mode=s.travel,created=self:Now(),map=start.map,merged=true}
+ return {points=retained,origin=self:Copy(start),seconds=elapsed,width=width,height=height,mode=s.travel,created=self:Now(),map=start.map,merged=true,optimizer='cluster-2opt-v3'}
 end
 -- Compare a small, geographically distributed set of candidate loop starts.
 -- Scores are estimated stops/hour; imported points are potential, not live nodes.
@@ -138,7 +146,8 @@ function N:PlanRoute(strategy)
    local travel=self:Distance(here,origin,w,h)/math.max(1,settings.speed)
    -- For 'nearest', include getting to the circuit; for 'optimal', do not.
    local denominator=seconds+(strategy=='nearest' and travel or 0)
-   local score=#route.points/denominator
+   local coverage=math.min(1,#route.points/12)
+   local score=(#route.points*coverage)/math.max(600,denominator)
    if not bestScore or score>bestScore then best,bestScore=route,score end
   end
  end
