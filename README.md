@@ -6,6 +6,14 @@ Standalone profession, offline-alt, inventory, crafting and gathering workspace 
 
 Copy **VoidMarkNexus** (the folder containing `VoidMarkNexus.toc`) into `World of Warcraft/_classic_beta_/Interface/AddOns/`. Enable it and use `/vmn`. Log into each character, open every profession, and visit the bank to populate records. Keybinding: Open VoidMark Nexus. The minimap gem opens the window; right-click opens Settings.
 
+## Windows GitHub Desktop junction installation
+
+The GitHub repository root contains a nested **VoidMarkNexus** directory. **Point the WoW junction at this inner directory**, not the repository root. The inner directory contains `VoidMarkNexus.toc`.
+
+If you cloned the repo to `C:\WoW Forever Addons\VoidMark  Nexus` (two spaces), run `Install-WoWLinks.ps1` from that root in PowerShell as Administrator. It installs or repairs junctions for both `_classic_beta_` and `_forever_`. It never deletes a regular addon directory. Existing junctions are updated without touching the repository's addon files.
+
+Alternatively, install the distributable `dist/VoidMarkNexus.zip` directly. It already has the correct top-level `VoidMarkNexus/` folder. **Do not extract the whole repository ZIP into AddOns.**
+
 ## Implemented
 
 - Shared account database; character-specific recipes and timestamped bag/bank snapshots. Optional imported-character inventory, exclusions, and stale-data controls. Cross-realm and cross-faction inventories are excluded from calculations. Binding and mail restrictions must be checked in game.
