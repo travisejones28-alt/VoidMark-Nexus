@@ -95,8 +95,30 @@ function N:CreateUI()
   N:Choice(u.professionButton,choices,function(v) u.profession=v or nil; u.page=1 end)
  end)
  u.filterButton=button(f,'All',830,-55,210,function()
-  local choices={}; for _,v in ipairs({'All','Known','Unknown','Wishlist','Profit','Loss','Missing','Available','Fresh','Cost ascending','Profit descending','Margin descending'}) do choices[#choices+1]={label=v,value=v} end
-  N:Choice(u.filterButton,choices,function(v) u.filter=v; u.page=1 end)
+  if u.tab=='Routes' then
+   local choices={
+    {label='All gathering nodes',value={kind='all',target=''}},
+    {label='Herbs only',value={kind='herb',target=''}},
+    {label='Mining only',value={kind='ore',target=''}}
+   }
+   local names={}
+   for _,node in pairs(N.nodeTypes or {}) do names[node.name]=node.kind end
+   local sorted={}; for name in pairs(names) do sorted[#sorted+1]=name end
+   table.sort(sorted)
+   for _,name in ipairs(sorted) do
+    choices[#choices+1]={label=name,value={kind=names[name],target=name}}
+   end
+   N:Choice(u.filterButton,choices,function(v)
+    N.db.settings.kind=v.kind
+    N.db.settings.target=v.target
+    u.selected=nil; u.page=1
+    N.dirty=true
+   end)
+  else
+   local choices={}
+   for _,v in ipairs({'All','Known','Unknown','Wishlist','Profit','Loss','Missing','Available','Fresh','Cost ascending','Profit descending','Margin descending'}) do choices[#choices+1]={label=v,value=v} end
+   N:Choice(u.filterButton,choices,function(v) u.filter=v; u.page=1 end)
+  end
  end)
  u.heading=label(f,'',164,-95); u.heading:SetWidth(875)
  for i=1,16 do
@@ -164,7 +186,7 @@ function N:Render()
  self.renderStocks={}
  local rows,detail={},''; local selected=u.selected; local tab=u.tab
  local c=u.character and self.db.characters[u.character]
- u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(u.filter)
+ u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Routes' and ((self.db.settings.target~='' and self.db.settings.target) or ({all='All nodes',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All nodes') or u.filter)
  u.heading:SetText(tab..'  |  '..(tab=='Settings' and 'Select setting; Apply uses the bottom value field' or 'Search above; quantity or action value below'))
  self:SetActions({},{}); u.footer:SetText('Offline data is cached. Open each profession and bank once to record it. /vmn native restores Blizzard access.')
  if tab=='Recipes' or tab=='Profitability' then
@@ -215,7 +237,7 @@ function N:Render()
   self:SetActions({'Save/reset','Discard/reset','Routes'},{function() N:SaveSession() end,function() N:StartSession() end,function() u.tab='Routes'; u.selected=nil end})
  elseif tab=='Routes' then
   local map=self:Position(); local nodes=map and self:ZoneNodes(map) or {}; local s=self.db.settings
-  detail='Travel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use direct distances and a bounded 2-opt improvement. Terrain, cliffs, roads and live competition are not known. Waypoints are potential spawns, not guaranteed resources.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
+  detail='Resource: '..(s.target~='' and s.target or ({all='All nodes',herb='Herbs',ore='Mining'})[s.kind] or 'All nodes')..'\\nTravel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use direct distances and a bounded 2-opt improvement. Terrain, cliffs, roads and live competition are not known. Waypoints are potential spawns, not guaranteed resources.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
   for name,r in pairs(self.db.routes) do rows[#rows+1]={text='Saved: '..name..' | '..#r.points..' waypoints',routeName=name,detail='Use Load selected to navigate this saved route.'} end
   if self.activeRoute then for i,p in ipairs(self.activeRoute.points) do rows[#rows+1]={text=i..'. '..(p.name or 'Waypoint')..string.format(' (%.1f, %.1f)',p.x*100,p.y*100),detail=p.source or 'Custom waypoint'} end end
   self:SetActions({'Travel mode','Generate','Load selected'},{function()
