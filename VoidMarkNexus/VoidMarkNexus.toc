@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: VoidMark Nexus
 ## Notes: Professions, offline alts, planning, profitability and gathering navigation.
-## Author: Travis Jones / OpenAI
+## Author: VoidMark
 ## Version: 0.1.0-alpha
 ## SavedVariables: VoidMarkNexusDB
 ## OptionalDeps: VoidMarkMarket, Auctionator
