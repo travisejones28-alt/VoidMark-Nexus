@@ -118,23 +118,38 @@ function N:CreateUI()
  end)
  u.filterButton=button(f,'All',830,-55,210,function()
   if u.tab=='Routes' then
-   local choices={
-    {label='All gathering nodes',value={kind='all',target=''}},
-    {label='Herbs only',value={kind='herb',target=''}},
-    {label='Mining only',value={kind='ore',target=''}}
+   local options={
+    {label='All gathering nodes',value='all'},
+    {label='All herbs',value='herb'},
+    {label='All mining',value='ore'},
+    {label='Custom selection (clear)',value='clear'}
    }
    local names={}
    for _,node in pairs(N.nodeTypes or {}) do names[node.name]=node.kind end
    local sorted={}; for name in pairs(names) do sorted[#sorted+1]=name end
    table.sort(sorted)
+   local picked=N.db.settings.routeResources
    for _,name in ipairs(sorted) do
-    choices[#choices+1]={label=name,value={kind=names[name],target=name}}
+    options[#options+1]={label=(type(picked)=='table' and picked[name] and '[x] ' or '[ ] ')..name,value=name}
    end
-   N:Choice(u.filterButton,choices,function(v)
-    N.db.settings.kind=v.kind
-    N.db.settings.target=v.target
-    u.selected=nil; u.page=1
-    N.dirty=true
+   N:Choice(u.filterButton,options,function(v)
+    local settings=N.db.settings
+    if v=='all' or v=='herb' or v=='ore' then
+     settings.kind=v; settings.target=''; settings.routeResources=nil
+    elseif v=='clear' then
+     settings.kind='all'; settings.target=''; settings.routeResources={}
+    else
+     if type(settings.routeResources)~='table' then
+      settings.routeResources={}
+     end
+     settings.kind='all'; settings.target=''
+     settings.routeResources[v]=not settings.routeResources[v] or nil
+    end
+    u.selected=nil; u.page=1; N.dirty=true
+    if v~='all' and v~='herb' and v~='ore' then
+     -- Keep picker open to allow several resource selections in one pass.
+     u.filterButton:Click()
+    end
    end)
   else
    local choices={}
@@ -235,7 +250,7 @@ function N:Render()
  self.renderStocks={}
  local rows,detail={},''; local selected=u.selected; local tab=u.tab
  local c=u.character and self.db.characters[u.character]
- u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Routes' and ((self.db.settings.target~='' and self.db.settings.target) or ({all='All nodes',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All nodes') or u.filter)
+ u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Routes' and ((type(self.db.settings.routeResources)=='table' and next(self.db.settings.routeResources) and (function() local n=0; for _ in pairs(self.db.settings.routeResources) do n=n+1 end; return n..' selected' end)()) or (self.db.settings.target~='' and self.db.settings.target) or ({all='All nodes',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All nodes') or u.filter)
  u.heading:SetText(tab..'  |  '..(tab=='Settings' and 'Select setting; Apply uses the bottom value field' or 'Search above; quantity or action value below'))
  self:SetActions({},{}); u.footer:SetText('Offline data is cached. Open each profession and bank once to record it. /vmn native restores Blizzard access.')
  if tab=='Recipes' or tab=='Profitability' then
