@@ -82,7 +82,7 @@ end
 function N:ShowArrow()
  if not self.arrow then
   local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
-  f:SetSize(190,110)
+  f:SetSize(190,158)
   f:SetPoint('TOP',UIParent,'TOP',0,-135)
   f:SetFrameStrata('HIGH')
   f:SetMovable(true); f:EnableMouse(true)
@@ -96,13 +96,24 @@ function N:ShowArrow()
   end
   local top=f:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
   top:SetPoint('TOPLEFT',10,-8); top:SetText('|cffc18affNEXUS ROUTE|r')
+  -- Void Compass: subdued circular dial, cardinal labels and rotating needle.
+  local dial=f:CreateTexture(nil,'BACKGROUND')
+  dial:SetSize(80,80); dial:SetPoint('TOP',f,'TOP',0,-24)
+  dial:SetTexture('Interface\\Minimap\\Minimap-TrackingBorder')
+  dial:SetVertexColor(.67,.36,.91,.9)
+  local function cardinal(letter,x,y)
+   local t=f:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
+   t:SetPoint('CENTER',f,'TOP',x,y); t:SetText(letter)
+   t:SetTextColor(.8,.66,1)
+  end
+  cardinal('N',0,-29); cardinal('S',0,-99)
+  cardinal('W',-36,-64); cardinal('E',36,-64)
   f.texture=f:CreateTexture(nil,'ARTWORK')
-  f.texture:SetSize(42,42); f.texture:SetPoint('TOP',0,-25)
-  -- Built-in arrow instead of the missing external Arrow.tga artwork.
+  f.texture:SetSize(38,38); f.texture:SetPoint('TOP',0,-46)
   f.texture:SetTexture('Interface\\Minimap\\MinimapArrow')
-  f.texture:SetVertexColor(.88,.64,1,1)
+  f.texture:SetVertexColor(.9,.52,1,1)
   f.label=f:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
-  f.label:SetPoint('BOTTOM',0,9); f.label:SetWidth(175)
+  f.label:SetPoint('BOTTOM',0,10); f.label:SetWidth(180)
   f.label:SetJustifyH('CENTER')
   f.angle=nil
   local function menu()
@@ -117,6 +128,14 @@ function N:ShowArrow()
     f.refreshAt=0
     if WorldMapFrame and WorldMapFrame:IsShown() then N:RefreshMap() end
    end)
+   -- Close the menu without affecting the active navigation.
+   if N.menu then
+    local close=CreateFrame('Button',nil,N.menu,'UIPanelCloseButton')
+    close:SetSize(24,24)
+    close:SetPoint('TOPRIGHT',N.menu,'TOPRIGHT',2,2)
+    close:SetFrameLevel(N.menu:GetFrameLevel()+5)
+    close:SetScript('OnClick',function() N.menu:Hide() end)
+   end
   end
   f:SetScript('OnMouseUp',function(_,button) if button=='RightButton' then menu() end end)
   f:SetScript('OnEnter',function()
