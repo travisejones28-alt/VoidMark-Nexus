@@ -4,12 +4,14 @@ function N:Position()
  local map=self:Call(C_Map.GetBestMapForUnit,'player'); local p=map and self:Call(C_Map.GetPlayerMapPosition,map,'player')
  if p and p.GetXY then local x,y=p:GetXY(); if self:Finite(x,0,1) and self:Finite(y,0,1) then return map,x,y end end
 end
-function N:ZoneNodes(map)
+function N:ZoneNodes(map,kindOverride,targetOverride)
  local out,seen={},{}
  local s=self.db.settings
+ local selectedKind=kindOverride or s.kind
+ local selectedTarget=targetOverride~=nil and targetOverride or s.target
  local function add(object,x,y,source,at)
-  local kind=self.nodeTypes[object]; if not kind or (s.kind~='all' and kind.kind~=s.kind) then return end
-  if s.target~='' and not kind.name:lower():find(s.target:lower(),1,true) then return end
+  local kind=self.nodeTypes[object]; if not kind or (selectedKind~='all' and kind.kind~=selectedKind) then return end
+  if selectedTarget~='' and not kind.name:lower():find(selectedTarget:lower(),1,true) then return end
   local key=tostring(object)..':'..math.floor(x*500+.5)..':'..math.floor(y*500+.5)
   if seen[key] then if source=='Observed' then out[seen[key]].source=source; out[seen[key]].at=at end; return end
   out[#out+1]={object=object,x=x,y=y,source=source,at=at,map=map,name=kind.name,kind=kind.kind,skill=kind.skill}; seen[key]=#out
