@@ -306,19 +306,34 @@ function N:ShowTopGatheringZones()
  self:Choice(self.ui.zoneButton,choices,function(resource)
   local ranking=self:RankResourceZones(resource)
   if #ranking==0 then self:Print('No comparable zones with available map dimensions for '..resource); return end
-  local items={}
+  if self.zoneRankingWindow then self.zoneRankingWindow:Hide() end
+  local w=CreateFrame('Frame',nil,UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
+  skin(w);w:SetSize(670,330);w:SetPoint('CENTER');w:SetFrameStrata('FULLSCREEN_DIALOG')
+  w:EnableMouse(true);w:SetMovable(true);w:RegisterForDrag('LeftButton')
+  w:SetScript('OnDragStart',function(frame) frame:StartMoving() end)
+  w:SetScript('OnDragStop',function(frame) frame:StopMovingOrSizing() end)
+  label(w,'TOP 5 FARMING ZONES | '..resource,16,-15,'GameFontNormalLarge')
+  button(w,'Close',567,-10,86,function() w:Hide() end)
+  label(w,'ZONE',20,-52,'GameFontNormalSmall')
+  label(w,'EST. STOPS/HR',265,-52,'GameFontNormalSmall')
+  label(w,'LOOP',400,-52,'GameFontNormalSmall')
+  label(w,'STOPS',487,-52,'GameFontNormalSmall')
   for i,r in ipairs(ranking) do
-   items[#items+1]={
-    label=string.format('%d. %s | %.0f stops/hr | %.1f min | %d stops',i,r.name,r.score,(r.route.seconds or 0)/60,#r.route.points),
-    value=i
-   }
+   local y=-68-(i-1)*43
+   local name=r.name
+   if #name>26 then name=name:sub(1,25)..'…' end
+   label(w,i..'. '..name,20,y-7,'GameFontHighlightSmall')
+   label(w,string.format('%.0f',r.score),285,y-7,'GameFontHighlightSmall')
+   label(w,string.format('%.1f min',(r.route.seconds or 0)/60),400,y-7,'GameFontHighlightSmall')
+   label(w,tostring(#r.route.points),500,y-7,'GameFontHighlightSmall')
+   button(w,'Preview',565,y,85,function()
+    w:Hide()
+    r.route.strategy='optimal'
+    N:ShowRoutePreview('optimal',r.route)
+   end)
   end
-  self:Choice(self.ui.zoneButton,items,function(i)
-   local selected=ranking[i]
-   if not selected then return end
-   selected.route.strategy='optimal'
-   self:ShowRoutePreview('optimal',selected.route)
-  end)
+  label(w,'Estimates use potential spawn locations and direct travel; not guaranteed harvests.',18,-300,'GameFontHighlightSmall')
+  self.zoneRankingWindow=w
  end)
 end
 function N:CreateUI()
