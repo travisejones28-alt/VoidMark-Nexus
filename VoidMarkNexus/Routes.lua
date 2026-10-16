@@ -98,7 +98,7 @@ function N:BuildRoute(nodes,start,width,height,s)
 end
 -- Compare a small, geographically distributed set of candidate loop starts.
 -- Scores are estimated stops/hour; imported points are potential, not live nodes.
-function N:GenerateRoute()
+function N:PlanRoute(strategy)
  local map,x,y=self:Position()
  if not map then return self:Print('Zone position unavailable.') end
  local nodes=self:ZoneNodes(map)
@@ -107,7 +107,7 @@ function N:GenerateRoute()
  if not w then return self:Print('Map dimensions unavailable.') end
  local here={map=map,x=x,y=y}
  local settings=self.db.settings
- local strategy=settings.routeStrategy or 'optimal'
+ strategy=strategy or settings.routeStrategy or 'optimal'
  local starts={here}
  if strategy~='here' then
   starts={}
@@ -145,8 +145,13 @@ function N:GenerateRoute()
  if not best then return self:Print('No circuit fits your filters and time budget.') end
  best.strategy=strategy
  best.estimatedStopsPerHour=bestScore*3600
+ return best
+end
+function N:GenerateRoute()
+ local best=self:PlanRoute()
+ if not best then return end
  self.activeRoute=best; self.waypoint=1; self.dirty=true; self:ShowArrow()
- self:Print(string.format('%s: %d stops, estimated %.0f stops/hour (straight-line model).',strategy,#best.points,best.estimatedStopsPerHour))
+ self:Print(string.format('%s: %d stops, approx %.1f minute loop (straight-line estimate).',best.strategy,#best.points,(best.seconds or 0)/60))
 end
 function N:SkipWaypoint()
  if not self.activeRoute then return end
