@@ -82,25 +82,21 @@ end
 function N:ShowArrow()
  if not self.arrow then
   local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
-  f:SetSize(152,116)
+  f:SetSize(152,100)
   f:SetPoint('TOP',UIParent,'TOP',0,-135)
   f:SetFrameStrata('HIGH')
   f:SetMovable(true); f:EnableMouse(true)
   f:RegisterForDrag('LeftButton')
   f:SetScript('OnDragStart',function(w) w:StartMoving() end)
   f:SetScript('OnDragStop',function(w) w:StopMovingOrSizing() end)
-  if f.SetBackdrop then
-   f:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Tooltips\\UI-Tooltip-Border',edgeSize=10,insets={left=3,right=3,top=3,bottom=3}})
-   f:SetBackdropColor(.025,.018,.05,.72)
-   f:SetBackdropBorderColor(.35,.20,.48,.48)
-  end
+  if f.SetBackdrop then f:SetBackdrop(nil) end
   local top=f:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
   top:SetPoint('TOPLEFT',8,-6); top:SetText('|cffad9bbfRoute|r')
   -- Compact directional pointer without a compass ring or cardinal lettering.
   f.texture=f:CreateTexture(nil,'ARTWORK')
-  f.texture:SetSize(30,30); f.texture:SetPoint('TOP',0,-22)
+  f.texture:SetSize(40,40); f.texture:SetPoint('TOP',0,-20)
   f.texture:SetTexture('Interface\\Minimap\\MinimapArrow')
-  f.texture:SetVertexColor(.72,.57,.86,.9)
+  f.texture:SetVertexColor(.72,.57,.86,.95)
   f.label=f:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
   f.label:SetPoint('BOTTOM',0,12); f.label:SetWidth(146)
   f.label:SetJustifyH('CENTER')
