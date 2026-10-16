@@ -147,6 +147,61 @@ function N:PlanRoute(strategy)
  best.estimatedStopsPerHour=bestScore*3600
  return best
 end
+-- Cross-zone comparisons are based on accessible imported coordinates, not active spawns.
+function N:RankResourceZones(resource)
+ if not resource or resource=='' then return {} end
+ local maps={}
+ for object,kind in pairs(self.nodeTypes or {}) do
+  if kind.name==resource then
+   for map,points in pairs((self.spawns or {})[object] or {}) do
+    if not self:IsGatheringCityMap(map) and type(points)=='table' then
+     maps[map]=(maps[map] or 0)+math.floor(#points/2)
+    end
+   end
+  end
+ end
+ local eligible={}
+ for map,count in pairs(maps) do if count>=4 then eligible[#eligible+1]={map=map,count=count} end end
+ table.sort(eligible,function(a,b) return a.count>b.count end)
+ -- Preselect up to 20 plausible zones before running the expensive optimizer.
+ local results={}
+ for index=1,math.min(20,#eligible) do
+  local map=eligible[index].map
+  local width,height=self:MapSize(map)
+  if width and height then
+   local nodes=self:ZoneNodes(map,'all',resource)
+   local seeds={}
+   local occupied={}
+   for _,node in ipairs(nodes) do
+    local cell=math.floor(node.x*5)..':'..math.floor(node.y*5)
+    if not occupied[cell] then occupied[cell]=node; seeds[#seeds+1]=node end
+   end
+   local best,bestScore
+   for j=1,math.min(5,#seeds) do
+    local start=seeds[j]
+    local route=self:BuildRoute(nodes,{map=map,x=start.x,y=start.y},width,height,self.db.settings)
+    if route and #route.points>=3 then
+     local score=#route.points/math.max(60,route.seconds)
+     if not bestScore or score>bestScore then best,bestScore=route,score end
+    end
+   end
+   if best then
+    local name='Zone '..map
+    if C_Map and type(C_Map.GetMapInfo)=='function' then
+     local info=self:Call(C_Map.GetMapInfo,map)
+     if info and type(info.name)=='string' then name=info.name end
+    end
+    results[#results+1]={map=map,name=name,route=best,score=bestScore*3600,rawCount=eligible[index].count}
+   end
+  end
+ end
+ table.sort(results,function(a,b)
+  if a.score==b.score then return a.map<b.map end
+  return a.score>b.score
+ end)
+ while #results>5 do table.remove(results) end
+ return results
+end
 function N:GenerateRoute()
  local best=self:PlanRoute()
  if not best then return end
