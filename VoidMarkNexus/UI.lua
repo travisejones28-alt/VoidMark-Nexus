@@ -53,6 +53,28 @@ function N:Show(tab)
  if not self.ui then self:CreateUI() end
  self.ui.tab=tab or self.ui.tab or 'Dashboard'; self.ui.frame:Show(); self.dirty=true; self:Render()
 end
+-- Prefer the client's direct item-icon APIs, which work before item cache is populated.
+function N:InventoryIcon(id)
+ id=tonumber(id)
+ if not id then return nil end
+ if C_Item and type(C_Item.GetItemIconByID)=='function' then
+  local icon=self:Call(C_Item.GetItemIconByID,id)
+  if icon then return icon end
+ end
+ if type(GetItemInfoInstant)=='function' then
+  local _,_,_,_,icon=self:Call(GetItemInfoInstant,id)
+  if icon then return icon end
+ end
+ if type(GetItemIcon)=='function' then
+  local icon=self:Call(GetItemIcon,id)
+  if icon then return icon end
+ end
+ if type(GetItemInfo)=='function' then
+  local _,_,_,_,_,_,_,_,_,icon=self:Call(GetItemInfo,id)
+  if icon then return icon end
+ end
+ return nil
+end
 function N:CreateUI()
  local f=CreateFrame('Frame','VoidMarkNexusWindow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil); skin(f)
  f:SetSize(1060,660); f:SetFrameStrata('MEDIUM'); f:SetClampedToScreen(true); f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag('LeftButton')
@@ -136,9 +158,11 @@ function N:CreateUI()
    GameTooltip:ClearLines()
    GameTooltip:SetOwner(self,'ANCHOR_RIGHT')
    local ok=false
-   -- Use the client-resolved item link when available, rather than a partial
-   -- hyperlink constructed from cached inventory data.
-   if type(GetItemInfo)=='function' then
+   if type(data.itemLink)=='string' then
+    ok=pcall(GameTooltip.SetHyperlink,GameTooltip,data.itemLink)
+   end
+   -- Fall back to the client-resolved link if the scanned link is unavailable.
+   if not ok and type(GetItemInfo)=='function' then
     local success,_,link=pcall(GetItemInfo,itemID)
     if success and type(link)=='string' then
      ok=pcall(GameTooltip.SetHyperlink,GameTooltip,link)
@@ -241,7 +265,7 @@ function N:Render()
  elseif tab=='Inventory' then
   local query=u.search:GetText():lower()
   for id,ch in pairs(self.db.characters) do if not u.character or id==u.character then for _,loc in ipairs({'bags','bank'}) do for item,qty in pairs(ch[loc]) do
-   local name=self:ItemName(item); if query=='' or name:lower():find(query,1,true) then rows[#rows+1]={text=name..' x'..qty..' | '..ch.name..' / '..loc,item=item,itemName=name,detail=name..'\n'..ch.name..' / '..ch.realm..' / '..ch.faction..'\n'..self:Age(ch[loc..'At'])..'\nCached inventory may have changed. Cross-realm/faction transfers are not included.'} end
+   local name=self:ItemName(item); if query=='' or name:lower():find(query,1,true) then rows[#rows+1]={text=name..' x'..qty..' | '..ch.name..' / '..loc,item=item,itemName=name,itemLink=ch.itemLinks and ch.itemLinks[loc] and ch.itemLinks[loc][item],detail=name..'\n'..ch.name..' / '..ch.realm..' / '..ch.faction..'\n'..self:Age(ch[loc..'At'])..'\nCached inventory may have changed. Cross-realm/faction transfers are not included.'} end
   end end end end
   self:SetActions({'Set price','Market','Prices'},{function() if u.selected then N:SetPrice(u.selected.item,u.value:GetText()) end end,function() if u.selected then N:OpenMarket(u.selected.item) end end,function() N:TextDialog('Manual prices', 'Use /vmn price ITEM_ID GOLD\nFor example: /vmn price 2447 0.25\nEnable Prefer manual prices in Settings to override Market.') end})
  elseif tab=='Characters' then
@@ -284,7 +308,10 @@ function N:Render()
  if selected and selected.detail then detail=selected.detail end
  local pages=math.max(1,math.ceil(#rows/16)); u.page=math.min(pages,math.max(1,u.page)); u.pageLabel:SetText(u.page..' / '..pages..'  ('..#rows..')')
  for i,b in ipairs(u.rows) do local r=rows[(u.page-1)*16+i]; b.data=r; b:SetShown(r~=nil)
-  if r then b.text:SetText(r.text); b.icon:SetTexture(r.icon or (r.item and self:Call(GetItemIcon,r.item)) or 'Interface\\Icons\\INV_Misc_Gem_Amethyst_02') end
+  if r then
+   b.text:SetText(r.text)
+   b.icon:SetTexture(r.icon or (r.item and self:InventoryIcon(r.item)) or 'Interface\\Icons\\INV_Misc_QuestionMark')
+  end
  end
  u.detail:SetText(detail); u.detailChild:SetHeight(math.max(440,u.detail:GetStringHeight()+20))
  self.renderStocks=nil
