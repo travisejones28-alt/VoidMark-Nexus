@@ -10,26 +10,75 @@ end
 function N:Distance(a,b,width,height)
  return math.sqrt(((a.x-b.x)*width)^2+((a.y-b.y)*height)^2)
 end
+-- Player-marked obstacles provide local geometry absent from the WoW map API.
+-- Each circle uses normalized map coordinates and a radius in world yards.
+function N:MarkRouteObstacle(radius)
+ local map,x,y=self:Position()
+ if not map then return self:Print('Current zone position unavailable.') end
+ local r=math.max(15,math.min(500,tonumber(radius) or 90))
+ self.db.terrainBlocks=self.db.terrainBlocks or {}
+ local list=self.db.terrainBlocks[map] or {}
+ if #list>=100 then return self:Print('Maximum 100 marked obstacles per zone.') end
+ list[#list+1]={x=x,y=y,r=r}
+ self.db.terrainBlocks[map]=list
+ self.dirty=true
+ self:Print('Marked obstacle ('..r..' yards) at your location. Regenerate route.')
+end
+function N:ClearRouteObstacles()
+ local map=self:Position()
+ if not map then return end
+ self.db.terrainBlocks=self.db.terrainBlocks or {}
+ self.db.terrainBlocks[map]=nil
+ self.dirty=true
+ self:Print('Cleared obstacle marks in this zone.')
+end
+function N:TerrainSegmentDistance(a,b,width,height,map)
+ local direct=self:Distance(a,b,width,height)
+ local blocks=self.db and self.db.terrainBlocks and self.db.terrainBlocks[map]
+ if not blocks or #blocks==0 then return direct end
+ local ax,ay=a.x*width,a.y*height
+ local bx,by=b.x*width,b.y*height
+ local vx,vy=bx-ax,by-ay
+ local len2=vx*vx+vy*vy
+ local cost=direct
+ for _,o in ipairs(blocks) do
+  local cx,cy=o.x*width,o.y*height
+  local projection=len2>0 and math.max(0,math.min(1,((cx-ax)*vx+(cy-ay)*vy)/len2)) or 0
+  local dx,dy=ax+projection*vx-cx,ay+projection*vy-cy
+  if dx*dx+dy*dy<o.r*o.r then
+   -- Large estimated detour cost discourages crossing a marked obstruction.
+   cost=cost+math.max(200,o.r*6)
+  end
+ end
+ return cost
+end
 function N:BuildRoute(nodes,start,width,height,s)
  if not width or not height then return nil,'Client map dimensions unavailable; cannot calculate reliable distance.' end
  -- The imported spawn database can contain several records for one farming patch.
  -- Collapse near-identical/adjacent candidates before constructing navigation.
+ local function distance(a,b) return self:TerrainSegmentDistance(a,b,width,height,start.map) end
  local speed=math.max(1,s.speed)
  local stop=math.max(0,s.mountDelay)+math.max(0,s.gatherDelay)
  local spacing=math.max(40,math.min(85,speed*7)) -- 49 yards on foot, 78 on a 100% mount
  local candidates={}
  local ordered={}
- for _,node in ipairs(nodes) do ordered[#ordered+1]=node end
+ for _,node in ipairs(nodes) do
+  local blocked=false
+  for _,o in ipairs((self.db.terrainBlocks or {})[start.map] or {}) do
+   if ((node.x-o.x)*width)^2+((node.y-o.y)*height)^2 < o.r*o.r then blocked=true; break end
+  end
+  if not blocked then ordered[#ordered+1]=node end
+ end
  table.sort(ordered,function(a,b)
-  local da=self:Distance(a,start,width,height)
-  local db=self:Distance(b,start,width,height)
+  local da=distance(a,start,width,height)
+  local db=distance(b,start,width,height)
   if da==db then return (a.object or 0)<(b.object or 0) end
   return da<db
  end)
  for _,n in ipairs(ordered) do
   local nearby
   for _,c in ipairs(candidates) do
-   if self:Distance(c,n,width,height)<spacing then nearby=c; break end
+   if distance(c,n,width,height)<spacing then nearby=c; break end
   end
   if nearby then
    nearby.spawnCount=(nearby.spawnCount or 1)+1
@@ -49,10 +98,10 @@ function N:BuildRoute(nodes,start,width,height,s)
  local function duration(path)
   local previous=start; local seconds=0
   for _,p in ipairs(path) do
-   seconds=seconds+self:Distance(previous,p,width,height)/speed+stop
+   seconds=seconds+distance(previous,p,width,height)/speed+stop
    previous=p
   end
-  return seconds+self:Distance(previous,start,width,height)/speed
+  return seconds+distance(previous,start,width,height)/speed
  end
  local function optimize(path)
   -- Full 2-opt on a bounded path, always including the closing edge.
@@ -64,8 +113,8 @@ function N:BuildRoute(nodes,start,width,height,s)
      local b=path[i]
      local c=path[j]
      local d=path[j+1] or start
-     if self:Distance(a,c,width,height)+self:Distance(b,d,width,height)+.01 <
-       self:Distance(a,b,width,height)+self:Distance(c,d,width,height) then
+     if distance(a,c,width,height)+distance(b,d,width,height)+.01 <
+       distance(a,b,width,height)+distance(c,d,width,height) then
       local left,right=i,j
       while left<right do path[left],path[right]=path[right],path[left];left=left+1;right=right-1 end
       improved=true
@@ -95,8 +144,8 @@ function N:BuildRoute(nodes,start,width,height,s)
    local choice,choiceScore,choiceDistance
    for i,p in ipairs(candidates) do
     if not used[i] then
-     local d=self:Distance(last,p,width,height)
-     local home=self:Distance(p,start,width,height)
+     local d=distance(last,p,width,height)
+     local home=distance(p,start,width,height)
      if elapsed+d/speed+stop+home/speed<=budget then
       local score=d/speed+mode.returnWeight*home/speed
       if p.source=='Observed' then score=score-(mode.observed or 6) end
