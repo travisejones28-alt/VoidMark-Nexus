@@ -69,42 +69,106 @@ function N:AddWaypoint()
  table.insert(self.activeRoute.points,{x=x,y=y,map=map,name='Custom waypoint',source='Custom'})
  self.waypoint=self.waypoint or 1; self.dirty=true; self:ShowArrow()
 end
+local function nexusAngle(y,x)
+ if math.atan2 then return math.atan2(y,x) end
+ if x==0 then return y>=0 and math.pi/2 or -math.pi/2 end
+ local n=math.atan(y/x)
+ if x<0 then n=n+math.pi end
+ return n
+end
+local function nexusDeltaAngle(a,b)
+ return (b-a+math.pi)%(2*math.pi)-math.pi
+end
 function N:ShowArrow()
  if not self.arrow then
-  local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent); f:SetSize(170,110); f:SetPoint('TOP',UIParent,'TOP',0,-140)
-  f:SetFrameStrata('LOW'); f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag('LeftButton')
-  f:SetScript('OnDragStart',function() f:StartMoving() end); f:SetScript('OnDragStop',function() f:StopMovingOrSizing() end)
-  f:SetScript('OnMouseUp',function(_,button)
-   if button~='RightButton' then return end
+  local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
+  f:SetSize(190,110)
+  f:SetPoint('TOP',UIParent,'TOP',0,-135)
+  f:SetFrameStrata('HIGH')
+  f:SetMovable(true); f:EnableMouse(true)
+  f:RegisterForDrag('LeftButton')
+  f:SetScript('OnDragStart',function(w) w:StartMoving() end)
+  f:SetScript('OnDragStop',function(w) w:StopMovingOrSizing() end)
+  if f.SetBackdrop then
+   f:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Tooltips\\UI-Tooltip-Border',edgeSize=10,insets={left=3,right=3,top=3,bottom=3}})
+   f:SetBackdropColor(.025,.018,.05,.88)
+   f:SetBackdropBorderColor(.5,.22,.78,.9)
+  end
+  local top=f:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
+  top:SetPoint('TOPLEFT',10,-8); top:SetText('|cffc18affNEXUS ROUTE|r')
+  f.texture=f:CreateTexture(nil,'ARTWORK')
+  f.texture:SetSize(42,42); f.texture:SetPoint('TOP',0,-25)
+  -- Built-in arrow instead of the missing external Arrow.tga artwork.
+  f.texture:SetTexture('Interface\\Minimap\\MinimapArrow')
+  f.texture:SetVertexColor(.88,.64,1,1)
+  f.label=f:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
+  f.label:SetPoint('BOTTOM',0,9); f.label:SetWidth(175)
+  f.label:SetJustifyH('CENTER')
+  f.angle=nil
+  local function menu()
    N:Choice(f,{
-    {label='Skip next waypoint',value='skip'},
-    {label='Restart route from waypoint 1',value='restart'},
-    {label='Cancel current route',value='cancel'}
+    {label='Skip waypoint',value='skip'},
+    {label='Restart from waypoint 1',value='restart'},
+    {label='Cancel route',value='cancel'}
    },function(action)
     if action=='skip' then N:SkipWaypoint()
     elseif action=='restart' and N.activeRoute then N.waypoint=1; N.dirty=true
     elseif action=='cancel' then N.activeRoute=nil; N.waypoint=nil; f:Hide(); N.dirty=true end
+    f.refreshAt=0
     if WorldMapFrame and WorldMapFrame:IsShown() then N:RefreshMap() end
    end)
+  end
+  f:SetScript('OnMouseUp',function(_,button) if button=='RightButton' then menu() end end)
+  f:SetScript('OnEnter',function()
+   GameTooltip:SetOwner(f,'ANCHOR_RIGHT')
+   GameTooltip:SetText('VoidMark Nexus navigation')
+   GameTooltip:AddLine('Right-click: Skip / Restart / Cancel')
+   GameTooltip:AddLine('Left-drag: Move',.8,.8,.8)
+   GameTooltip:Show()
   end)
-  f.texture=f:CreateTexture(nil,'ARTWORK'); f.texture:SetSize(48,48); f.texture:SetPoint('TOP'); f.texture:SetTexture('Interface\\AddOns\\VoidMarkNexus\\Media\\Arrow.tga')
-  f.label=f:CreateFontString(nil,'OVERLAY','GameFontNormalSmall'); f.label:SetPoint('TOP',0,-52); f.label:SetWidth(170)
-  local elapsed=0
-  f:SetScript('OnUpdate',function(_,dt) elapsed=elapsed+dt; if elapsed<.15 then return end; elapsed=0; N:Guard('navigation',function() N:UpdateArrow() end) end)
+  f:SetScript('OnLeave',function() GameTooltip:Hide() end)
+  -- Smooth facing updates every frame; update expensive map coordinates 10x/sec.
+  f.refreshAt=0
+  f:SetScript('OnUpdate',function(w,dt)
+   w.refreshAt=w.refreshAt-dt
+   if w.refreshAt<=0 then
+    w.refreshAt=.10
+    N:Guard('navigation',function() N:UpdateArrow() end)
+   end
+   local facing=N:Call(GetPlayerFacing)
+   if w.bearing and N:Finite(facing,-10,10) then
+    local goal=w.bearing-facing
+    if not w.angle then w.angle=goal end
+    local fraction=math.min(1,dt*13)
+    w.angle=w.angle+nexusDeltaAngle(w.angle,goal)*fraction
+    w.texture:SetRotation(w.angle)
+   end
+  end)
   self.arrow=f
  end
+ self.arrow.refreshAt=0
  self.arrow:Show()
 end
 function N:UpdateArrow()
- local route=self.activeRoute; local point=route and route.points[self.waypoint or 1]
- if not point or not self.db.settings.routeVisible then self.arrow:Hide(); return end
- local map,x,y=self:Position(); if map~=route.map then self.arrow.label:SetText('Return to route zone'); self.arrow.texture:Hide(); return end
- local facing=self:Call(GetPlayerFacing); if not self:Finite(facing,-10,10) then self.arrow.texture:Hide(); return end
- local distance=self:Distance({x=x,y=y},point,route.width,route.height)
- local bearing=math.atan2(-(point.x-x)*route.width,-(point.y-y)*route.height)
- self.arrow.texture:Show(); self.arrow.texture:SetRotation(bearing-facing)
- self.arrow.label:SetText(string.format('%s\n%d / %d  |  %.0f yd\n~%.0f sec direct',point.name or 'Waypoint',self.waypoint,#route.points,distance,distance/math.max(1,self.db.settings.speed)))
- if distance<8 then self:SkipWaypoint() end
+ local arrow=self.arrow
+ if not arrow then return end
+ local route=self.activeRoute
+ local point=route and route.points[self.waypoint or 1]
+ if not point or not self.db.settings.routeVisible then arrow:Hide(); return end
+ local map,x,y=self:Position()
+ if map~=route.map or not x or not y then
+  arrow.label:SetText('Return to route zone')
+  arrow.texture:Hide()
+  arrow.bearing=nil
+  return
+ end
+ local dx=(point.x-x)*route.width
+ local dy=(point.y-y)*route.height
+ local distance=math.sqrt(dx*dx+dy*dy)
+ arrow.bearing=nexusAngle(-dx,-dy)
+ arrow.texture:Show()
+ arrow.label:SetText(string.format('%s  |  %d/%d\n%.0f yd · ~%.0f sec',point.name or 'Waypoint',self.waypoint,#route.points,distance,distance/math.max(1,self.db.settings.speed)))
+ if distance<8 then self:SkipWaypoint(); arrow.refreshAt=0 end
 end
 -- Item IDs are the gathered resources, not world object/spawn IDs.
 -- Prefer item icons from the client and use distinct inventory textures when uncached.
