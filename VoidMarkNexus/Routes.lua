@@ -42,67 +42,90 @@ function N:BuildRoute(nodes,start,width,height,s)
    candidates[#candidates+1]=copy
   end
  end
- -- Stop-count cap prevents dense imported spawns dominating the map and UI.
+ -- Try several constructive heuristics, then improve each closed circuit with 2-opt.
+ -- All scoring uses Euclidean yard distances and real total loop duration.
  local limit=math.min(35,math.max(2,s.nodeLimit or 35))
- local path,last,elapsed={},start,0
- local used={}
- while #path<limit do
-  local best,bestCost,bestDistance
-  for i,n in ipairs(candidates) do
-   if not used[i] then
-    local distance=self:Distance(last,n,width,height)
-    local home=self:Distance(n,start,width,height)
-    local cost=distance/speed+stop
-    if elapsed+cost+home/speed<=s.routeMinutes*60 then
-     -- Prefer confirmed locations and compact loops. Duplicate database
-     -- coordinates do not count as separate harvest opportunities.
-     local verified=n.source=='Observed' and 7 or 0
-     local density=math.min(5,math.log(1+(n.spawnCount or 1))*2)
-     local score=cost+(home/speed)*.16-verified-density
-     if not bestCost or score<bestCost then
-      best,bestCost,bestDistance=i,score,distance
+ local budget=math.max(60,(s.routeMinutes or 15)*60)
+ local function duration(path)
+  local previous=start; local seconds=0
+  for _,p in ipairs(path) do
+   seconds=seconds+self:Distance(previous,p,width,height)/speed+stop
+   previous=p
+  end
+  return seconds+self:Distance(previous,start,width,height)/speed
+ end
+ local function optimize(path)
+  -- Full 2-opt on a bounded path, always including the closing edge.
+  for pass=1,5 do
+   local improved=false
+   for i=1,#path-1 do
+    for j=i+1,#path do
+     local a=i==1 and start or path[i-1]
+     local b=path[i]
+     local c=path[j]
+     local d=path[j+1] or start
+     if self:Distance(a,c,width,height)+self:Distance(b,d,width,height)+.01 <
+       self:Distance(a,b,width,height)+self:Distance(c,d,width,height) then
+      local left,right=i,j
+      while left<right do path[left],path[right]=path[right],path[left];left=left+1;right=right-1 end
+      improved=true
      end
     end
    end
-  end
-  if not best then break end
-  used[best]=true
-  local point=candidates[best]
-  path[#path+1]=point
-  elapsed=elapsed+bestDistance/speed+stop
-  last=point
- end
- -- 2-opt optimizes the whole circuit without changing the chosen stop set.
- if #path>2 then
-  for pass=1,2 do
-   local improved=false
-   for i=1,#path-1 do for j=i+1,#path do
-    local a=i==1 and start or path[i-1]
-    local b=path[i]
-    local c=path[j]
-    local d=path[j+1] or start
-    if self:Distance(a,c,width,height)+self:Distance(b,d,width,height)+.01<
-       self:Distance(a,b,width,height)+self:Distance(c,d,width,height) then
-     local l,r=i,j
-     while l<r do path[l],path[r]=path[r],path[l]; l=l+1; r=r-1 end
-     improved=true
-    end
-   end end
    if not improved then break end
   end
+  return path
  end
- -- Recheck actual loop duration after optimization, including the return leg.
- elapsed=0; last=start
- local retained={}
- for _,p in ipairs(path) do
-  local leg=self:Distance(last,p,width,height)/speed+stop
-  local home=self:Distance(p,start,width,height)/speed
-  if elapsed+leg+home<=s.routeMinutes*60 then
-   retained[#retained+1]=p;elapsed=elapsed+leg;last=p
+ local function value(path)
+  local seconds=duration(path)
+  if seconds>budget+.01 or #path==0 then return -1,seconds end
+  local observed=0
+  for _,p in ipairs(path) do if p.source=='Observed' then observed=observed+1 end end
+  -- Penalize tiny repeat circuits; density is not treated as extra spawns.
+  local coverage=math.min(1,#path/10)
+  local score=(#path+observed*.25)*coverage/math.max(600,seconds)
+  return score,seconds
+ end
+ local best,bestScore,bestSeconds={},-1,0
+ local strategies={{distance=1,returnWeight=.05},{distance=1,returnWeight=.35},
+                   {distance=1,returnWeight=.75},{distance=1,returnWeight=.15,observed=12}}
+ for _,mode in ipairs(strategies) do
+  local path,used,last,elapsed={},{},start,0
+  while #path<limit do
+   local choice,choiceScore,choiceDistance
+   for i,p in ipairs(candidates) do
+    if not used[i] then
+     local d=self:Distance(last,p,width,height)
+     local home=self:Distance(p,start,width,height)
+     if elapsed+d/speed+stop+home/speed<=budget then
+      local score=d/speed+mode.returnWeight*home/speed
+      if p.source=='Observed' then score=score-(mode.observed or 6) end
+      if not choiceScore or score<choiceScore then
+       choice,choiceScore,choiceDistance=i,score,d
+      end
+     end
+    end
+   end
+   if not choice then break end
+   local p=candidates[choice]
+   path[#path+1]=p;used[choice]=true
+   elapsed=elapsed+choiceDistance/speed+stop;last=p
+  end
+  optimize(path)
+  -- A shorter loop may be more productive than simply filling all 35 slots.
+  local evaluations={#path,math.floor(#path*.75),math.floor(#path*.5)}
+  for _,count in ipairs(evaluations) do
+   if count>0 then
+    local trial={}
+    for i=1,count do trial[i]=path[i] end
+    optimize(trial)
+    local score,seconds=value(trial)
+    if score>bestScore then best,bestScore,bestSeconds=trial,score,seconds end
+   end
   end
  end
- elapsed=elapsed+self:Distance(last,start,width,height)/speed
- return {points=retained,origin=self:Copy(start),seconds=elapsed,width=width,height=height,mode=s.travel,created=self:Now(),map=start.map,merged=true,optimizer='cluster-2opt-v3'}
+ return {points=best,origin=self:Copy(start),seconds=bestSeconds,width=width,height=height,mode=s.travel,created=self:Now(),map=start.map,merged=true,optimizer='multi-seed-2opt-v4'}
+
 end
 -- Compare a small, geographically distributed set of candidate loop starts.
 -- Scores are estimated stops/hour; imported points are potential, not live nodes.
