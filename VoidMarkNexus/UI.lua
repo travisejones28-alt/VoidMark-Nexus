@@ -154,7 +154,7 @@ function N:SettingsRows()
  {'cut','Auction cut (0.05 = 5%)',0,.3},{'deposit','Deposit per craft (copper)',0,1e8},{'failedAuctions','Failed listings per craft',0,20},
  {'saleFraction','Expected sold fraction',0,1},{'waste','Additional material cost fraction',0,1},{'speed','Travel speed (yards/sec)',1,50},
  {'mountDelay','Remount/form delay per node (seconds)',0,30},{'gatherDelay','Gathering delay per node (seconds)',0,60},
- {'routeMinutes','Route time budget (minutes)',1,120},{'nodeLimit','Maximum route waypoints',2,150},{'scale','Window scale',.6,1.5}}) do
+ {'routeMinutes','Route time budget (minutes)',1,120},{'nodeLimit','Maximum route waypoints',2,150},{'mapIconSize','Map gathering icon size (pixels)',5,16},{'scale','Window scale',.6,1.5}}) do
   rows[#rows+1]={text=v[2]..': '..s[v[1]],key=v[1],min=v[3],max=v[4],detail='Enter a value in the bottom field and press Apply. These are user assumptions, not measured predictions.'}
  end
  return rows
