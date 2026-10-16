@@ -123,6 +123,71 @@ function N:ShowResourcePicker()
  button(f,'X',340,-10,32,function() f:Hide() end)
  self.resourcePicker=f
 end
+
+-- Schematic zone-coordinate route preview; never claims to show terrain or roads.
+function N:ShowRoutePreview(strategy)
+ local route=self:PlanRoute(strategy)
+ if not route then return end
+ if self.previewWindow then self.previewWindow:Hide() end
+ local w=CreateFrame('Frame',nil,UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
+ skin(w); w:SetSize(530,540); w:SetPoint('CENTER'); w:SetFrameStrata('FULLSCREEN_DIALOG')
+ w:EnableMouse(true); w:SetMovable(true); w:RegisterForDrag('LeftButton')
+ w:SetScript('OnDragStart',function(a) a:StartMoving() end)
+ w:SetScript('OnDragStop',function(a) a:StopMovingOrSizing() end)
+ label(w,'VOIDMARK | PROJECTED ROUTE',16,-14)
+ button(w,'X',484,-10,35,function() w:Hide() end)
+ local title=label(w,string.format('%s  |  %d stops  |  ~%.1f min/loop',({optimal='Optimal Loop',nearest='Nearest Loop',here='Start Here'})[route.strategy] or 'Route',#route.points,(route.seconds or 0)/60),16,-40,'GameFontHighlight')
+ title:SetWidth(490)
+ local canvas=CreateFrame('Frame',nil,w,BackdropTemplateMixin and 'BackdropTemplate' or nil)
+ canvas:SetSize(448,380); canvas:SetPoint('TOPLEFT',40,-70)
+ skin(canvas)
+ local left,top,side=25,24,325
+ local origin=route.origin
+ local all={origin}
+ for _,p in ipairs(route.points) do all[#all+1]=p end
+ local minX,maxX,minY,maxY=1,0,1,0
+ for _,p in ipairs(all) do
+  minX=math.min(minX,p.x);maxX=math.max(maxX,p.x)
+  minY=math.min(minY,p.y);maxY=math.max(maxY,p.y)
+ end
+ local dx=math.max(.02,maxX-minX);local dy=math.max(.02,maxY-minY)
+ local scale=math.min(365/dx,315/dy)
+ local function xy(p)
+  return left+(p.x-minX)*scale,top+(p.y-minY)*scale
+ end
+ local function point(p,index)
+  local x,y=xy(p)
+  local dot=canvas:CreateTexture(nil,'OVERLAY')
+  dot:SetTexture('Interface\\Buttons\\WHITE8X8')
+  dot:SetSize(index==0 and 10 or 5,index==0 and 10 or 5)
+  dot:SetVertexColor(index==0 and 1 or .73,index==0 and .76 or .47,index==0 and .2 or .94,1)
+  dot:SetPoint('CENTER',canvas,'TOPLEFT',x,-y)
+ end
+ local function connect(a,b)
+  if type(canvas.CreateLine)~='function' then return end
+  local ok,line=pcall(canvas.CreateLine,canvas,nil,'ARTWORK')
+  if not ok or not line then return end
+  pcall(function()
+   local x1,y1=xy(a);local x2,y2=xy(b)
+   line:SetStartPoint('TOPLEFT',canvas,'TOPLEFT',x1,-y1)
+   line:SetEndPoint('TOPLEFT',canvas,'TOPLEFT',x2,-y2)
+   line:SetThickness(2)
+   line:SetVertexColor(.69,.38,1,.95)
+   line:Show()
+  end)
+ end
+ local previous=origin
+ for _,p in ipairs(route.points) do connect(previous,p);previous=p end
+ if #route.points>1 then connect(previous,origin) end
+ point(origin,0)
+ for i,p in ipairs(route.points) do point(p,i) end
+ local foot=label(w,'Schematic preview • Coordinates only • No terrain/pathfinding',18,-460,'GameFontHighlightSmall')
+ foot:SetWidth(490)
+ button(w,'Activate route',182,-499,160,function()
+  N.activeRoute=N:Copy(route);N.waypoint=1;N.dirty=true;N:ShowArrow();w:Hide()
+ end)
+ self.previewWindow=w
+end
 function N:CreateUI()
  local f=CreateFrame('Frame','VoidMarkNexusWindow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil); skin(f)
  f:SetSize(1060,660); f:SetFrameStrata('MEDIUM'); f:SetClampedToScreen(true); f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag('LeftButton')
@@ -227,9 +292,11 @@ function N:CreateUI()
  button(f,'Next',270,-583,100,function() u.page=u.page+1; u.selected=nil; N.dirty=true end)
  u.pageLabel=label(f,'',385,-589,'GameFontHighlightSmall')
  u.value=edit(f,555,-584,140,'1'); u.actions={}
+ u.previewButton=button(f,'Preview route',715,-546,140,function() N:ShowRoutePreview(N.db.settings.routeStrategy or 'optimal') end)
+ u.previewButton:Hide()
  u.strategyButton=button(f,'Optimal Loop',555,-546,140,function()
   local options={{label='Optimal Loop',value='optimal'},{label='Nearest Efficient Loop',value='nearest'},{label='Start Here',value='here'}}
-  N:Choice(u.strategyButton,options,function(v) N.db.settings.routeStrategy=v; N.dirty=true end)
+  N:Choice(u.strategyButton,options,function(v) N.db.settings.routeStrategy=v; N.dirty=true; N:ShowRoutePreview(v) end)
  end)
  u.strategyButton:Hide()
  u.value:SetScript('OnTextChanged',function() N.dirty=true end)
@@ -280,6 +347,7 @@ function N:Render()
  local u=self.ui; if not u or not u.frame:IsShown() then return end; self.dirty=false
  if u.strategyButton then
   u.strategyButton:SetShown(u.tab=='Routes')
+  if u.previewButton then u.previewButton:SetShown(u.tab=='Routes') end
   local titles={optimal='Optimal Loop',nearest='Nearest Loop',here='Start Here'}
   u.strategyButton:SetText(titles[self.db.settings.routeStrategy or 'optimal'] or 'Optimal Loop')
  end
