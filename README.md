@@ -65,4 +65,4 @@ Nexus reads `VoidMarkMarketDB.schemaVersion == 1`, `economies[normalizedRealm ..
 
 ## Licensing
 
-Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and data: Copyright (c) 2019 Wuild, MIT; full license in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. VoidMark's interface and routing remain standalone; no third-party addon is required.
+VoidMark Nexus implementation: see LICENSE. The bundled gathering dataset and resource definitions retain the source notice in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. VoidMark's interface and routing remain standalone; no third-party addon is required.
