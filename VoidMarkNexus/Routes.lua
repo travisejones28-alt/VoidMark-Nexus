@@ -703,7 +703,11 @@ function N:RefreshMap()
   if not pin then
    pin=CreateFrame('Button',nil,canvas)
    pin:SetSize(7,7)
-   pin.tex=pin:CreateTexture(nil,'OVERLAY')
+   pin.back=pin:CreateTexture(nil,'ARTWORK')
+   pin.back:SetTexture('Interface\\Buttons\\WHITE8X8')
+   pin.back:SetPoint('CENTER')
+   pin.back:SetVertexColor(.015,.008,.025,.88)
+   pin.tex=pin:CreateTexture(nil,'OVERLAY',nil,5)
    pin.tex:SetAllPoints()
    pin.label=pin:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
    pin.label:SetPoint('CENTER')
@@ -720,17 +724,19 @@ function N:RefreshMap()
     end
     GameTooltip:Show()
    end)
-   pin:SetScript('OnLeave',function(p) p:SetSize(p.normalSize or 7,p.normalSize or 7); p.tex:SetAlpha(p.isRoute and 1 or .7); GameTooltip:Hide() end)
+   pin:SetScript('OnLeave',function(p) p:SetSize(p.normalSize or 7,p.normalSize or 7); p.tex:SetAlpha(1); GameTooltip:Hide() end)
    self.mapPins[i]=pin
   end
   local p=points[i]
   if p then
    pin.node=p.n
    pin.isRoute=p.route or false
-   pin:SetFrameLevel(canvas:GetFrameLevel()+(p.route and 65 or 15))
-   pin.normalSize=p.route and 24 or math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
+   pin:SetFrameLevel(math.max(canvas:GetFrameLevel(),world:GetFrameLevel())+(p.route and 110 or 90))
+   pin.normalSize=p.route and 24 or math.max(8,math.min(16,tonumber(s.mapIconSize) or 7))
+   pin.back:SetSize(pin.normalSize+4,pin.normalSize+4)
+   pin.back:SetVertexColor(p.route and .24 or .015,p.route and .10 or .008,p.route and .35 or .025,.90)
    pin:SetSize(pin.normalSize,pin.normalSize)
-   pin.tex:SetAlpha(p.route and 1 or .7)
+   pin.tex:SetAlpha(1)
    if p.route then pin.label:SetTextColor(1,.95,.1,1) end
    pin.clusterCount=p.count
    pin.clusterNames=p.names
