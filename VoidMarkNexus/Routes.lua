@@ -93,22 +93,63 @@ function N:UpdateArrow()
  self.arrow.label:SetText(string.format('%s\n%d / %d  |  %.0f yd\n~%.0f sec direct',point.name or 'Waypoint',self.waypoint,#route.points,distance,distance/math.max(1,self.db.settings.speed)))
  if distance<8 then self:SkipWaypoint() end
 end
+-- Item IDs are the gathered resources, not world object/spawn IDs.
+-- Prefer item icons from the client and use distinct inventory textures when uncached.
 local nexusNodeIcons = {
  ["Peacebloom"]=2447, ["Silverleaf"]=765, ["Earthroot"]=2449,
- ["Mageroyal"]=785, ["Briarthorn"]=2450, ["Bruiseweed"]=2453,
- ["Wild Steelbloom"]=3355, ["Kingsblood"]=3356, ["Liferoot"]=3357,
- ["Fadeleaf"]=3818, ["Goldthorn"]=3821, ["Khadgar's Whisker"]=3358,
- ["Wintersbite"]=3819, ["Firebloom"]=4625, ["Purple Lotus"]=8831,
+ ["Mageroyal"]=785, ["Briarthorn"]=2450, ["Stranglekelp"]=3820,
+ ["Bruiseweed"]=2453, ["Wild Steelbloom"]=3355, ["Grave Moss"]=3369,
+ ["Kingsblood"]=3356, ["Liferoot"]=3357, ["Fadeleaf"]=3818,
+ ["Goldthorn"]=3821, ["Khadgar's Whisker"]=3358, ["Wintersbite"]=3819,
+ ["Firebloom"]=4625, ["Purple Lotus"]=8831, ["Arthas' Tears"]=8836,
  ["Sungrass"]=8838, ["Blindweed"]=8839, ["Ghost Mushroom"]=8845,
- ["Gromsblood"]=8846, ["Dreamfoil"]=13463, ["Mountain Silversage"]=13465,
- ["Plaguebloom"]=13466, ["Icecap"]=13467, ["Black Lotus"]=13468,
+ ["Gromsblood"]=8846, ["Golden Sansam"]=13464, ["Dreamfoil"]=13463,
+ ["Mountain Silversage"]=13465, ["Plaguebloom"]=13466, ["Icecap"]=13467,
+ ["Black Lotus"]=13468,
  ["Copper Vein"]=2770, ["Tin Vein"]=2771, ["Silver Vein"]=2775,
  ["Iron Deposit"]=2772, ["Gold Vein"]=2776, ["Mithril Deposit"]=3858,
- ["Truesilver Deposit"]=7911, ["Small Thorium Vein"]=10620,
- ["Rich Thorium Vein"]=10620
+ ["Truesilver Deposit"]=7911, ["Dark Iron Deposit"]=11370,
+ ["Small Thorium Vein"]=10620, ["Rich Thorium Vein"]=10620,
+ ["Incendicite Mineral Vein"]=3340, ["Lesser Bloodstone Deposit"]=4278,
+ ["Indurium Mineral Vein"]=5833, ["Hakkari Thorium Vein"]=10620,
+ ["Small Obsidian Chunk"]=22202, ["Large Obsidian Chunk"]=22203
 }
-local nexusGenericHerb = 'Interface\\Icons\\INV_Misc_Herb_01'
-local nexusGenericOre = 'Interface\\Icons\\INV_Ore_Copper_01'
+local nexusNodeFallback = {
+ ["Peacebloom"]='Interface\\Icons\\INV_Misc_Flower_02',
+ ["Silverleaf"]='Interface\\Icons\\INV_Misc_Herb_10',
+ ["Earthroot"]='Interface\\Icons\\INV_Misc_Herb_07',
+ ["Mageroyal"]='Interface\\Icons\\INV_Jewelry_Talisman_03',
+ ["Briarthorn"]='Interface\\Icons\\INV_Misc_Root_01',
+ ["Copper Vein"]='Interface\\Icons\\INV_Ore_Copper_01',
+ ["Tin Vein"]='Interface\\Icons\\INV_Ore_Tin_01',
+ ["Silver Vein"]='Interface\\Icons\\INV_Ore_Silver_01',
+ ["Iron Deposit"]='Interface\\Icons\\INV_Ore_Iron_01',
+ ["Gold Vein"]='Interface\\Icons\\INV_Ore_Gold_01',
+ ["Mithril Deposit"]='Interface\\Icons\\INV_Ore_Mithril_01',
+ ["Truesilver Deposit"]='Interface\\Icons\\INV_Ore_TrueSilver_01'
+}
+local nexusGenericHerb='Interface\\Icons\\INV_Misc_Herb_01'
+local nexusGenericOre='Interface\\Icons\\INV_Ore_Copper_01'
+local function nexusResourceIcon(node)
+ local name=node.name or ''
+ local id=nexusNodeIcons[name]
+ local texture
+ if id then
+  if C_Item and type(C_Item.GetItemIconByID)=='function' then
+   local ok,result=pcall(C_Item.GetItemIconByID,id)
+   if ok then texture=result end
+  end
+  if not texture and type(GetItemIcon)=='function' then
+   local ok,result=pcall(GetItemIcon,id)
+   if ok then texture=result end
+  end
+  if not texture and type(GetItemInfoInstant)=='function' then
+   local ok,_,_,_,_,icon=pcall(GetItemInfoInstant,id)
+   if ok then texture=icon end
+  end
+ end
+ return texture or nexusNodeFallback[name] or (node.kind=='ore' and nexusGenericOre or nexusGenericHerb)
+end
 function N:RefreshMap()
  local world=WorldMapFrame
  local canvas=world and world.GetCanvas and world:GetCanvas()
@@ -159,7 +200,7 @@ function N:RefreshMap()
   local pin=self.mapPins[i]
   if not pin then
    pin=CreateFrame('Button',nil,canvas)
-   pin:SetSize(17,17)
+   pin:SetSize(11,11)
    pin.tex=pin:CreateTexture(nil,'ARTWORK')
    pin.tex:SetAllPoints()
    pin.label=pin:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
@@ -181,9 +222,7 @@ function N:RefreshMap()
    local texture
    if p.route then texture='Interface\\Icons\\INV_Misc_Map_01'
    else
-    local id=nexusNodeIcons[p.n.name or '']
-    if id and type(GetItemIcon)=='function' then texture=self:Call(GetItemIcon,id) end
-    texture=texture or (p.n.kind=='ore' and nexusGenericOre or nexusGenericHerb)
+    texture=nexusResourceIcon(p.n)
    end
    pin.tex:SetTexture(texture)
    pin.label:SetText(p.label)
