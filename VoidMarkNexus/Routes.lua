@@ -672,7 +672,32 @@ function N:RefreshMap()
    clusters[#clusters+1]={n=node,label='',count=1,names={[node.name or 'Unknown']=true}}
   end
  end
- for i=1,math.min(250,#clusters) do points[#points+1]=clusters[i] end
+ -- Keep the map-wide distribution instead of only taking the first 250
+ -- database records (which are grouped by object ID/region). Pick one from
+ -- each spatial bucket per pass so distant areas stay represented.
+ local buckets,order={},{}
+ for _,c in ipairs(clusters) do
+  local key=math.floor(c.n.x*12)..':'..math.floor(c.n.y*12)
+  if not buckets[key] then buckets[key]={};order[#order+1]=key end
+  buckets[key][#buckets[key]+1]=c
+ end
+ table.sort(order)
+ for _,key in ipairs(order) do
+  table.sort(buckets[key],function(a,b)
+   if (a.n.source=='Observed')~=(b.n.source=='Observed') then return a.n.source=='Observed' end
+   return a.count>b.count
+  end)
+ end
+ local pass=1
+ while #points<250 do
+  local added=false
+  for _,key in ipairs(order) do
+   local c=buckets[key][pass]
+   if c and #points<250 then points[#points+1]=c;added=true end
+  end
+  if not added then break end
+  pass=pass+1
+ end
  for i=1,math.max(#points,#self.mapPins) do
   local pin=self.mapPins[i]
   if not pin then
