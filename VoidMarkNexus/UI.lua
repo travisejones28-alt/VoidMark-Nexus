@@ -286,7 +286,7 @@ function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
   N:ShowRoutePreview(strategy,newMode,route)
  end)
   button(w,'Activate route',182,-499,160,function()
-  N.activeRoute=N:Copy(route);N.waypoint=1;N.dirty=true;N:ShowArrow();w:Hide()
+  N.activeRoute=N:PrepareTerrainRoute(N:Copy(route));N.waypoint=1;N.terrainIndex=1;N.dirty=true;N:ShowArrow();w:Hide()
  end)
  self.previewWindow=w
 end
