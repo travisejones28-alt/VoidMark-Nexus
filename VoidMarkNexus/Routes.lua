@@ -96,12 +96,57 @@ function N:BuildRoute(nodes,start,width,height,s)
  elapsed=elapsed+self:Distance(last,start,width,height)/speed
  return {points=path,origin=self:Copy(start),seconds=elapsed,width=width,height=height,mode=s.travel,created=self:Now(),map=start.map,merged=true}
 end
+-- Compare a small, geographically distributed set of candidate loop starts.
+-- Scores are estimated stops/hour; imported points are potential, not live nodes.
 function N:GenerateRoute()
- local map,x,y=self:Position(); if not map then return self:Print('Zone position unavailable.') end
- local w,h=self:MapSize(map); local route,err=self:BuildRoute(self:ZoneNodes(map),{map=map,x=x,y=y},w,h,self.db.settings)
- if not route then return self:Print(err) end
- if #route.points<1 then return self:Print('No nodes fit the filters and route duration.') end
- self.activeRoute=route; self.waypoint=1; self.dirty=true; self:ShowArrow()
+ local map,x,y=self:Position()
+ if not map then return self:Print('Zone position unavailable.') end
+ local nodes=self:ZoneNodes(map)
+ if #nodes==0 then return self:Print('No matching gathering nodes in this zone.') end
+ local w,h=self:MapSize(map)
+ if not w then return self:Print('Map dimensions unavailable.') end
+ local here={map=map,x=x,y=y}
+ local settings=self.db.settings
+ local strategy=settings.routeStrategy or 'optimal'
+ local starts={here}
+ if strategy~='here' then
+  starts={}
+  -- Spatial spread yields diverse candidate loops without testing all spawns.
+  local cells,ordered={},{}
+  for _,p in ipairs(nodes) do
+   local key=math.floor(p.x*4)..':'..math.floor(p.y*4)
+   local cell=cells[key]
+   if not cell then cell={point=p,count=0}; cells[key]=cell end
+   cell.count=cell.count+1
+  end
+  for _,c in pairs(cells) do ordered[#ordered+1]=c end
+  table.sort(ordered,function(a,b)
+   if a.count~=b.count then return a.count>b.count end
+   return (a.point.x+a.point.y)<(b.point.x+b.point.y)
+  end)
+  for i=1,math.min(7,#ordered) do
+   local seed=ordered[i].point
+   starts[#starts+1]={map=map,x=seed.x,y=seed.y}
+  end
+  if strategy=='nearest' then starts[#starts+1]=here end
+ end
+ local best,bestScore
+ for _,origin in ipairs(starts) do
+  local route=self:BuildRoute(nodes,origin,w,h,settings)
+  if route and #route.points>0 then
+   local seconds=math.max(1,route.seconds or settings.routeMinutes*60)
+   local travel=self:Distance(here,origin,w,h)/math.max(1,settings.speed)
+   -- For 'nearest', include getting to the circuit; for 'optimal', do not.
+   local denominator=seconds+(strategy=='nearest' and travel or 0)
+   local score=#route.points/denominator
+   if not bestScore or score>bestScore then best,bestScore=route,score end
+  end
+ end
+ if not best then return self:Print('No circuit fits your filters and time budget.') end
+ best.strategy=strategy
+ best.estimatedStopsPerHour=bestScore*3600
+ self.activeRoute=best; self.waypoint=1; self.dirty=true; self:ShowArrow()
+ self:Print(string.format('%s: %d stops, estimated %.0f stops/hour (straight-line model).',strategy,#best.points,best.estimatedStopsPerHour))
 end
 function N:SkipWaypoint()
  if not self.activeRoute then return end
