@@ -142,7 +142,7 @@ function N:RefreshMap()
  local nodes={}
  if s.nodesVisible and filter~='none' then
   -- Map display filters must NOT change the independent route-planning filter.
-  for _,node in ipairs(self:ZoneNodes(map)) do
+  for _,node in ipairs(self:ZoneNodes(map,'all','')) do
    if filter=='all' or node.kind==filter then nodes[#nodes+1]=node end
   end
  end
