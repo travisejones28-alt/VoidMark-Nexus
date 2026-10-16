@@ -125,9 +125,10 @@ function N:ShowResourcePicker()
 end
 
 -- Schematic zone-coordinate route preview; never claims to show terrain or roads.
-function N:ShowRoutePreview(strategy)
+function N:ShowRoutePreview(strategy,displayMode)
  local route=self:PlanRoute(strategy)
  if not route then return end
+ displayMode=displayMode or self.db.settings.previewMode or 'map'
  if self.previewWindow then self.previewWindow:Hide() end
  local w=CreateFrame('Frame',nil,UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
  skin(w); w:SetSize(530,540); w:SetPoint('CENTER'); w:SetFrameStrata('FULLSCREEN_DIALOG')
@@ -160,23 +161,26 @@ function N:ShowRoutePreview(strategy)
  local viewY2=math.min(1,boundMaxY+padY)
  local zoomX,zoomY=448/math.max(.02,viewX2-viewX1),380/math.max(.02,viewY2-viewY1)
  if canvas.SetClipsChildren then canvas:SetClipsChildren(true) end
- if C_Map and type(C_Map.GetMapArtLayers)=='function' and type(C_Map.GetMapArtLayerTextures)=='function' then
+ if displayMode=='map' and C_Map and type(C_Map.GetMapArtLayers)=='function' and type(C_Map.GetMapArtLayerTextures)=='function' then
   local ok,layers=pcall(C_Map.GetMapArtLayers,route.map)
   local layer=ok and type(layers)=='table' and layers[1]
   if layer and layer.layerWidth and layer.layerHeight and layer.tileWidth and layer.tileHeight then
    local okTextures,textures=pcall(C_Map.GetMapArtLayerTextures,route.map,1)
    if okTextures and type(textures)=='table' and #textures>0 then
+    local valid=0
+    for _,id in ipairs(textures) do if type(id)=='number' and id>0 then valid=valid+1 end end
     local tilesAcross=math.ceil(layer.layerWidth/layer.tileWidth)
     local tilesDown=math.ceil(layer.layerHeight/layer.tileHeight)
-    if tilesAcross*tilesDown<=100 then
+    if valid>0 and tilesAcross*tilesDown<=100 then
      for row=0,tilesDown-1 do
       for col=0,tilesAcross-1 do
        local id=textures[row*tilesAcross+col+1]
-       if id then
+       if type(id)=='number' and id>0 then
         local tw=math.min(layer.tileWidth,layer.layerWidth-col*layer.tileWidth)
         local th=math.min(layer.tileHeight,layer.layerHeight-row*layer.tileHeight)
         local tile=canvas:CreateTexture(nil,'ARTWORK',nil,-7)
         tile:SetTexture(id)
+        tile:Show()
         tile:SetSize(zoomX*tw/layer.layerWidth,zoomY*th/layer.layerHeight)
         tile:SetPoint('TOPLEFT',canvas,'TOPLEFT',zoomX*(col*layer.tileWidth/layer.layerWidth-viewX1),-zoomY*(row*layer.tileHeight/layer.layerHeight-viewY1))
         tile:SetTexCoord(0,tw/layer.tileWidth,0,th/layer.tileHeight)
@@ -238,9 +242,14 @@ function N:ShowRoutePreview(strategy)
  if #route.points>1 then connect(previous,origin) end
  point(origin,0)
  for i,p in ipairs(route.points) do point(p,i) end
- local foot=label(w,artLoaded and 'Zoomed zone artwork • Route estimate ignores obstacles' or 'Schematic only • Map artwork unavailable on this client',18,-460,'GameFontHighlightSmall')
+ local foot=label(w,artLoaded and 'Map view • Terrain visible only; path does not avoid obstacles' or 'Diagram view • Map art unavailable or disabled',18,-460,'GameFontHighlightSmall')
  foot:SetWidth(490)
- button(w,'Activate route',182,-499,160,function()
+ button(w,displayMode=='map' and 'Diagram view' or 'Map view',20,-499,125,function()
+  local newMode=displayMode=='map' and 'diagram' or 'map'
+  N.db.settings.previewMode=newMode
+  N:ShowRoutePreview(strategy,newMode)
+ end)
+  button(w,'Activate route',182,-499,160,function()
   N.activeRoute=N:Copy(route);N.waypoint=1;N.dirty=true;N:ShowArrow();w:Hide()
  end)
  self.previewWindow=w
