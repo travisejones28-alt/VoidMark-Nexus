@@ -127,7 +127,32 @@ function N:CreateUI()
   row.icon=row:CreateTexture(nil,'ARTWORK'); row.icon:SetSize(20,20); row.icon:SetPoint('LEFT',3,0)
   row.text=label(row,'',28,-6,'GameFontHighlightSmall'); row.text:SetWidth(500); row.text:SetWordWrap(false)
   row:SetScript('OnClick',function() if row.data then u.selected=row.data; N.dirty=true end end)
-  row:SetScript('OnEnter',function() if row.data and row.data.item then GameTooltip:SetOwner(row,'ANCHOR_RIGHT'); GameTooltip:SetHyperlink('item:'..row.data.item); GameTooltip:Show() end end)
+  row:SetScript('OnEnter',function(self)
+   local data=self.data
+   if not data or not data.item then return end
+   local itemID=tonumber(data.item)
+   if not itemID or itemID<=0 then return end
+   GameTooltip:Hide()
+   GameTooltip:ClearLines()
+   GameTooltip:SetOwner(self,'ANCHOR_RIGHT')
+   local ok=false
+   -- Use the client-resolved item link when available, rather than a partial
+   -- hyperlink constructed from cached inventory data.
+   if type(GetItemInfo)=='function' then
+    local success,_,link=pcall(GetItemInfo,itemID)
+    if success and type(link)=='string' then
+     ok=pcall(GameTooltip.SetHyperlink,GameTooltip,link)
+    end
+   end
+   if not ok and type(GameTooltip.SetItemByID)=='function' then
+    ok=pcall(GameTooltip.SetItemByID,GameTooltip,itemID)
+   end
+   if not ok then
+    ok=pcall(GameTooltip.SetHyperlink,GameTooltip,'item:'..itemID..':0:0:0:0:0:0:0')
+   end
+   if not ok then GameTooltip:ClearLines(); GameTooltip:AddLine(data.itemName or ('Item #'..itemID)) end
+   GameTooltip:Show()
+  end)
   row:SetScript('OnLeave',function() GameTooltip:Hide() end); u.rows[i]=row
  end
  local scroll=CreateFrame('ScrollFrame',nil,f,'UIPanelScrollFrameTemplate'); scroll:SetPoint('TOPLEFT',715,-125); scroll:SetSize(300,440)
@@ -216,7 +241,7 @@ function N:Render()
  elseif tab=='Inventory' then
   local query=u.search:GetText():lower()
   for id,ch in pairs(self.db.characters) do if not u.character or id==u.character then for _,loc in ipairs({'bags','bank'}) do for item,qty in pairs(ch[loc]) do
-   local name=self:ItemName(item); if query=='' or name:lower():find(query,1,true) then rows[#rows+1]={text=name..' x'..qty..' | '..ch.name..' / '..loc,item=item,detail=name..'\n'..ch.name..' / '..ch.realm..' / '..ch.faction..'\n'..self:Age(ch[loc..'At'])..'\nCached inventory may have changed. Cross-realm/faction transfers are not included.'} end
+   local name=self:ItemName(item); if query=='' or name:lower():find(query,1,true) then rows[#rows+1]={text=name..' x'..qty..' | '..ch.name..' / '..loc,item=item,itemName=name,detail=name..'\n'..ch.name..' / '..ch.realm..' / '..ch.faction..'\n'..self:Age(ch[loc..'At'])..'\nCached inventory may have changed. Cross-realm/faction transfers are not included.'} end
   end end end end
   self:SetActions({'Set price','Market','Prices'},{function() if u.selected then N:SetPrice(u.selected.item,u.value:GetText()) end end,function() if u.selected then N:OpenMarket(u.selected.item) end end,function() N:TextDialog('Manual prices', 'Use /vmn price ITEM_ID GOLD\nFor example: /vmn price 2447 0.25\nEnable Prefer manual prices in Settings to override Market.') end})
  elseif tab=='Characters' then
