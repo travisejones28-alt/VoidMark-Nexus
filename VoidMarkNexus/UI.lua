@@ -125,8 +125,8 @@ function N:ShowResourcePicker()
 end
 
 -- Schematic zone-coordinate route preview; never claims to show terrain or roads.
-function N:ShowRoutePreview(strategy,displayMode)
- local route=self:PlanRoute(strategy)
+function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
+ local route=prebuiltRoute or self:PlanRoute(strategy)
  if not route then return end
  displayMode=displayMode or self.db.settings.previewMode or 'map'
  if self.previewWindow then self.previewWindow:Hide() end
@@ -283,7 +283,7 @@ function N:ShowRoutePreview(strategy,displayMode)
  button(w,displayMode=='map' and 'Diagram view' or 'Map view',20,-499,125,function()
   local newMode=displayMode=='map' and 'diagram' or 'map'
   N.db.settings.previewMode=newMode
-  N:ShowRoutePreview(strategy,route)
+  N:ShowRoutePreview(strategy,newMode,route)
  end)
   button(w,'Activate route',182,-499,160,function()
   N.activeRoute=N:Copy(route);N.waypoint=1;N.dirty=true;N:ShowArrow();w:Hide()
@@ -329,7 +329,7 @@ function N:ShowTopGatheringZones()
    button(w,'Preview',565,y,85,function()
     w:Hide()
     r.route.strategy='optimal'
-    N:ShowRoutePreview('optimal',r.route)
+    N:ShowRoutePreview('optimal',nil,r.route)
    end)
   end
   label(w,'Estimates use potential spawn locations and direct travel; not guaranteed harvests.',18,-300,'GameFontHighlightSmall')
