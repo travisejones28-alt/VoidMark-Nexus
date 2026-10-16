@@ -32,25 +32,77 @@ function N:ClearRouteObstacles()
  self.dirty=true
  self:Print('Cleared obstacle marks in this zone.')
 end
-function N:TerrainSegmentDistance(a,b,width,height,map)
- local direct=self:Distance(a,b,width,height)
+-- Grounded obstacle geometry: saved user marks, never inferred from map artwork.
+function N:TerrainIntersects(a,b,width,height,map)
  local blocks=self.db and self.db.terrainBlocks and self.db.terrainBlocks[map]
- if not blocks or #blocks==0 then return direct end
+ if not blocks then return false end
  local ax,ay=a.x*width,a.y*height
- local bx,by=b.x*width,b.y*height
- local vx,vy=bx-ax,by-ay
- local len2=vx*vx+vy*vy
- local cost=direct
+ local dx,dy=(b.x-a.x)*width,(b.y-a.y)*height
+ local length=dx*dx+dy*dy
  for _,o in ipairs(blocks) do
   local cx,cy=o.x*width,o.y*height
-  local projection=len2>0 and math.max(0,math.min(1,((cx-ax)*vx+(cy-ay)*vy)/len2)) or 0
-  local dx,dy=ax+projection*vx-cx,ay+projection*vy-cy
-  if dx*dx+dy*dy<o.r*o.r then
-   -- Large estimated detour cost discourages crossing a marked obstruction.
-   cost=cost+math.max(200,o.r*6)
+  local t=length>0 and math.max(0,math.min(1,((cx-ax)*dx+(cy-ay)*dy)/length)) or 0
+  local ex,ey=ax+t*dx-cx,ay+t*dy-cy
+  if ex*ex+ey*ey<(o.r+12)^2 then return true end
+ end
+ return false
+end
+function N:TerrainLeg(a,b,width,height,map)
+ local direct=self:Distance(a,b,width,height)
+ local blocks=self.db and self.db.terrainBlocks and self.db.terrainBlocks[map]
+ if not blocks or #blocks==0 or not self:TerrainIntersects(a,b,width,height,map) then return direct,{} end
+ -- Visibility graph with eight safe clearance points around each marked obstacle.
+ -- Bounded to 100 graph vertices to prevent excessive work inside the WoW frame.
+ local vertices={{x=a.x,y=a.y},{x=b.x,y=b.y}}
+ for _,o in ipairs(blocks) do
+  if #vertices>=98 then break end
+  local radius=o.r+20
+  for k=0,7 do
+   local angle=k*math.pi/4
+   local x=o.x+math.cos(angle)*radius/width
+   local y=o.y+math.sin(angle)*radius/height
+   if x>=0 and x<=1 and y>=0 and y<=1 then
+    local safe=true
+    for _,other in ipairs(blocks) do
+     local dx,dy=(x-other.x)*width,(y-other.y)*height
+     if dx*dx+dy*dy<(other.r+12)^2 then safe=false;break end
+    end
+    if safe then vertices[#vertices+1]={x=x,y=y} end
+   end
   end
  end
- return cost
+ local cost={[1]=0}
+ local previous,done={},{}
+ for step=1,#vertices do
+  local chosen,best
+  for k=1,#vertices do
+   if not done[k] and cost[k] and (not best or cost[k]<best) then chosen,best=k,cost[k] end
+  end
+  if not chosen or chosen==2 then break end
+  done[chosen]=true
+  for k=1,#vertices do
+   if not done[k] and k~=chosen and not self:TerrainIntersects(vertices[chosen],vertices[k],width,height,map) then
+    local newCost=best+self:Distance(vertices[chosen],vertices[k],width,height)
+    if not cost[k] or newCost<cost[k] then cost[k]=newCost;previous[k]=chosen end
+   end
+  end
+ end
+ if not cost[2] then return direct+5000,{} end
+ local reverse={}
+ local i=previous[2]
+ while i and i~=1 and #reverse<100 do
+  reverse[#reverse+1]=vertices[i]
+  i=previous[i]
+ end
+ local detours={}
+ for j=#reverse,1,-1 do detours[#detours+1]=reverse[j] end
+ return cost[2],detours
+end
+function N:TerrainSegmentDistance(a,b,width,height,map)
+ -- Cheap direct-path check; avoid expensive graph searches during loop optimization.
+ if not self:TerrainIntersects(a,b,width,height,map) then return self:Distance(a,b,width,height) end
+ local actual=self:TerrainLeg(a,b,width,height,map)
+ return actual
 end
 function N:BuildRoute(nodes,start,width,height,s)
  if not width or not height then return nil,'Client map dimensions unavailable; cannot calculate reliable distance.' end
