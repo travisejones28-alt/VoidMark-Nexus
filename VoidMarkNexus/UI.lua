@@ -283,12 +283,43 @@ function N:ShowRoutePreview(strategy,displayMode)
  button(w,displayMode=='map' and 'Diagram view' or 'Map view',20,-499,125,function()
   local newMode=displayMode=='map' and 'diagram' or 'map'
   N.db.settings.previewMode=newMode
-  N:ShowRoutePreview(strategy,newMode)
+  N:ShowRoutePreview(strategy,route)
  end)
   button(w,'Activate route',182,-499,160,function()
   N.activeRoute=N:Copy(route);N.waypoint=1;N.dirty=true;N:ShowArrow();w:Hide()
  end)
  self.previewWindow=w
+end
+function N:ShowTopGatheringZones()
+ local choices={}
+ local seen={}
+ for _,node in pairs(self.nodeTypes or {}) do
+  if node.kind=='herb' or node.kind=='ore' then
+   if not seen[node.name] then
+    seen[node.name]=true
+    choices[#choices+1]={label=node.name,value=node.name}
+   end
+  end
+ end
+ table.sort(choices,function(a,b) return a.label<b.label end)
+ if not self.ui then return end
+ self:Choice(self.ui.zoneButton,choices,function(resource)
+  local ranking=self:RankResourceZones(resource)
+  if #ranking==0 then self:Print('No comparable zones with available map dimensions for '..resource); return end
+  local items={}
+  for i,r in ipairs(ranking) do
+   items[#items+1]={
+    label=string.format('%d. %s | %.0f stops/hr | %.1f min | %d stops',i,r.name,r.score,(r.route.seconds or 0)/60,#r.route.points),
+    value=i
+   }
+  end
+  self:Choice(self.ui.zoneButton,items,function(i)
+   local selected=ranking[i]
+   if not selected then return end
+   selected.route.strategy='optimal'
+   self:ShowRoutePreview('optimal',selected.route)
+  end)
+ end)
 end
 function N:CreateUI()
  local f=CreateFrame('Frame','VoidMarkNexusWindow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil); skin(f)
@@ -395,6 +426,8 @@ function N:CreateUI()
  u.pageLabel=label(f,'',385,-589,'GameFontHighlightSmall')
  u.value=edit(f,555,-584,140,'1'); u.actions={}
  u.previewButton=button(f,'Preview route',715,-546,140,function() N:ShowRoutePreview(N.db.settings.routeStrategy or 'optimal') end)
+ u.zoneButton=button(f,'Top 5 zones',865,-546,140,function() N:ShowTopGatheringZones() end)
+ u.zoneButton:Hide()
  u.previewButton:Hide()
  u.strategyButton=button(f,'Optimal Loop',555,-546,140,function()
   local options={{label='Optimal Loop',value='optimal'},{label='Nearest Efficient Loop',value='nearest'},{label='Start Here',value='here'}}
@@ -450,6 +483,7 @@ function N:Render()
  if u.strategyButton then
   u.strategyButton:SetShown(u.tab=='Routes')
   if u.previewButton then u.previewButton:SetShown(u.tab=='Routes') end
+  if u.zoneButton then u.zoneButton:SetShown(u.tab=='Routes') end
   local titles={optimal='Optimal Loop',nearest='Nearest Loop',here='Start Here'}
   u.strategyButton:SetText(titles[self.db.settings.routeStrategy or 'optimal'] or 'Optimal Loop')
  end
