@@ -202,24 +202,30 @@ function N:RankResourceZones(resource)
   local width,height=self:MapSize(map)
   if width and height then
    local nodes=self:ZoneNodes(map,'all',resource)
-   local seeds={}
-   local occupied={}
+   local cells={}
    for _,node in ipairs(nodes) do
     local cell=math.floor(node.x*5)..':'..math.floor(node.y*5)
-    if not occupied[cell] then occupied[cell]=node; seeds[#seeds+1]=node end
+    local item=cells[cell]
+    if not item then item={point=node,count=0};cells[cell]=item end
+    item.count=item.count+1
    end
+   local seeds={}
+   for _,item in pairs(cells) do seeds[#seeds+1]=item end
+   table.sort(seeds,function(a,b)
+    if a.count~=b.count then return a.count>b.count end
+    if a.point.x~=b.point.x then return a.point.x<b.point.x end
+    return a.point.y<b.point.y
+   end)
    local best,bestScore
    for j=1,math.min(5,#seeds) do
-    local start=seeds[j]
+    local start=seeds[j].point
     local route=self:BuildRoute(nodes,{map=map,x=start.x,y=start.y},width,height,self.db.settings)
     if route and #route.points>=3 then
-     -- Score unique clustered stops, but penalize tiny loops with poor coverage.
-     -- A 10-minute reference window keeps one tiny dense patch from
-     -- dominating the rankings solely on an unrealistically short cycle.
-     local minimumCycle=600
-     local effectiveSeconds=math.max(minimumCycle,route.seconds)
-     local score=#route.points/effectiveSeconds
-     if #route.points<8 then score=score*(#route.points/8) end
+     local seconds=math.max(600,route.seconds)
+     local observed=0
+     for _,p in ipairs(route.points) do if p.source=='Observed' then observed=observed+1 end end
+     local coverage=math.min(1,#route.points/10)
+     local score=(#route.points+observed*.25)*coverage/seconds
      if not bestScore or score>bestScore then best,bestScore=route,score end
     end
    end
