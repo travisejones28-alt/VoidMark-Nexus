@@ -288,7 +288,7 @@ function N:Render()
   local map=self:Position(); local nodes=map and self:ZoneNodes(map) or {}; local s=self.db.settings
   detail='Resource: '..(s.target~='' and s.target or ({all='All nodes',herb='Herbs',ore='Mining'})[s.kind] or 'All nodes')..'\nTravel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use direct distances and a bounded 2-opt improvement. Terrain, cliffs, roads and live competition are not known. Waypoints are potential spawns, not guaranteed resources.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
   for name,r in pairs(self.db.routes) do rows[#rows+1]={text='Saved: '..name..' | '..#r.points..' waypoints',routeName=name,detail='Use Load selected to navigate this saved route.'} end
-  if self.activeRoute then for i,p in ipairs(self.activeRoute.points) do rows[#rows+1]={text=i..'. '..(p.name or 'Waypoint')..string.format(' (%.1f, %.1f)',p.x*100,p.y*100),detail=p.source or 'Custom waypoint'} end end
+  if self.activeRoute then for i,p in ipairs(self.activeRoute.points) do rows[#rows+1]={text=i..'. '..(p.name or 'Waypoint')..string.format(' (%.1f, %.1f)',p.x*100,p.y*100),icon=self:ResourceNodeIcon(p),detail=p.source or 'Custom waypoint'} end end
   self:SetActions({'Travel mode','Generate','Load selected'},{function()
    local choices={}; for i,m in ipairs(N.travelModes) do choices[#choices+1]={label=m[1],value=i} end
    N:Choice(u.actions[1],choices,function(i) local m=N.travelModes[i]; s.travel=m[1]; s.speed=m[2]; s.mountDelay=m[3] end)
