@@ -46,27 +46,43 @@ function N:MinimapButton()
   b:SetPoint('CENTER',Minimap,'CENTER',math.cos(angle)*radius,math.sin(angle)*radius)
  end
  b:RegisterForClicks('LeftButtonUp','RightButtonUp')
- b:RegisterForDrag('LeftButton')
- b:SetScript('OnDragStart',function()
-  b.dragging=true
+ local wasDragged=false
+ local function updatePosition()
+  local scale=Minimap:GetEffectiveScale()
+  local mx,my=Minimap:GetCenter()
+  local cx,cy=GetCursorPosition()
+  if not scale or scale<=0 or not mx or not my or not cx or not cy then return end
+  local dx,dy=cx/scale-mx,cy/scale-my
+  local angle
+  if math.atan2 then angle=math.atan2(dy,dx)
+  elseif dx==0 then angle=dy>=0 and math.pi/2 or -math.pi/2
+  else
+   angle=math.atan(dy/dx)
+   if dx<0 then angle=angle+math.pi end
+  end
+  N.db.settings.minimapAngle=math.deg(angle)
+  position()
+ end
+ b:SetScript('OnMouseDown',function(_,key)
+  if key~='LeftButton' then return end
+  local x,y=GetCursorPosition()
+  b.pressX,b.pressY=x,y
+  wasDragged=false
   b:SetScript('OnUpdate',function()
-   local scale=Minimap:GetEffectiveScale()
-   if not scale or scale==0 then return end
-   local mx,my=Minimap:GetCenter()
    local cx,cy=GetCursorPosition()
-   if not mx or not my or not cx or not cy then return end
-   local dx,dy=cx/scale-mx,cy/scale-my
-   local angle=math.deg((math.atan2 and math.atan2(dy,dx)) or math.atan(dy,dx))
-   N.db.settings.minimapAngle=angle
-   position()
+   if not cx or not cy then return end
+   if not wasDragged then
+    local dx,dy=cx-b.pressX,cy-b.pressY
+    if dx*dx+dy*dy>=16 then wasDragged=true end
+   end
+   if wasDragged then updatePosition() end
   end)
  end)
- b:SetScript('OnDragStop',function()
-  b:SetScript('OnUpdate',nil)
-  b.dragging=false
+ b:SetScript('OnMouseUp',function(_,key)
+  if key=='LeftButton' then b:SetScript('OnUpdate',nil) end
  end)
  b:SetScript('OnClick',function(_,key)
-  if b.dragging then return end
+  if key=='LeftButton' and wasDragged then wasDragged=false; return end
   if key=='RightButton' then N:Show('Settings') else N:Slash('') end
  end)
  b:SetScript('OnEnter',function()
