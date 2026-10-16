@@ -141,19 +141,57 @@ function N:ShowRoutePreview(strategy)
  local canvas=CreateFrame('Frame',nil,w,BackdropTemplateMixin and 'BackdropTemplate' or nil)
  canvas:SetSize(448,380); canvas:SetPoint('TOPLEFT',40,-70)
  skin(canvas)
- local left,top,side=25,24,325
+ -- Render the exact C_Map tile artwork used by the World Map where supported.
+ -- Tile coordinates are proportional to the entire zone, not to the route bounds.
+ local artLoaded=false
+ if C_Map and type(C_Map.GetMapArtLayers)=='function' and type(C_Map.GetMapArtLayerTextures)=='function' then
+  local ok,layers=pcall(C_Map.GetMapArtLayers,route.map)
+  local layer=ok and type(layers)=='table' and layers[1]
+  if layer and layer.layerWidth and layer.layerHeight and layer.tileWidth and layer.tileHeight then
+   local okTextures,textures=pcall(C_Map.GetMapArtLayerTextures,route.map,1)
+   if okTextures and type(textures)=='table' and #textures>0 then
+    local tilesAcross=math.ceil(layer.layerWidth/layer.tileWidth)
+    local tilesDown=math.ceil(layer.layerHeight/layer.tileHeight)
+    if tilesAcross*tilesDown<=100 then
+     for row=0,tilesDown-1 do
+      for col=0,tilesAcross-1 do
+       local id=textures[row*tilesAcross+col+1]
+       if id then
+        local tw=math.min(layer.tileWidth,layer.layerWidth-col*layer.tileWidth)
+        local th=math.min(layer.tileHeight,layer.layerHeight-row*layer.tileHeight)
+        local tile=canvas:CreateTexture(nil,'BACKGROUND')
+        tile:SetTexture(id)
+        tile:SetSize(448*tw/layer.layerWidth,380*th/layer.layerHeight)
+        tile:SetPoint('TOPLEFT',canvas,'TOPLEFT',448*col*layer.tileWidth/layer.layerWidth,-380*row*layer.tileHeight/layer.layerHeight)
+        tile:SetTexCoord(0,tw/layer.tileWidth,0,th/layer.tileHeight)
+        tile:SetAlpha(.82)
+       end
+      end
+     end
+     artLoaded=true
+    end
+   end
+  end
+ end
+ local left,top=15,15
  local origin=route.origin
  local all={origin}
  for _,p in ipairs(route.points) do all[#all+1]=p end
- local minX,maxX,minY,maxY=1,0,1,0
- for _,p in ipairs(all) do
-  minX=math.min(minX,p.x);maxX=math.max(maxX,p.x)
-  minY=math.min(minY,p.y);maxY=math.max(maxY,p.y)
+ local minX,maxX,minY,maxY=0,1,0,1
+ local scaleX,scaleY=448,380
+ if not artLoaded then
+  minX,maxX,minY,maxY=1,0,1,0
+  for _,p in ipairs(all) do
+   minX=math.min(minX,p.x); maxX=math.max(maxX,p.x)
+   minY=math.min(minY,p.y); maxY=math.max(maxY,p.y)
+  end
+  local dx=math.max(.02,maxX-minX); local dy=math.max(.02,maxY-minY)
+  local scale=math.min(415/dx,345/dy)
+  scaleX,scaleY=scale,scale
  end
- local dx=math.max(.02,maxX-minX);local dy=math.max(.02,maxY-minY)
- local scale=math.min(365/dx,315/dy)
  local function xy(p)
-  return left+(p.x-minX)*scale,top+(p.y-minY)*scale
+  if artLoaded then return p.x*448,p.y*380 end
+  return left+(p.x-minX)*scaleX,top+(p.y-minY)*scaleY
  end
  local function point(p,index)
   local x,y=xy(p)
@@ -187,7 +225,7 @@ function N:ShowRoutePreview(strategy)
  if #route.points>1 then connect(previous,origin) end
  point(origin,0)
  for i,p in ipairs(route.points) do point(p,i) end
- local foot=label(w,'Projected route • Dotted purple loop • Terrain not modeled',18,-460,'GameFontHighlightSmall')
+ local foot=label(w,artLoaded and 'Zone artwork • Terrain visible, not pathfinding' or 'Schematic only • Map artwork unavailable on this client',18,-460,'GameFontHighlightSmall')
  foot:SetWidth(490)
  button(w,'Activate route',182,-499,160,function()
   N.activeRoute=N:Copy(route);N.waypoint=1;N.dirty=true;N:ShowArrow();w:Hide()
