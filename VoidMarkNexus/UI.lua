@@ -193,6 +193,42 @@ function N:ShowRoutePreview(strategy,displayMode)
    end
   end
  end
+
+ -- Add detailed exploration overlay textures above the base zone map.
+ -- These are visual only; no exploration progress is changed.
+ local overlaysShown=0
+ if artLoaded and C_MapExplorationInfo and type(C_MapExplorationInfo.GetExploredMapTextures)=='function'
+    and C_Map and type(C_Map.GetMapArtLayers)=='function' then
+  local ok,infos=pcall(C_MapExplorationInfo.GetExploredMapTextures,route.map)
+  local okLayers,layers=pcall(C_Map.GetMapArtLayers,route.map)
+  local layer=okLayers and type(layers)=='table' and layers[1]
+  if ok and type(infos)=='table' and layer and layer.layerWidth and layer.layerHeight then
+   for _,info in ipairs(infos) do
+    if type(info)=='table' and type(info.fileDataIDs)=='table'
+       and info.textureWidth and info.textureHeight and info.offsetX and info.offsetY then
+     local cols=math.ceil(info.textureWidth/(layer.tileWidth or 256))
+     local rows=math.ceil(info.textureHeight/(layer.tileHeight or 256))
+     if cols>0 and rows>0 and cols*rows<=36 then
+      for row=0,rows-1 do for col=0,cols-1 do
+       local id=info.fileDataIDs[row*cols+col+1]
+       if type(id)=='number' and id>0 then
+        local tileWidth=math.min(layer.tileWidth or 256,info.textureWidth-col*(layer.tileWidth or 256))
+        local tileHeight=math.min(layer.tileHeight or 256,info.textureHeight-row*(layer.tileHeight or 256))
+        local t=canvas:CreateTexture(nil,'ARTWORK',nil,-6)
+        t:SetTexture(id)
+        t:SetSize(tileWidth*zoomX/layer.layerWidth,tileHeight*zoomY/layer.layerHeight)
+        t:SetPoint('TOPLEFT',canvas,'TOPLEFT',
+         ((info.offsetX+col*(layer.tileWidth or 256))/layer.layerWidth-viewX1)*zoomX,
+         -((info.offsetY+row*(layer.tileHeight or 256))/layer.layerHeight-viewY1)*zoomY)
+        t:SetTexCoord(0,tileWidth/(layer.tileWidth or 256),0,tileHeight/(layer.tileHeight or 256))
+        overlaysShown=overlaysShown+1
+       end
+      end end
+     end
+    end
+   end
+  end
+ end
  local left,top=15,15
  local minX,maxX,minY,maxY=0,1,0,1
  local scaleX,scaleY=448,380
@@ -242,7 +278,7 @@ function N:ShowRoutePreview(strategy,displayMode)
  if #route.points>1 then connect(previous,origin) end
  point(origin,0)
  for i,p in ipairs(route.points) do point(p,i) end
- local foot=label(w,artLoaded and 'Map view • Terrain visible only; path does not avoid obstacles' or 'Diagram view • Map art unavailable or disabled',18,-460,'GameFontHighlightSmall')
+ local foot=label(w,artLoaded and ('Zone map + '..overlaysShown..' explored detail tiles • Not terrain-aware') or 'Diagram view • Map art unavailable or disabled',18,-460,'GameFontHighlightSmall')
  foot:SetWidth(490)
  button(w,displayMode=='map' and 'Diagram view' or 'Map view',20,-499,125,function()
   local newMode=displayMode=='map' and 'diagram' or 'map'
