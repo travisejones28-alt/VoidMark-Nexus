@@ -11,33 +11,90 @@ function N:Distance(a,b,width,height)
  return math.sqrt(((a.x-b.x)*width)^2+((a.y-b.y)*height)^2)
 end
 function N:BuildRoute(nodes,start,width,height,s)
- if not width then return nil,'Client map dimensions unavailable; cannot calculate reliable distance.' end
- local candidates={}; for _,n in ipairs(nodes) do candidates[#candidates+1]=self:Copy(n) end
- table.sort(candidates,function(a,b) local da=self:Distance(a,start,width,height); local db=self:Distance(b,start,width,height); if da==db then return a.object<b.object end; return da<db end)
- local limit=math.min(150,math.max(2,s.nodeLimit)); while #candidates>limit*3 do table.remove(candidates) end
- local path,last,elapsed={},start,0; local speed=math.max(1,s.speed); local stop=math.max(0,s.mountDelay)+math.max(0,s.gatherDelay)
- while #candidates>0 and #path<limit do
-  local best,bestCost
-  for i,n in ipairs(candidates) do local cost=self:Distance(last,n,width,height)/speed+stop; if not bestCost or cost<bestCost then best,bestCost=i,cost end end
-  local point=candidates[best]; local home=self:Distance(point,start,width,height)/speed
-  if elapsed+bestCost+home>s.routeMinutes*60 then break end
-  path[#path+1]=table.remove(candidates,best); elapsed=elapsed+bestCost; last=point
- end
- -- Open-path 2-opt with a fixed player origin and a return to that origin.
- for pass=1,3 do
-  local improved=false
-  for i=1,#path-1 do for j=i+1,#path do
-   local a=i==1 and start or path[i-1]; local b=path[i]; local c=path[j]; local d=path[j+1] or start
-   if self:Distance(a,c,width,height)+self:Distance(b,d,width,height)+.01<self:Distance(a,b,width,height)+self:Distance(c,d,width,height) then
-    local l,r=i,j; while l<r do path[l],path[r]=path[r],path[l]; l=l+1; r=r-1 end; improved=true
+ if not width or not height then return nil,'Client map dimensions unavailable; cannot calculate reliable distance.' end
+ -- The imported spawn database can contain several records for one farming patch.
+ -- Collapse near-identical/adjacent candidates before constructing navigation.
+ local speed=math.max(1,s.speed)
+ local stop=math.max(0,s.mountDelay)+math.max(0,s.gatherDelay)
+ local spacing=math.max(40,math.min(85,speed*7)) -- 49 yards on foot, 78 on a 100% mount
+ local candidates={}
+ local ordered={}
+ for _,node in ipairs(nodes) do ordered[#ordered+1]=node end
+ table.sort(ordered,function(a,b)
+  local da=self:Distance(a,start,width,height)
+  local db=self:Distance(b,start,width,height)
+  if da==db then return (a.object or 0)<(b.object or 0) end
+  return da<db
+ end)
+ for _,n in ipairs(ordered) do
+  local nearby
+  for _,c in ipairs(candidates) do
+   if self:Distance(c,n,width,height)<spacing then nearby=c; break end
+  end
+  if nearby then
+   nearby.spawnCount=(nearby.spawnCount or 1)+1
+   if nearby.source~='Observed' and n.source=='Observed' then
+    nearby.x,nearby.y,nearby.name,nearby.object,nearby.source=n.x,n.y,n.name,n.object,n.source
    end
-  end end
-  if not improved then break end
+  else
+   local copy=self:Copy(n)
+   copy.spawnCount=1
+   candidates[#candidates+1]=copy
+  end
+ end
+ -- Stop-count cap prevents dense imported spawns dominating the map and UI.
+ local limit=math.min(35,math.max(2,s.nodeLimit or 35))
+ local path,last,elapsed={},start,0
+ local used={}
+ while #path<limit do
+  local best,bestCost,bestDistance
+  for i,n in ipairs(candidates) do
+   if not used[i] then
+    local distance=self:Distance(last,n,width,height)
+    local home=self:Distance(n,start,width,height)
+    local cost=distance/speed+stop
+    if elapsed+cost+home/speed<=s.routeMinutes*60 then
+     -- Prefer a coherent circuit, with mild weighting for observed and denser
+     -- patches instead of chasing every overlapping potential spawn point.
+     local bias=math.min(20,(n.spawnCount or 1)*2)
+     if n.source=='Observed' then bias=bias+10 end
+     local score=cost+bias*-1
+     if not bestCost or score<bestCost then
+      best,bestCost,bestDistance=i,score,distance
+     end
+    end
+   end
+  end
+  if not best then break end
+  used[best]=true
+  local point=candidates[best]
+  path[#path+1]=point
+  elapsed=elapsed+bestDistance/speed+stop
+  last=point
+ end
+ -- 2-opt optimizes the whole circuit without changing the chosen stop set.
+ if #path>2 then
+  for pass=1,2 do
+   local improved=false
+   for i=1,#path-1 do for j=i+1,#path do
+    local a=i==1 and start or path[i-1]
+    local b=path[i]
+    local c=path[j]
+    local d=path[j+1] or start
+    if self:Distance(a,c,width,height)+self:Distance(b,d,width,height)+.01<
+       self:Distance(a,b,width,height)+self:Distance(c,d,width,height) then
+     local l,r=i,j
+     while l<r do path[l],path[r]=path[r],path[l]; l=l+1; r=r-1 end
+     improved=true
+    end
+   end end
+   if not improved then break end
+  end
  end
  elapsed=0; last=start
  for _,p in ipairs(path) do elapsed=elapsed+self:Distance(last,p,width,height)/speed+stop; last=p end
  elapsed=elapsed+self:Distance(last,start,width,height)/speed
- return {points=path,origin=self:Copy(start),seconds=elapsed,width=width,height=height,mode=s.travel,created=self:Now(),map=start.map}
+ return {points=path,origin=self:Copy(start),seconds=elapsed,width=width,height=height,mode=s.travel,created=self:Now(),map=start.map,merged=true}
 end
 function N:GenerateRoute()
  local map,x,y=self:Position(); if not map then return self:Print('Zone position unavailable.') end
