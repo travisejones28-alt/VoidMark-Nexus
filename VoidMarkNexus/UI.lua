@@ -227,6 +227,11 @@ function N:CreateUI()
  button(f,'Next',270,-583,100,function() u.page=u.page+1; u.selected=nil; N.dirty=true end)
  u.pageLabel=label(f,'',385,-589,'GameFontHighlightSmall')
  u.value=edit(f,555,-584,140,'1'); u.actions={}
+ u.strategyButton=button(f,'Optimal Loop',555,-546,140,function()
+  local options={{label='Optimal Loop',value='optimal'},{label='Nearest Efficient Loop',value='nearest'},{label='Start Here',value='here'}}
+  N:Choice(u.strategyButton,options,function(v) N.db.settings.routeStrategy=v; N.dirty=true end)
+ end)
+ u.strategyButton:Hide()
  u.value:SetScript('OnTextChanged',function() N.dirty=true end)
  for i=1,3 do u.actions[i]=button(f,'',708+(i-1)*112,-583,108,function() local fn=u.actionFns and u.actionFns[i]; if fn then fn() end; N.dirty=true end) end
  u.footer=label(f,'',164,-625,'GameFontHighlightSmall'); u.footer:SetWidth(875)
@@ -273,6 +278,11 @@ function N:SettingsRows()
 end
 function N:Render()
  local u=self.ui; if not u or not u.frame:IsShown() then return end; self.dirty=false
+ if u.strategyButton then
+  u.strategyButton:SetShown(u.tab=='Routes')
+  local titles={optimal='Optimal Loop',nearest='Nearest Loop',here='Start Here'}
+  u.strategyButton:SetText(titles[self.db.settings.routeStrategy or 'optimal'] or 'Optimal Loop')
+ end
  self.renderStocks={}
  local rows,detail={},''; local selected=u.selected; local tab=u.tab
  local c=u.character and self.db.characters[u.character]
@@ -327,7 +337,7 @@ function N:Render()
   self:SetActions({'Save/reset','Discard/reset','Routes'},{function() N:SaveSession() end,function() N:StartSession() end,function() u.tab='Routes'; u.selected=nil end})
  elseif tab=='Routes' then
   local map=self:Position(); local nodes=map and self:ZoneNodes(map) or {}; local s=self.db.settings
-  detail='Resource: '..(s.target~='' and s.target or ({all='All nodes',herb='Herbs',ore='Mining'})[s.kind] or 'All nodes')..'\nTravel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use direct distances and a bounded 2-opt improvement. Terrain, cliffs, roads and live competition are not known. Waypoints are potential spawns, not guaranteed resources.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
+  detail='Strategy: '..({optimal='Optimal Loop',nearest='Nearest Efficient Loop',here='Start Here'})[s.routeStrategy or 'optimal']..'\\nResource: '..(s.target~='' and s.target or ({all='All nodes',herb='Herbs',ore='Mining'})[s.kind] or 'All nodes')..'\nTravel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use direct distances and a bounded 2-opt improvement. Terrain, cliffs, roads and live competition are not known. Waypoints are potential spawns, not guaranteed resources.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
   for name,r in pairs(self.db.routes) do rows[#rows+1]={text='Saved: '..name..' | '..#r.points..' waypoints',routeName=name,detail='Use Load selected to navigate this saved route.'} end
   if self.activeRoute then for i,p in ipairs(self.activeRoute.points) do rows[#rows+1]={text=i..'. '..(p.name or 'Waypoint')..string.format(' (%.1f, %.1f)',p.x*100,p.y*100),icon=self:ResourceNodeIcon(p),detail=p.source or 'Custom waypoint'} end end
   self:SetActions({'Travel mode','Generate','Load selected'},{function()
