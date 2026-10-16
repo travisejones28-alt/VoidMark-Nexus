@@ -150,6 +150,11 @@ local function nexusResourceIcon(node)
  end
  return texture or nexusNodeFallback[name] or (node.kind=='ore' and nexusGenericOre or nexusGenericHerb)
 end
+-- Shared with the Routes tab, so list rows use the same resource artwork as map pins.
+function N:ResourceNodeIcon(node)
+ if type(node)~='table' then return 'Interface\\Icons\\INV_Misc_Map_01' end
+ return nexusResourceIcon(node)
+end
 function N:RefreshMap()
  local world=WorldMapFrame
  local canvas=world and world.GetCanvas and world:GetCanvas()
