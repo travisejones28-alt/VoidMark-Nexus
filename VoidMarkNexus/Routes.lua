@@ -703,10 +703,6 @@ function N:RefreshMap()
   if not pin then
    pin=CreateFrame('Button',nil,canvas)
    pin:SetSize(7,7)
-   pin.back=pin:CreateTexture(nil,'ARTWORK')
-   pin.back:SetTexture('Interface\\Buttons\\WHITE8X8')
-   pin.back:SetPoint('CENTER')
-   pin.back:SetVertexColor(.015,.008,.025,.88)
    pin.tex=pin:CreateTexture(nil,'OVERLAY',nil,5)
    pin.tex:SetAllPoints()
    pin.label=pin:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
@@ -732,9 +728,7 @@ function N:RefreshMap()
    pin.node=p.n
    pin.isRoute=p.route or false
    pin:SetFrameLevel(math.max(canvas:GetFrameLevel(),world:GetFrameLevel())+(p.route and 110 or 90))
-   pin.normalSize=p.route and 24 or math.max(8,math.min(16,tonumber(s.mapIconSize) or 7))
-   pin.back:SetSize(pin.normalSize+4,pin.normalSize+4)
-   pin.back:SetVertexColor(p.route and .24 or .015,p.route and .10 or .008,p.route and .35 or .025,.90)
+   pin.normalSize=p.route and 24 or math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
    pin:SetSize(pin.normalSize,pin.normalSize)
    pin.tex:SetAlpha(1)
    if p.route then pin.label:SetTextColor(1,.95,.1,1) end
