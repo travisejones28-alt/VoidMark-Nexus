@@ -93,24 +93,101 @@ function N:UpdateArrow()
  self.arrow.label:SetText(string.format('%s\n%d / %d  |  %.0f yd\n~%.0f sec direct',point.name or 'Waypoint',self.waypoint,#route.points,distance,distance/math.max(1,self.db.settings.speed)))
  if distance<8 then self:SkipWaypoint() end
 end
+local nexusNodeIcons = {
+ ["Peacebloom"]=2447, ["Silverleaf"]=765, ["Earthroot"]=2449,
+ ["Mageroyal"]=785, ["Briarthorn"]=2450, ["Bruiseweed"]=2453,
+ ["Wild Steelbloom"]=3355, ["Kingsblood"]=3356, ["Liferoot"]=3357,
+ ["Fadeleaf"]=3818, ["Goldthorn"]=3821, ["Khadgar's Whisker"]=3358,
+ ["Wintersbite"]=3819, ["Firebloom"]=4625, ["Purple Lotus"]=8831,
+ ["Sungrass"]=8838, ["Blindweed"]=8839, ["Ghost Mushroom"]=8845,
+ ["Gromsblood"]=8846, ["Dreamfoil"]=13463, ["Mountain Silversage"]=13465,
+ ["Plaguebloom"]=13466, ["Icecap"]=13467, ["Black Lotus"]=13468,
+ ["Copper Vein"]=2770, ["Tin Vein"]=2771, ["Silver Vein"]=2775,
+ ["Iron Deposit"]=2772, ["Gold Vein"]=2776, ["Mithril Deposit"]=3858,
+ ["Truesilver Deposit"]=7911, ["Small Thorium Vein"]=10620,
+ ["Rich Thorium Vein"]=10620
+}
+local nexusGenericHerb = 'Interface\\Icons\\INV_Misc_Herb_01'
+local nexusGenericOre = 'Interface\\Icons\\INV_Ore_Copper_01'
 function N:RefreshMap()
- local world=WorldMapFrame; local canvas=world and world.GetCanvas and world:GetCanvas()
+ local world=WorldMapFrame
+ local canvas=world and world.GetCanvas and world:GetCanvas()
  if not canvas or not world:IsShown() then return end
- local map=world:GetMapID(); local nodes=self.db.settings.nodesVisible and self:ZoneNodes(map) or {}
- self.mapPins=self.mapPins or {}; local width,height=canvas:GetWidth(),canvas:GetHeight()
- local points={}; local route=self.activeRoute
- if self.db.settings.routeVisible and route and route.map==map then for i,n in ipairs(route.points) do points[#points+1]={n=n,label=tostring(i)} end end
+ local map=world:GetMapID()
+ if not map then return end
+ local s=self.db.settings
+ local filter=s.mapNodeFilter or 'all'
+ -- A standalone world-map control, independent of whether the Nexus main window is open.
+ if not self.mapNodeFilterButton then
+  local b=CreateFrame('Button',nil,canvas,'UIPanelButtonTemplate')
+  b:SetSize(140,23)
+  b:SetPoint('TOPLEFT',canvas,'TOPLEFT',12,-12)
+  b:SetFrameStrata('HIGH')
+  b:SetScript('OnClick',function()
+   N:Choice(b,{
+    {label='Both: Herbs and Mining',value='all'},
+    {label='Herbs only',value='herb'},
+    {label='Mining only',value='ore'},
+    {label='No gathering nodes',value='none'}
+   },function(value)
+    N.db.settings.mapNodeFilter=value
+    N:RefreshMap()
+   end)
+  end)
+  self.mapNodeFilterButton=b
+ end
+ local names={all='Herbs + Ore',herb='Herbs',ore='Mining',none='Hidden'}
+ self.mapNodeFilterButton:SetText('Nexus: '..(names[filter] or names.all)..'  v')
+ self.mapNodeFilterButton:Show()
+ local nodes={}
+ if s.nodesVisible and filter~='none' then
+  -- Map display filters must NOT change the independent route-planning filter.
+  for _,node in ipairs(self:ZoneNodes(map)) do
+   if filter=='all' or node.kind==filter then nodes[#nodes+1]=node end
+  end
+ end
+ self.mapPins=self.mapPins or {}
+ local width,height=canvas:GetWidth(),canvas:GetHeight()
+ if width<=0 or height<=0 then return end
+ local points={}
+ local route=self.activeRoute
+ if s.routeVisible and route and route.map==map then
+  for i,n in ipairs(route.points) do points[#points+1]={n=n,label=tostring(i),route=true} end
+ end
  for i=1,math.min(250,#nodes) do points[#points+1]={n=nodes[i],label=''} end
  for i=1,math.max(#points,#self.mapPins) do
   local pin=self.mapPins[i]
   if not pin then
-   pin=CreateFrame('Button',nil,canvas); pin:SetSize(10,10)
-   pin.tex=pin:CreateTexture(nil,'ARTWORK'); pin.tex:SetAllPoints(); pin.tex:SetColorTexture(.65,.3,1,.8)
-   pin.label=pin:CreateFontString(nil,'OVERLAY','GameFontNormalSmall'); pin.label:SetPoint('CENTER')
-   pin:SetScript('OnEnter',function(p) GameTooltip:SetOwner(p,'ANCHOR_RIGHT'); GameTooltip:SetText(p.node.name or 'Waypoint'); GameTooltip:AddLine(p.node.source or 'Route'); GameTooltip:Show() end)
-   pin:SetScript('OnLeave',function() GameTooltip:Hide() end); self.mapPins[i]=pin
+   pin=CreateFrame('Button',nil,canvas)
+   pin:SetSize(17,17)
+   pin.tex=pin:CreateTexture(nil,'ARTWORK')
+   pin.tex:SetAllPoints()
+   pin.label=pin:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
+   pin.label:SetPoint('CENTER')
+   pin:SetScript('OnEnter',function(p)
+    GameTooltip:SetOwner(p,'ANCHOR_RIGHT')
+    GameTooltip:SetText(p.node.name or 'Waypoint')
+    GameTooltip:AddLine(p.node.source or 'Route')
+    GameTooltip:Show()
+   end)
+   pin:SetScript('OnLeave',function() GameTooltip:Hide() end)
+   self.mapPins[i]=pin
   end
   local p=points[i]
-  if p then pin.node=p.n; pin:ClearAllPoints(); pin:SetPoint('CENTER',canvas,'TOPLEFT',p.n.x*width,-p.n.y*height); pin.label:SetText(p.label); pin:Show() else pin:Hide() end
+  if p then
+   pin.node=p.n
+   pin:ClearAllPoints()
+   pin:SetPoint('CENTER',canvas,'TOPLEFT',p.n.x*width,-p.n.y*height)
+   local texture
+   if p.route then texture='Interface\\Icons\\INV_Misc_Map_01'
+   else
+    local id=nexusNodeIcons[p.n.name or '']
+    if id and type(GetItemIcon)=='function' then texture=self:Call(GetItemIcon,id) end
+    texture=texture or (p.n.kind=='ore' and nexusGenericOre or nexusGenericHerb)
+   end
+   pin.tex:SetTexture(texture)
+   pin.label:SetText(p.label)
+   pin:Show()
+  else pin:Hide() end
  end
 end
