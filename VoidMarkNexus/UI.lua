@@ -144,6 +144,22 @@ function N:ShowRoutePreview(strategy)
  -- Render the exact C_Map tile artwork used by the World Map where supported.
  -- Tile coordinates are proportional to the entire zone, not to the route bounds.
  local artLoaded=false
+ local origin=route.origin
+ local all={origin}
+ for _,p in ipairs(route.points) do all[#all+1]=p end
+ local boundMinX,boundMaxX,boundMinY,boundMaxY=1,0,1,0
+ for _,p in ipairs(all) do
+  boundMinX=math.min(boundMinX,p.x); boundMaxX=math.max(boundMaxX,p.x)
+  boundMinY=math.min(boundMinY,p.y); boundMaxY=math.max(boundMaxY,p.y)
+ end
+ local padX=math.max(.02,(boundMaxX-boundMinX)*.13)
+ local padY=math.max(.02,(boundMaxY-boundMinY)*.13)
+ local viewX1=math.max(0,boundMinX-padX)
+ local viewX2=math.min(1,boundMaxX+padX)
+ local viewY1=math.max(0,boundMinY-padY)
+ local viewY2=math.min(1,boundMaxY+padY)
+ local zoomX,zoomY=448/math.max(.02,viewX2-viewX1),380/math.max(.02,viewY2-viewY1)
+ if canvas.SetClipsChildren then canvas:SetClipsChildren(true) end
  if C_Map and type(C_Map.GetMapArtLayers)=='function' and type(C_Map.GetMapArtLayerTextures)=='function' then
   local ok,layers=pcall(C_Map.GetMapArtLayers,route.map)
   local layer=ok and type(layers)=='table' and layers[1]
@@ -159,10 +175,10 @@ function N:ShowRoutePreview(strategy)
        if id then
         local tw=math.min(layer.tileWidth,layer.layerWidth-col*layer.tileWidth)
         local th=math.min(layer.tileHeight,layer.layerHeight-row*layer.tileHeight)
-        local tile=canvas:CreateTexture(nil,'BACKGROUND')
+        local tile=canvas:CreateTexture(nil,'ARTWORK',nil,-7)
         tile:SetTexture(id)
-        tile:SetSize(448*tw/layer.layerWidth,380*th/layer.layerHeight)
-        tile:SetPoint('TOPLEFT',canvas,'TOPLEFT',448*col*layer.tileWidth/layer.layerWidth,-380*row*layer.tileHeight/layer.layerHeight)
+        tile:SetSize(zoomX*tw/layer.layerWidth,zoomY*th/layer.layerHeight)
+        tile:SetPoint('TOPLEFT',canvas,'TOPLEFT',zoomX*(col*layer.tileWidth/layer.layerWidth-viewX1),-zoomY*(row*layer.tileHeight/layer.layerHeight-viewY1))
         tile:SetTexCoord(0,tw/layer.tileWidth,0,th/layer.tileHeight)
         tile:SetAlpha(.82)
        end
@@ -174,9 +190,6 @@ function N:ShowRoutePreview(strategy)
   end
  end
  local left,top=15,15
- local origin=route.origin
- local all={origin}
- for _,p in ipairs(route.points) do all[#all+1]=p end
  local minX,maxX,minY,maxY=0,1,0,1
  local scaleX,scaleY=448,380
  if not artLoaded then
@@ -190,7 +203,7 @@ function N:ShowRoutePreview(strategy)
   scaleX,scaleY=scale,scale
  end
  local function xy(p)
-  if artLoaded then return p.x*448,p.y*380 end
+  if artLoaded then return (p.x-viewX1)*zoomX,(p.y-viewY1)*zoomY end
   return left+(p.x-minX)*scaleX,top+(p.y-minY)*scaleY
  end
  local function point(p,index)
@@ -225,7 +238,7 @@ function N:ShowRoutePreview(strategy)
  if #route.points>1 then connect(previous,origin) end
  point(origin,0)
  for i,p in ipairs(route.points) do point(p,i) end
- local foot=label(w,artLoaded and 'Zone artwork • Terrain visible, not pathfinding' or 'Schematic only • Map artwork unavailable on this client',18,-460,'GameFontHighlightSmall')
+ local foot=label(w,artLoaded and 'Zoomed zone artwork • Route estimate ignores obstacles' or 'Schematic only • Map artwork unavailable on this client',18,-460,'GameFontHighlightSmall')
  foot:SetWidth(490)
  button(w,'Activate route',182,-499,160,function()
   N.activeRoute=N:Copy(route);N.waypoint=1;N.dirty=true;N:ShowArrow();w:Hide()
