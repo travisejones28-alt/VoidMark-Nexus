@@ -563,7 +563,7 @@ function N:RefreshMap()
  if active and active.map then
   local info=C_Map and C_Map.GetMapInfo and self:Call(C_Map.GetMapInfo,active.map)
   local name=info and info.name or ('Zone '..tostring(active.map))
-  self.mapActiveRouteButton:SetText(active.map==map and 'Route: '..name or 'View route: '..name)
+  self.mapActiveRouteButton:SetText(active.map==map and ('Route: '..name..' ('..tostring(#(active.points or {}))..' stops)') or ('View route: '..name))
   self.mapActiveRouteButton:Show()
  else
   self.mapActiveRouteButton:Hide()
@@ -678,10 +678,11 @@ function N:RefreshMap()
   if not pin then
    pin=CreateFrame('Button',nil,canvas)
    pin:SetSize(7,7)
-   pin.tex=pin:CreateTexture(nil,'ARTWORK')
+   pin.tex=pin:CreateTexture(nil,'OVERLAY')
    pin.tex:SetAllPoints()
    pin.label=pin:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
    pin.label:SetPoint('CENTER')
+   pin.label:SetDrawLayer('OVERLAY',7)
    pin:SetScript('OnEnter',function(p)
     p:SetSize(16,16)
     p.tex:SetAlpha(1)
@@ -701,9 +702,11 @@ function N:RefreshMap()
   if p then
    pin.node=p.n
    pin.isRoute=p.route or false
-   pin.normalSize=p.route and 12 or math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
+   pin:SetFrameLevel(canvas:GetFrameLevel()+(p.route and 65 or 15))
+   pin.normalSize=p.route and 24 or math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
    pin:SetSize(pin.normalSize,pin.normalSize)
    pin.tex:SetAlpha(p.route and 1 or .7)
+   if p.route then pin.label:SetTextColor(1,.95,.1,1) end
    pin.clusterCount=p.count
    pin.clusterNames=p.names
    pin:ClearAllPoints()
@@ -715,6 +718,7 @@ function N:RefreshMap()
    end
    pin.tex:SetTexture(texture)
    pin.label:SetText(p.label)
+   if p.route then pin.label:SetFontObject('GameFontNormalLarge') else pin.label:SetFontObject('GameFontNormalSmall') end
    pin:Show()
   else pin:Hide() end
  end
