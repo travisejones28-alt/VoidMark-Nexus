@@ -544,6 +544,30 @@ function N:RefreshMap()
  self.mapIconSizeSlider:SetShown(filter~='none' and s.nodesVisible)
  self.mapNodeFilterButton:SetText('Nexus: '..(names[filter] or names.all)..'  v')
  self.mapNodeFilterButton:Show()
+ -- Make active-route map selection explicit instead of silently hiding it.
+ if not self.mapActiveRouteButton then
+  local b=CreateFrame('Button',nil,canvas,'UIPanelButtonTemplate')
+  b:SetSize(165,23)
+  b:SetPoint('TOPLEFT',canvas,'TOPLEFT',162,-12)
+  b:SetFrameStrata('HIGH')
+  b:SetScript('OnClick',function()
+   local route=N.activeRoute
+   if route and WorldMapFrame and WorldMapFrame.SetMapID then
+    WorldMapFrame:SetMapID(route.map)
+    N:RefreshMap()
+   end
+  end)
+  self.mapActiveRouteButton=b
+ end
+ local active=self.activeRoute
+ if active and active.map then
+  local info=C_Map and C_Map.GetMapInfo and self:Call(C_Map.GetMapInfo,active.map)
+  local name=info and info.name or ('Zone '..tostring(active.map))
+  self.mapActiveRouteButton:SetText(active.map==map and 'Route: '..name or 'View route: '..name)
+  self.mapActiveRouteButton:Show()
+ else
+  self.mapActiveRouteButton:Hide()
+ end
  local nodes={}
  if s.nodesVisible and filter~='none' then
   -- Map display filters must NOT change the independent route-planning filter.
@@ -600,6 +624,36 @@ function N:RefreshMap()
    else line:Hide() end
   end
  end
+ -- Dot texture fallback: several Forever builds expose CreateLine but cannot draw
+ -- correctly on the world-map canvas. Keep at most four short, clipped segments.
+ self.mapRouteDots=self.mapRouteDots or {}
+ local usedDots=0
+ for _,leg in ipairs(segments) do
+  local ax,ay=leg.a.x*width,leg.a.y*height
+  local bx,by=leg.b.x*width,leg.b.y*height
+  local dx,dy=bx-ax,by-ay
+  local distance=math.sqrt(dx*dx+dy*dy)
+  local count=math.min(70,math.floor(distance/6))
+  for j=0,count do
+   local t=j/math.max(1,count)
+   local x,y=ax+dx*t,ay+dy*t
+   if x>=0 and y>=0 and x<=width and y<=height then
+    usedDots=usedDots+1
+    local dot=self.mapRouteDots[usedDots]
+    if not dot then
+     dot=canvas:CreateTexture(nil,'OVERLAY')
+     dot:SetTexture('Interface\\Buttons\\WHITE8X8')
+     dot:SetSize(3,3)
+     self.mapRouteDots[usedDots]=dot
+    end
+    dot:ClearAllPoints()
+    dot:SetPoint('CENTER',canvas,'TOPLEFT',x,-y)
+    dot:SetVertexColor(.73,.37,1,.96)
+    dot:Show()
+   end
+  end
+ end
+ for i=usedDots+1,#self.mapRouteDots do self.mapRouteDots[i]:Hide() end
  -- Merge nearby display-only markers; keep full node records for farming calculations.
  local clusters={}
  for _,node in ipairs(nodes) do
