@@ -351,6 +351,7 @@ function N:PrepareTerrainRoute(route)
  local blocks=self.db and self.db.terrainBlocks and self.db.terrainBlocks[route.map]
  if not blocks or #blocks==0 then route.travelPoints=nil;return route end
  local points={}
+ local indices={}
  local previous=route.origin
  local seconds=0
  local speed=math.max(1,self.db.settings.speed)
@@ -358,11 +359,13 @@ function N:PrepareTerrainRoute(route)
   local distance,detour=self:TerrainLeg(previous,destination,route.width,route.height,route.map)
   for _,via in ipairs(detour) do points[#points+1]={x=via.x,y=via.y,map=route.map,transit=true,name='Terrain detour'} end
   points[#points+1]=destination
+  indices[#indices+1]=#points
   seconds=seconds+distance/speed+math.max(0,self.db.settings.gatherDelay)+math.max(0,self.db.settings.mountDelay)
   previous=destination
  end
  local last=self:TerrainLeg(previous,route.origin,route.width,route.height,route.map)
  route.travelPoints=points
+ route.travelStopIndices=indices
  route.terrainSeconds=seconds+last/speed
  route.terrainMode='marked-obstacles'
  return route
@@ -370,12 +373,14 @@ end
 function N:GenerateRoute()
  local best=self:PlanRoute()
  if not best then return end
- self.activeRoute=self:PrepareTerrainRoute(best); self.waypoint=1; self.dirty=true; self:ShowArrow()
+ self.activeRoute=self:PrepareTerrainRoute(best); self.waypoint=1; self.terrainIndex=1; self.dirty=true; self:ShowArrow()
  self:Print(string.format('%s: %d stops, approx %.1f minute loop (straight-line estimate).',best.strategy,#best.points,(best.seconds or 0)/60))
 end
 function N:SkipWaypoint()
  if not self.activeRoute then return end
  self.waypoint=(self.waypoint or 1)+1
+ local ids=self.activeRoute.travelStopIndices
+ if ids then self.terrainIndex=((ids[self.waypoint-1] or 0)+1) end
  if self.waypoint>#self.activeRoute.points then self.activeRoute=nil; if self.arrow then self.arrow:Hide() end; self:Print('Route complete.') end
  self.dirty=true
 end
@@ -484,7 +489,9 @@ function N:UpdateArrow()
  local arrow=self.arrow
  if not arrow then return end
  local route=self.activeRoute
- local point=route and route.points[self.waypoint or 1]
+ local node=route and route.points[self.waypoint or 1]
+ local transit=route and route.travelPoints and route.travelPoints[self.terrainIndex or 1]
+ local point=transit or node
  if not point or not self.db.settings.routeVisible then arrow:Hide(); return end
  local map,x,y=self:Position()
  if map~=route.map or not x or not y then
@@ -498,8 +505,12 @@ function N:UpdateArrow()
  local distance=math.sqrt(dx*dx+dy*dy)
  arrow.bearing=nexusAngle(-dx,-dy)
  arrow.texture:Show()
- arrow.label:SetText(string.format('%s  |  %d/%d\n%.0f yd · ~%.0f sec',point.name or 'Waypoint',self.waypoint,#route.points,distance,distance/math.max(1,self.db.settings.speed)))
- if distance<8 then self:SkipWaypoint(); arrow.refreshAt=0 end
+ arrow.label:SetText(string.format('%s  |  %d/%d\n%.0f yd · ~%.0f sec',point.transit and 'Detour' or (point.name or 'Waypoint'),self.waypoint,#route.points,distance,distance/math.max(1,self.db.settings.speed)))
+ if distance<8 then
+  if point.transit then self.terrainIndex=(self.terrainIndex or 1)+1
+  else self:SkipWaypoint() end
+  arrow.refreshAt=0
+ end
 end
 -- Item IDs are the gathered resources, not world object/spawn IDs.
 -- Prefer item icons from the client and use distinct inventory textures when uncached.
