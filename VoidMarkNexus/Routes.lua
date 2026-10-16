@@ -299,16 +299,27 @@ function N:RefreshMap()
  self.mapPins=self.mapPins or {}
  local width,height=canvas:GetWidth(),canvas:GetHeight()
  if width<=0 or height<=0 then return end
- -- WoW Line regions draw actual connecting strokes; rotating a rectangular
- -- Texture rotates its artwork, not the underlying rectangle geometry.
+ -- Only the next five waypoints and connecting legs appear on the world map.
+ -- Navigation retains every waypoint in the underlying route.
  self.mapRouteLines=self.mapRouteLines or {}
  local route=self.activeRoute
+ local points={}
  local segments={}
  if s.routeVisible and route and route.map==map then
-  local prev=route.origin
-  for _,node in ipairs(route.points) do
-   if prev and node then segments[#segments+1]={a=prev,b=node} end
-   prev=node
+  local current=math.max(1,self.waypoint or 1)
+  local last=math.min(#route.points,current+4)
+  local prev
+  -- Starting at the player's live map position avoids a line to an old origin.
+  local liveMap,px,py=self:Position()
+  if liveMap==map and px and py then prev={x=px,y=py}
+  else prev=route.points[current-1] or route.origin end
+  for i=current,last do
+   local node=route.points[i]
+   if node then
+    points[#points+1]={n=node,label=tostring(i),route=true}
+    if prev then segments[#segments+1]={a=prev,b=node} end
+    prev=node
+   end
   end
  end
  for i=1,math.max(#segments,#self.mapRouteLines) do
@@ -319,20 +330,15 @@ function N:RefreshMap()
    self.mapRouteLines[i]=line
   end
   if line then
-   local segment=segments[i]
-   if segment then
-    local active=i==(self.waypoint or 1)
-    line:SetStartPoint('TOPLEFT',canvas,'TOPLEFT',segment.a.x*width,-segment.a.y*height)
-    line:SetEndPoint('TOPLEFT',canvas,'TOPLEFT',segment.b.x*width,-segment.b.y*height)
-    line:SetThickness(active and 3 or 2)
-    line:SetVertexColor(active and 1 or .64,active and .74 or .25,active and .2 or 1,.9)
+   local leg=segments[i]
+   if leg then
+    line:SetStartPoint('TOPLEFT',canvas,'TOPLEFT',leg.a.x*width,-leg.a.y*height)
+    line:SetEndPoint('TOPLEFT',canvas,'TOPLEFT',leg.b.x*width,-leg.b.y*height)
+    line:SetThickness(i==1 and 3 or 2)
+    line:SetVertexColor(i==1 and 1 or .65,i==1 and .75 or .32,i==1 and .25 or 1,.92)
     line:Show()
    else line:Hide() end
   end
- end
- local points={}
- if s.routeVisible and route and route.map==map then
-  for i,n in ipairs(route.points) do points[#points+1]={n=n,label=tostring(i),route=true} end
  end
  -- Merge nearby display-only markers; keep full node records for farming calculations.
  local clusters={}
