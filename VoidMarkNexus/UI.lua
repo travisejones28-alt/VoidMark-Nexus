@@ -60,6 +60,25 @@ function N:CreateUI()
  f:SetScale(self.db.settings.scale)
  f:SetScript('OnDragStart',function() f:StartMoving() end)
  f:SetScript('OnDragStop',function() f:StopMovingOrSizing(); local x,y=f:GetCenter(); local ux,uy=UIParent:GetCenter(); N.db.settings.position={x-ux,y-uy} end)
+ -- Use a scale grip because the panel's children have fixed pixel coordinates.
+ local grip=CreateFrame('Button',nil,f)
+ grip:SetSize(28,28); grip:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-2,2)
+ grip:SetFrameLevel(f:GetFrameLevel()+10)
+ local t=grip:CreateTexture(nil,'OVERLAY'); t:SetAllPoints(); t:SetTexture('Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up')
+ grip:RegisterForDrag('LeftButton')
+ grip:SetScript('OnDragStart',function(self)
+  self.startX,self.startY=GetCursorPosition(); self.startScale=f:GetScale()
+  self:SetScript('OnUpdate',function(g)
+   local x,y=GetCursorPosition(); local scale=UIParent:GetEffectiveScale()
+   if not scale or scale<=0 then return end
+   local dx=(x-g.startX)/scale; local dy=(g.startY-y)/scale
+   local nextScale=math.max(0.65,math.min(1.5,g.startScale+math.max(dx/1060,dy/660)))
+   f:SetScale(nextScale); N.db.settings.scale=nextScale
+  end)
+ end)
+ grip:SetScript('OnDragStop',function(self) self:SetScript('OnUpdate',nil) end)
+ grip:SetScript('OnEnter',function() GameTooltip:SetOwner(grip,'ANCHOR_RIGHT'); GameTooltip:SetText('Drag to resize Nexus'); GameTooltip:Show() end)
+ grip:SetScript('OnLeave',function() GameTooltip:Hide() end)
  label(f,'VOIDMARK  |  NEXUS',18,-17,'GameFontNormalLarge'); label(f,self.version,280,-19,'GameFontHighlightSmall')
  button(f,'Close',956,-10,86,function() f:Hide(); if N.menu then N.menu:Hide() end end)
  self.ui={frame=f,tab='Dashboard',rows={},page=1,filter='All'}; local u=self.ui
