@@ -101,8 +101,7 @@ end
 function N:TerrainSegmentDistance(a,b,width,height,map)
  -- Cheap direct-path check; avoid expensive graph searches during loop optimization.
  if not self:TerrainIntersects(a,b,width,height,map) then return self:Distance(a,b,width,height) end
- local actual=self:TerrainLeg(a,b,width,height,map)
- return actual
+ return self:Distance(a,b,width,height)+600
 end
 function N:BuildRoute(nodes,start,width,height,s)
  if not width or not height then return nil,'Client map dimensions unavailable; cannot calculate reliable distance.' end
@@ -347,10 +346,31 @@ function N:RankResourceZones(resource)
  while #results>5 do table.remove(results) end
  return results
 end
+function N:PrepareTerrainRoute(route)
+ if not route or not route.points or not route.width or not route.height then return route end
+ local blocks=self.db and self.db.terrainBlocks and self.db.terrainBlocks[route.map]
+ if not blocks or #blocks==0 then route.travelPoints=nil;return route end
+ local points={}
+ local previous=route.origin
+ local seconds=0
+ local speed=math.max(1,self.db.settings.speed)
+ for _,destination in ipairs(route.points) do
+  local distance,detour=self:TerrainLeg(previous,destination,route.width,route.height,route.map)
+  for _,via in ipairs(detour) do points[#points+1]={x=via.x,y=via.y,map=route.map,transit=true,name='Terrain detour'} end
+  points[#points+1]=destination
+  seconds=seconds+distance/speed+math.max(0,self.db.settings.gatherDelay)+math.max(0,self.db.settings.mountDelay)
+  previous=destination
+ end
+ local last=self:TerrainLeg(previous,route.origin,route.width,route.height,route.map)
+ route.travelPoints=points
+ route.terrainSeconds=seconds+last/speed
+ route.terrainMode='marked-obstacles'
+ return route
+end
 function N:GenerateRoute()
  local best=self:PlanRoute()
  if not best then return end
- self.activeRoute=best; self.waypoint=1; self.dirty=true; self:ShowArrow()
+ self.activeRoute=self:PrepareTerrainRoute(best); self.waypoint=1; self.dirty=true; self:ShowArrow()
  self:Print(string.format('%s: %d stops, approx %.1f minute loop (straight-line estimate).',best.strategy,#best.points,(best.seconds or 0)/60))
 end
 function N:SkipWaypoint()
