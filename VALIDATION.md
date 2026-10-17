@@ -1,3 +1,13 @@
+# Current validation: 0.3.0 beta
+
+79 Lua 5.1-compatible runtime tests pass, covering the original addon and persistent route/leg caches, bounds, forward-schema preservation, serialized reloads, dependency invalidation, best-so-far retention, explicit improvement, recording/replay, route import validation, session restoration and optional travel integration failures.
+
+A 35-stop imported-zone fixture measured roughly 0.106 CPU seconds cold versus 0.013 warm after serialized saved-data reload during development. These are headless CPU measurements, not an in-game latency promise; the final suite prints timings for its current run. All 79 tests also pass under the stock Lua 5.1 interpreter through Lupa. The stock-interpreter fixture measured 0.225 seconds cold versus 0.026 warm. GitHub Actions runs stock Lua 5.1 after push.
+
+`python tools/package.py --check` checks the installable ZIP against every addon source and artwork file. No live-client visual/taint QA was performed. In game, test generate/reload/reuse, active waypoint and totals restoration, each travel preset, record/reload/finish/replay, route export/import, map layering and optional travel handoff. Persistence still depends on WoW writing/loading SavedVariables during normal logout/reload.
+
+The notes below are historical validation from earlier builds.
+
 # Validation - 0.2.0 alpha
 
 Current result: **47 tests pass**. See `DEVELOPMENT_V5.md` for terrain routing v5 tests, benchmark, known limitations and exact in-game steps. The historical baseline results and acceptance checks follow.

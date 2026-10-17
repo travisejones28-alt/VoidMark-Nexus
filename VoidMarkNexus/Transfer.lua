@@ -39,6 +39,10 @@ function N:Decode(raw)
  end
  local value=read(0); assert(pos==#raw+1,'Trailing export data'); return value
 end
+function N:EncodeData(value)
+ local raw='VMN1:'..encode(value,0)
+ assert(#raw<=2000000,'Export exceeds 2 MB');return raw
+end
 function N:Export()
  local chars={}; for id,c in pairs(self.db.characters) do if not c.imported then chars[id]=c end end
  local raw='VMN1:'..encode({schema=1,account=self.db.account,characters=chars},0)
@@ -116,8 +120,43 @@ function N:PreviewImport(raw)
  self.pendingImport={raw=raw,accepted=accepted}; return table.concat(lines,'\n')
 end
 function N:ConfirmImport()
+ if self.pendingImport and self.pendingImport.kind=='route' then
+  local pending=self.pendingImport
+  local preview,err=self:PreviewRouteImport(pending.raw)
+  if not preview then self.pendingImport=nil;return self:Print(err) end
+  pending=self.pendingImport;self.db.routes[pending.name]=pending.route
+  self.pendingImport=nil;self.dirty=true;self:Print('Route imported: '..pending.name);return
+ end
  local pending=self.pendingImport; if not pending then return end
  local preview,err=self:PreviewImport(pending.raw); if not preview then return self:Print(err) end
  for id,c in pairs(self.pendingImport.accepted) do c.imported=true; self.db.characters[id]=c end
  self.pendingImport=nil; self.dirty=true; self:Print('Import complete. Imported inventory is excluded until enabled in Settings.')
+end
+
+function N:ExportRoute(name)
+ local route=self.db.routes[name]
+ route=route and self:CleanNavigationRoute(route)
+ if not route then return nil,'Select a valid saved route first.' end
+ return self:EncodeData({kind='route',schema=1,name=name,route=route})
+end
+function N:PreviewRouteImport(raw)
+ self.pendingImport=nil
+ local ok,data=pcall(self.Decode,self,raw)
+ if not ok then return nil,data end
+ if type(data)~='table' or data.kind~='route' or data.schema~=1 or
+  type(data.name)~='string' or #data.name<1 or #data.name>80 then return nil,'Invalid route export.' end
+ local route=self:CleanNavigationRoute(data.route)
+ if not route or route.recorded and (not route.travelPoints or not route.travelStopIndices) then return nil,'Invalid route geometry.' end
+ if route.unreachable then return nil,'Unreachable route rejected.' end
+ if route.recorded then
+  local previous=0
+  for _,index in ipairs(route.travelStopIndices) do
+   if index<=previous then return nil,'Invalid recording order.' end;previous=index
+  end
+ end
+ if self.db.routes[data.name] then return nil,'Route name already exists. Rename or delete the existing route first.' end
+ local count=0;for _ in pairs(self.db.routes) do count=count+1 end
+ if count>=50 then return nil,'Saved route limit: 50.' end
+ self.pendingImport={kind='route',raw=raw,name=data.name,route=route}
+ return string.format('Import route: %s\nZone %d | %d waypoints\nExisting routes will be retained.',data.name,route.map,#route.points)
 end

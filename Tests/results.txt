@@ -58,4 +58,23 @@ PASS Reference-style arrow HUD updates live progress, distance, ETA and next-sto
 PASS Navigation display scales as one saved unit with safe size bounds
 PASS Display minus/plus row resizes repeatedly without closing its menu
 PASS Navigation display restores its dragged anchor after UI recreation
-PASS: 60 tests; Lua 5.1 / LuaJIT 2.0.5
+PASS Persistent route cache round-trips through serialized saved data and uses wall time
+PASS Derived cache validation preserves user data and future cache schemas
+PASS Saved directed travel legs survive reload and invalidate on terrain or speed changes
+PASS Derived storage stays bounded during repeated route and leg insertion
+PASS Terrain revision reset on reload does not discard identical learned-leg context
+PASS Time limit preserves a completed candidate for reuse
+PASS Recordings survive reload and playback retains exact trail geometry
+PASS Recording discontinuities do not create false walked connections
+PASS Route export/import previews, validates, and never overwrites an existing name
+PASS Saved run comparison uses weighted overall rate and separate median
+PASS Optional travel integration handles absence, refusal and explicit navigation
+PASS New route planning reuses geometry after cosmetic settings and harvest timestamps change
+PASS Explicit improve starts with the saved valid circuit and retains it if no better candidate completes
+PASS Newer recording drafts are preserved without overwriting or discarding them
+PASS Rotating a generated loop does not split saved run comparison identities
+PASS Observed-only zones participate in zone ranking without uninitialized inputs
+PASS Cold versus saved imported-zone planning benchmark after serialized reload
+PASS Active gathering totals survive reload while offline time is excluded
+PASS Selected Start Here strategy survives narrow routing-settings extraction
+PASS: 79 tests; Lua 5.1 / standard interpreter

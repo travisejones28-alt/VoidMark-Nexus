@@ -1,6 +1,6 @@
 local _, N = ...
 _G.VoidMarkNexus = N
-N.version, N.schema = '0.2.11-alpha', 1
+N.version, N.schema = '0.3.0-beta', 1
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
 function N:Finite(v, lo, hi)
@@ -74,6 +74,8 @@ function N:Initialize()
  d.characters[self.characterID]=c; self.character=c; self.economy=realm..'|'..c.faction
  d.prices[self.economy]=d.prices[self.economy] or {}; self.prices=d.prices[self.economy]
  if self.InitializeTerrain then self:InitializeTerrain() end
+ if self.InitializeCache then self:InitializeCache() end
+ if self.InitializeRecording then self:InitializeRecording() end
  self.ready=true; return true
 end
 

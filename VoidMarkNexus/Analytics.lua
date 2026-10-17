@@ -42,7 +42,12 @@ function N:RecordHarvest(g,qty)
 end
 function N:RouteIdentity(route)
  local parts={tostring(route.map),route.mode or 'Foot',tostring(route.speed or 7)}
- for _,p in ipairs(route.points or {}) do parts[#parts+1]=key(p) end
+ local keys={};local first=1
+ for _,p in ipairs(route.points or {}) do keys[#keys+1]=key(p) end
+ if not route.recorded then
+  for i=2,#keys do if keys[i]<keys[first] then first=i end end
+ end
+ for offset=0,#keys-1 do parts[#parts+1]=keys[(first+offset-1)%#keys+1] end
  local text=table.concat(parts,';');local hash=0
  for i=1,#text do hash=(hash*31+text:byte(i))%2147483647 end
  return tostring(route.map)..':'..tostring(hash)

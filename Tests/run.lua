@@ -37,14 +37,14 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Data/Nodes','Data/Spawns','Model','Transfer','Professions','Inventory','Prices','Gathering','Analytics','Planner','Terrain','Routes','MinimapRoute','UI','Boot'}
+local files={'Core','Data/Nodes','Data/Spawns','Model','Transfer','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','Recording','MinimapRoute','UI','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/VoidMarkNexus/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.11-alpha') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.3.0-beta') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -335,7 +335,7 @@ test('Exact-input route cache avoids rebuilding and invalidates on relevant chan
  N.ZoneNodes=function() return list end
  N.BuildRoute=function(_,_,start)
   calls=calls+1
-  return {points=N:Copy(list),origin=start,map=1411,seconds=600,potentialStopsPerHour=18}
+  return {points=N:Copy(list),origin=start,map=1411,width=5000,height=3000,seconds=600,potentialStopsPerHour=18}
  end
  local first=N:PlanRoute('here');eq(calls,1)
  first.points[1].x=.99
@@ -343,11 +343,12 @@ test('Exact-input route cache avoids rebuilding and invalidates on relevant chan
  N.db.settings.speed=N.db.settings.speed+1;N:PlanRoute('here');eq(calls,2)
  x=.401;N:PlanRoute('here');eq(calls,3)
  N.db.terrainBlocks[1411]={{x=.8,y=.8,r=30}};N:PlanRoute('here');eq(calls,4)
- N.db.gatherEvidence[1411]={sample={checks=5}};N:PlanRoute('here');eq(calls,5)
- list[1].x=.402;N:PlanRoute('here');eq(calls,6)
- N.db.terrain.zones[1411]={revision=1,points={},edges={}};N:PlanRoute('here');eq(calls,7)
- now=now+121;N:PlanRoute('here');eq(calls,8)
- assert(#N.plannerCache<=6)
+ N.db.gatherEvidence[1411]={sample={checks=5}};N:PlanRoute('here');eq(calls,4)
+ list[1].x=.402;N:PlanRoute('here');eq(calls,5)
+ N.db.terrain.zones[1411]={revision=1,points={},edges={}};N:PlanRoute('here');eq(calls,6)
+ now=now+121;N:InitializeCache();N:PlanRoute('here');eq(calls,6)
+ N.db.settings.arrowScale=.9;N:PlanRoute('here');eq(calls,6)
+ assert(#N.db.calculations.routes<=12)
  N.Position,N.ZoneNodes,N.BuildRoute=position,nodes,build
  N.db.settings.speed=N.db.settings.speed-1
 end)
@@ -581,6 +582,224 @@ test('Navigation display restores its dragged anchor after UI recreation',functi
  N:RestoreArrowPosition();eq(N.arrow.anchor[1],'TOP');eq(N.arrow.anchor[5],-135)
  N.db.settings.arrowPosition=nil
 end)
+
+test('Persistent route cache round-trips through serialized saved data and uses wall time',function()
+ N:ClearCalculations()
+ local route={map=1411,width=5000,height=3000,speed=7,points={{x=.2,y=.2}},origin={x=.2,y=.2},seconds=1}
+ N:PutPlannerCache('roundtrip',route)
+ N.db.calculations=N:Decode(N:EncodeData(N.db.calculations))
+ N:InitializeCache();local copy=N:GetPlannerCache('roundtrip');assert(copy);copy.points[1].x=.8
+ eq(N:GetPlannerCache('roundtrip').points[1].x,.2)
+ local old=now;now=now+604801;N:InitializeCache();eq(N:GetPlannerCache('roundtrip'),nil);now=old
+end)
+
+test('Derived cache validation preserves user data and future cache schemas',function()
+ local routes=N.db.routes;local terrain=N.db.terrain
+ N.db.calculations={version=1,routes='broken',contexts={}};N:InitializeCache();eq(#N.db.calculations.routes,0)
+ local future={version=99,keep='untouched'};N.db.calculations=future;N:InitializeCache();N:ClearCalculations()
+ eq(N.db.calculations,future);eq(N:GetPlannerCache('anything'),nil);assert(N:CacheSummary():find('disabled',1,true))
+ eq(N.db.routes,routes);eq(N.db.terrain,terrain)
+ N.db.calculations=nil;N:InitializeCache()
+ local cycle={};cycle.self=cycle;eq(N:PortableCache(cycle),nil)
+ eq(N:PortableCache({bad=0/0}),nil)
+end)
+
+test('Saved directed travel legs survive reload and invalidate on terrain or speed changes',function()
+ N:ClearCalculations();N.db.terrain.zones={};N.db.terrainBlocks={}
+ local original=N.TerrainLeg;local calls=0
+ N.TerrainLeg=function(_,a,b) calls=calls+1;return a.x<b.x and 10 or 20,{{x=.3,y=.2}},{seconds=2,kind='learned'} end
+ local a,b={x=.2,y=.2},{x=.4,y=.2}
+ local c=N:TravelContext(1411,5000,3000,7)
+ local d,via=N:CachedTerrainLeg(a,b,5000,3000,1411,7,c);eq(d,10);eq(calls,1);via[1].x=.99
+ eq(N:CachedTerrainLeg(b,a,5000,3000,1411,7,c),20);eq(calls,2)
+ N.db.calculations=N:Decode(N:EncodeData(N.db.calculations));N:InitializeCache()
+ c=N:TravelContext(1411,5000,3000,7);local _,stored=N:CachedTerrainLeg(a,b,5000,3000,1411,7,c)
+ eq(calls,2);eq(stored[1].x,.3)
+ c=N:TravelContext(1411,5000,3000,14);N:CachedTerrainLeg(a,b,5000,3000,1411,14,c);eq(calls,3)
+ N.db.terrainBlocks[1411]={{x=.8,y=.8,r=30}}
+ c=N:TravelContext(1411,5000,3000,14);N:CachedTerrainLeg(a,b,5000,3000,1411,14,c);eq(calls,4)
+ N.TerrainLeg=original;N.db.terrainBlocks={}
+end)
+
+test('Derived storage stays bounded during repeated route and leg insertion',function()
+ N:ClearCalculations();local c=N:TravelContext(1411,5000,3000,7)
+ for i=1,550 do N:CachedTerrainLeg({x=i/10000,y=.1},{x=.9,y=.1},5000,3000,1411,7,c) end
+ assert(#c.order<=512);assert(c.bytes<=400000)
+ local r={map=1411,width=5000,height=3000,points={{x=.2,y=.2}},origin={x=.2,y=.2}}
+ for i=1,20 do N:PutPlannerCache('route-'..i,r) end
+ assert(#N.db.calculations.routes<=12);assert(#N.db.calculations.contexts<=3)
+ N:PruneCalculationCache();assert(N:PortableCache(N.db.calculations,2097152))
+end)
+
+test('Terrain revision reset on reload does not discard identical learned-leg context',function()
+ N:ClearCalculations();N.db.terrain.zones[1411]={revision=100,points={{x=.2,y=.2}},edges={},edgeCount=0}
+ local key=N:TravelContext(1411,5000,3000,7).key
+ N:InitializeTerrain();eq(N:TravelContext(1411,5000,3000,7).key,key)
+end)
+
+test('Time limit preserves a completed candidate for reuse',function()
+ N:ClearCalculations();local route={map=1411,width=5000,height=3000,points={{x=.2,y=.2}},origin={x=.2,y=.2}}
+ local result;local old=now
+ N:RunPlanner(function()
+  N.planningJob.cacheKey='timeout';N.planningJob.best=route
+  for i=1,5001 do N:PlannerCheckpoint() end
+ end,function(r) result=r end)
+ now=now+31;flush();assert(result and result.bestSoFar);assert(N:GetPlannerCache('timeout').bestSoFar);now=old
+end)
+
+test('Recordings survive reload and playback retains exact trail geometry',function()
+ local position=N.Position;local x=.2
+ N.Position=function() return 1411,x,.2 end
+ N.db.recordings={};N:InitializeRecording();N.db.routes['Test recording']=nil
+ N:StartRecording('Test recording');assert(N.recording)
+ for i=1,8 do now=now+1;x=.2+i*.003;N:SampleRecording() end
+ eq(#N.recording.points,9)
+ N.db.recordings=N:Decode(N:EncodeData(N.db.recordings));N:InitializeRecording();eq(#N.recording.points,9)
+ N:FinishRecording();assert(not N.recording)
+ local saved=N.db.routes['Test recording'];assert(saved.recorded);eq(#saved.travelPoints,9)
+ local prepare=N.PrepareTerrainRoute;N.PrepareTerrainRoute=function() error('Recorded geometry must not be optimized') end
+ N:ReplayRoute('Test recording');eq(N.activeRoute.travelPoints[8].x,saved.travelPoints[8].x)
+ N.PrepareTerrainRoute=prepare
+ N.terrainIndex=1;N.waypoint=1;x=.2;N:UpdateArrow();eq(N.terrainIndex,2);eq(N.waypoint,2)
+ N:SaveNavigation();N.activeRoute=nil;N:RestoreNavigation();eq(N.terrainIndex,2);assert(N.activeRoute.recorded)
+ N.Position=position;N.activeRoute=nil
+end)
+
+test('Recording discontinuities do not create false walked connections',function()
+ local position=N.Position;local x=.2
+ N.Position=function() return 1411,x,.2 end
+ N:StartRecording('Interrupted');now=now+1;x=.205;N:SampleRecording();eq(#N.recording.points,2)
+ now=now+1;x=.8;N:SampleRecording();assert(N.recording.interrupted);eq(#N.recording.points,2)
+ now=now+1;x=.207;N:SampleRecording();eq(#N.recording.points,2)
+ N:DiscardRecording();N.Position=position
+end)
+
+test('Route export/import previews, validates, and never overwrites an existing name',function()
+ local raw=N:ExportRoute('Test recording');assert(raw)
+ local saved=N.db.routes['Test recording'];assert(not N:PreviewRouteImport(raw))
+ N.db.routes['Test recording']=nil
+ assert(N:PreviewRouteImport(raw));eq(N.db.routes['Test recording'],nil);N:ConfirmImport()
+ eq(N.db.routes['Test recording'].travelPoints[8].x,saved.travelPoints[8].x)
+ local bad=N:Decode(raw);bad.name='Bad import';bad.route.travelPoints[1].x=2
+ assert(not N:PreviewRouteImport(N:EncodeData(bad)));eq(N.db.routes['Bad import'],nil)
+ bad=N:Decode(raw);bad.name='Bad order';bad.route.travelStopIndices[2]=bad.route.travelStopIndices[1]
+ assert(not N:PreviewRouteImport(N:EncodeData(bad)))
+ assert(not N:PreviewRouteImport('return os.execute("bad")'))
+end)
+
+test('Saved run comparison uses weighted overall rate and separate median',function()
+ local sessions=N.db.sessions;local r=N.db.routes['Test recording'];local id=N:RouteIdentity(r)
+ N.db.sessions={{routePerformance={[id]={seconds=60,total=10}}},{routePerformance={[id]={seconds=120,total=10}}}}
+ local summary=N:SavedRunSummary(r);assert(summary:find('400.0 materials/hour',1,true));assert(summary:find('median 450.0',1,true))
+ N.db.sessions=sessions
+end)
+
+test('Optional travel integration handles absence, refusal and explicit navigation',function()
+ local original=ShortestPathForever;ShortestPathForever=nil
+ N:TravelToRoute('Test recording')
+ local received
+ ShortestPathForever={API={version=1,Navigate=function(...) received={...};return true end}}
+ N:TravelToRoute('Test recording');eq(received[1],'VoidMarkNexus');eq(received[2],1411);assert(N.routePaused)
+ ShortestPathForever.API.Navigate=function() error('provider failure') end
+ N:TravelToRoute('Test recording');ShortestPathForever=original;N.routePaused=false
+end)
+
+
+test('New route planning reuses geometry after cosmetic settings and harvest timestamps change',function()
+ local settings=N:Copy(N.db.settings);local nodes=N.ZoneNodes;local build=N.BuildRoute
+ N:ClearCalculations();N.db.terrain.zones={};N.db.terrainBlocks={}
+ local at=now;local calls=0
+ N.ZoneNodes=function() return {{x=.4,y=.4,name='A',object=1731,source='Observed',at=at},{x=.41,y=.4,name='B',object=1731,source='Observed',at=at}} end
+ N.BuildRoute=function(_,list,start,w,h,s)
+  calls=calls+1;return {points=N:Copy(list),origin=start,map=start.map,width=w,height=h,speed=s.speed,seconds=30}
+ end
+ local a=N:PlanRoute('here');assert(a);eq(calls,1)
+ at=at+10;N.db.settings.scale=.8;N.db.settings.arrowScale=1.4;N:PlanRoute('here');eq(calls,1)
+ N.db.settings.nodeLimit=N.db.settings.nodeLimit+1;N:PlanRoute('here');eq(calls,2)
+ N.ZoneNodes,N.BuildRoute=nodes,build;N.db.settings=settings
+end)
+
+test('Explicit improve starts with the saved valid circuit and retains it if no better candidate completes',function()
+ N:ClearCalculations()
+ local nodes,build=N.ZoneNodes,N.BuildRoute
+ local list={{x=.4,y=.4,name='A'},{x=.41,y=.4,name='B'}}
+ local fail=false;local calls=0
+ N.ZoneNodes=function() return list end
+ N.BuildRoute=function(_,_,start,w,h,s)
+  calls=calls+1;if fail then return end
+  return {points=N:Copy(list),origin=start,map=1411,width=w,height=h,speed=s.speed,seconds=100}
+ end
+ assert(N:PlanRoute('optimal'));local before=calls;fail=true;local result
+ N:RunPlanner(function() N.planningJob.refresh=true;return N:PlanRoute('optimal') end,function(r) result=r end);flush()
+ assert(calls>before);assert(result and #result.points==2)
+ N.ZoneNodes,N.BuildRoute=nodes,build
+end)
+
+test('Newer recording drafts are preserved without overwriting or discarding them',function()
+ local future={version=10,precious='future data'}
+ N.db.recordings[N.characterID]=future;N:InitializeRecording();N:StartRecording('new');N:DiscardRecording()
+ eq(N.db.recordings[N.characterID],future)
+ N.db.recordings[N.characterID]=nil;N:InitializeRecording()
+end)
+
+test('Rotating a generated loop does not split saved run comparison identities',function()
+ local r={map=1411,mode='Foot',speed=7,points={{object=1,x=.1,y=.1},{object=2,x=.2,y=.2},{object=3,x=.3,y=.3}}}
+ local id=N:RouteIdentity(r)
+ r.points={r.points[2],r.points[3],r.points[1]};eq(N:RouteIdentity(r),id)
+ r.points={r.points[3],r.points[2],r.points[1]};assert(N:RouteIdentity(r)~=id)
+end)
+
+test('Observed-only zones participate in zone ranking without uninitialized inputs',function()
+ local nodes,build,spawns,types=N.ZoneNodes,N.BuildRoute,N.spawns,N.nodeTypes
+ local list={{x=.2,y=.2},{x=.3,y=.2},{x=.4,y=.2},{x=.5,y=.2}}
+ N.spawns={};N.nodeTypes={};local old=N.db.nodes;N.db.nodes={[1411]={}}
+ N.ZoneNodes=function() return list end
+ N.BuildRoute=function(_,_,start,w,h,s)
+  return {map=start.map,width=w,height=h,origin=start,points=N:Copy(list),seconds=300,speed=s.speed,potentialStopsPerHour=48}
+ end
+ local r=N:RankResourceZones('Test resource');eq(#r,1);eq(r[1].map,1411)
+ N.ZoneNodes,N.BuildRoute,N.spawns,N.nodeTypes=nodes,build,spawns,types;N.db.nodes=old
+end)
+
+test('Cold versus saved imported-zone planning benchmark after serialized reload',function()
+ local settings=N:Copy(N.db.settings)
+ N.db.settings.kind='all';N.db.settings.target='';N.db.settings.routeSelectionMode=nil
+ N.db.settings.importedNodes=true;N.db.settings.observedNodes=false;N.db.settings.speed=7
+ N.db.settings.routeMinutes=20;N.db.settings.nodeLimit=100
+ N.db.terrain.zones={};N.db.terrainBlocks={};N:ClearCalculations()
+ local first,second;local start=os.clock()
+ N:RunPlanner(function() return N:PlanRoute('here') end,function(r) first=r end);flush()
+ local cold=os.clock()-start;assert(first)
+ N.db.calculations=N:Decode(N:EncodeData(N.db.calculations));N:InitializeCache()
+ start=os.clock();N:RunPlanner(function() return N:PlanRoute('here') end,function(r) second=r end);flush()
+ local warm=os.clock()-start
+ assert(second);eq(#second.points,#first.points);assert(N.cacheStats.routes>0)
+ print(string.format('BENCH saved-route reload: cold %.4f / warm %.4f CPU sec (%d stops)',cold,warm,#second.points))
+ N.db.settings=settings
+end)
+
+
+test('Active gathering totals survive reload while offline time is excluded',function()
+ N:StartSession();local old=now
+ N.session.items={[2770]=12};N.session.total=12;now=now+120
+ N:SaveActiveSession();N.db.activeSessions=N:Decode(N:EncodeData(N.db.activeSessions))
+ now=now+3600;N.session=nil;assert(N:RestoreSession());eq(N.session.total,12);eq(N.session.items[2770],12)
+ local elapsed,rate=N:SessionStats();eq(elapsed,120);eq(rate,360)
+ N:SaveSession();eq(N.session.total,0);N:SaveActiveSession();N.session=nil;assert(N:RestoreSession());eq(N.session.total,0)
+ now=old
+ local entry=N.db.activeSessions[N.characterID];entry.session.zones={bad='broken'}
+ assert(not N:RestoreSession());eq(N.session.total,0)
+end)
+
+test('Selected Start Here strategy survives narrow routing-settings extraction',function()
+ local nodes,build=N.ZoneNodes,N.BuildRoute;local strategy=N.db.settings.routeStrategy
+ N:ClearCalculations();N.db.settings.routeStrategy='here'
+ N.ZoneNodes=function() return {{x=.1,y=.1},{x=.2,y=.1}} end
+ N.BuildRoute=function(_,list,start,w,h,s) return {points=N:Copy(list),origin=start,map=start.map,width=w,height=h,speed=s.speed,seconds=30} end
+ local route=N:PlanRoute();local _,x,y=N:Position();eq(route.strategy,'here');eq(route.origin.x,x);eq(route.origin.y,y)
+ N.ZoneNodes,N.BuildRoute=nodes,build;N.db.settings.routeStrategy=strategy
+end)
+
 
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary

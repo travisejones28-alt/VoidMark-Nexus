@@ -11,6 +11,7 @@ function N:Diagnostics()
  'Movement speed: '..tostring(type(GetUnitSpeed)=='function'),
  'Taxi / flight / swimming: '..tostring(type(UnitOnTaxi)=='function')..' / '..tostring(type(IsFlying)=='function')..' / '..tostring(type(IsSwimming)=='function'),
  'Terrain: observed directional trails only; no collision/elevation API used. Limits: 50 zones / 600 samples / 2400 edges each.',
+ self:CacheSummary(),self:RecordingStatus(),
  'Market adapter: schema 1, integration v'..self.integrationVersion,'Recent errors:'}
  for _,e in ipairs(self.errors) do lines[#lines+1]=e end
  return table.concat(lines,'\n')
@@ -38,7 +39,20 @@ function N:Slash(msg)
  elseif command=='restart' then self.waypoint=1;self.terrainIndex=1;self.routePaused=false
  elseif command=='arrowscale' then self:SetArrowScale(args)
  elseif command=='cancelplan' then self:CancelPlanner('Route calculation cancelled.')
- elseif command=='route' then self:GenerateRoute()
+ elseif command=='cache' then
+  if args=='clear' then self:ClearCalculations() else self:Print(self:CacheSummary()) end
+ elseif command=='record' then
+  if args=='finish' then self:FinishRecording()
+  elseif args=='discard' then self:DiscardRecording()
+  elseif args=='status' then self:Print(self:RecordingStatus())
+  else self:StartRecording(args) end
+ elseif command=='recordname' then
+  if self.recording and args~='' then self.recording.name=args:sub(1,80);self.dirty=true end
+ elseif command=='replay' then self:ReplayRoute(args)
+ elseif command=='routeexport' then
+  local raw,err=self:ExportRoute(args);if raw then self:TextDialog('Route export',raw) else self:Print(err) end
+ elseif command=='routeimport' then self:TextDialog('Route import',args,'route')
+ elseif command=='route' then self:GenerateRoute(args=='fresh')
  elseif command=='skip' then self:SkipWaypoint()
  elseif command=='stop' then self.activeRoute=nil; if self.arrow then self.arrow:Hide() end
  elseif command=='save' then self:SaveRoute(args)
@@ -124,10 +138,10 @@ frame:SetScript('OnEvent',function(_,event,...)
   if ...=='VoidMarkNexus' then N:Guard('initialize',function() N:Initialize() end) end
  elseif event=='PLAYER_LOGIN' then
   if not N.ready then return end
-  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:StartSession(); N:MinimapButton(); N:RestoreNavigation() end)
+  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:RestoreSession(); N:MinimapButton(); N:RestoreNavigation();if N.recording then N:Print(N:RecordingStatus()) end end)
   if C_Timer and C_Timer.NewTicker then
    C_Timer.NewTicker(1,function() if WorldMapFrame and WorldMapFrame:IsShown() then N:Guard('map',function() N:RefreshMap() end) end end)
-   C_Timer.NewTicker(.5,function() N:Guard('terrain sampling',function() N:SampleTerrain();N:TrackRouteSession() end) end)
+   C_Timer.NewTicker(.5,function() N:Guard('terrain sampling',function() N:SampleTerrain();N:TrackRouteSession();N:SampleRecording() end) end)
   end
  elseif N.ready then for _,fn in ipairs(N.handlers[event] or {}) do N:Guard(event,fn,...) end end
 end)

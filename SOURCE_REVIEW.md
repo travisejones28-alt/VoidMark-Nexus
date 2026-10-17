@@ -29,3 +29,10 @@ Market tree inspected: `7124c3f20860e42f2b6b98fad8bda01791957aed`. Reviewed Core
 - Small module files; syntax loaded by a Lua 5.1-compatible interpreter. Tests exercise mocked event and UI behavior separately from game claims.
 
 Actual client build/API behavior remains to be verified with `/vmn debug` and the in-game checklist. The reference TOCs consistently support 16001; no live client API probe was run.
+
+
+## 0.3.0 package review and implementation boundary
+
+Reviewed supplied Shortest Path Forever v1.19.2, Travelcraft 1.28.1, Polestar 0.2.5, SkillUp Forever v0.16.1 and FarmLedger (ZIP named v1.00; internal version 1.1.11). Useful patterns included separate graph and endpoint caches, directed observations, explicit dependency invalidation, stable persisted identifiers and recorded-loop comparisons.
+
+This release adds original Nexus cache, recording, session and route-transfer implementations. No third-party source or artwork from those packages is bundled. Optional Shortest Path support calls its documented version-1 public navigation API after an explicit user action. Existing GatherLite data provenance remains unchanged. SkillUp profession-target integration and bundled terrain meshes are not part of this release.

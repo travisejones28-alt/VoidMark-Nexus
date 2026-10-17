@@ -1,8 +1,10 @@
-# VoidMark Nexus 0.2.0 alpha
+# VoidMark Nexus 0.3.0 beta
 
-Terrain routing v5 adds learned directional trails, shared detour geometry, incremental planning, explicit gathering evidence and route performance. See [DEVELOPMENT_V5.md](DEVELOPMENT_V5.md) for current features, limits, 47-test validation and in-game steps. The older feature notes below describe the original baseline where they conflict with that update.
+Saved route reuse, shared directed travel legs, persistent farming recordings and active-session restoration for WoW Forever interface **16001**.
 
-Standalone profession, offline-alt, inventory, crafting and gathering workspace for Forever interface **16001**. This is an initial testable implementation, not a claim that the entire requested product is complete. No actual game-client testing was performed during development.
+Generate prefers compatible saved work. Routes → **Route tools** provides record/finish/replay tools, route export/import, explicit improvement, cache management and optional Shortest Path travel guidance. Named routes, learned trails, UI placement and active waypoint progress remain separate from computed caches.
+
+See [PERSISTENCE.md](PERSISTENCE.md) for the new behavior, commands, limits and backup details; [VALIDATION.md](VALIDATION.md) records automated validation and remaining in-game checks. Download the installable [VoidMarkNexus.zip](dist/VoidMarkNexus.zip). Existing profession, inventory, crafting, price and gathering features remain available. Actual game-client visual and taint verification remains necessary.
 
 ## Install
 
@@ -45,13 +47,13 @@ Alternatively, install the distributable `dist/VoidMarkNexus.zip` directly. It a
 | `/vmn skip` / `/vmn stop` | Advance or stop guidance |
 | `/vmn debug` | Build and API diagnostics |
 
-Settings contain speed, time budget, remount and gathering delays. Selecting a travel preset resets speed and delay to its assumptions. Custom settings can be edited afterward. Route distance is straight-line; there is no navigation mesh. Changing speed can change how many nodes fit the budget, but does not manufacture terrain-dependent paths. Routes do not know live spawns or unseen player competition. Map rendering caps potential-node pins at 250; routes cap at 150 waypoints and improve only a nearby candidate subset.
+Settings contain speed, time budget, remount and gathering delays. Selecting a travel preset resets speed and delay to its assumptions. Custom settings can be edited afterward. Travel geometry uses observed directional trails and manually marked obstacle detours; unverified connectors remain estimates. There is no collision mesh. Routes do not know live spawns or unseen player competition. Map rendering caps potential-node pins at 250; routes cap at 150 waypoints and improve only a nearby candidate subset.
 
 ## Incomplete / needs follow-up
 
 - Full native-window replacement is deliberately not claimed. Selecting Nexus opens its browser while preserving Blizzard's data source and crafting access. No suppression of protected native UI.
 - No bundled complete Forever recipe/source catalog. The browser records the catalog exposed by an opened profession; legacy APIs expose learned recipes only. Specialization and prerequisite modeling, full leveling threshold tables and full trainer shopping are not implemented.
-- No terrain/road/water navigation, congestion model, minimap node overlays, route lines, market-weighted routing or learned route performance optimization yet. Navigation is direct waypoint guidance. Custom route editing is add/save/load only.
+- No collision mesh, live-spawn visibility or congestion model. Learned corridors, manual obstacle detours, minimap route lines and route/session recording are implemented; full automatic performance-based circuit optimization remains future work.
 - No compressed/chunked transfer, arbitrary source-addon SavedVariables migration, guild/reagent/account bank support, per-item binding-aware transfers, or deeply integrated Market shopping orders yet.
 - Alternative reagent slots are marked incomplete rather than guessing. Uncached modern item binding metadata and unexposed profession cooldowns need in-game review.
 - UI is fixed-size with adjustable scale. Import preview is displayed in the transfer window before confirmation. Full visual QA in the game, localization, secret-value coverage and every Forever-specific profession require client testing.
@@ -133,3 +135,12 @@ Replaced the three navigation sizing menu entries with one Display row containin
 ## 0.2.11-alpha
 
 The navigation HUD now saves its screen anchor after dragging and restores it when recreated after login or `/reload`, applying its saved scale first. Repeated route activation does not reset placement. Invalid saved anchors fall back to the default, and the display stays clamped to screen.
+
+## 0.3.0-beta
+
+- Retain up to 12 compatible completed route results for seven days across normal reloads/logins. Share bounded directed travel-leg results across candidate starts and sessions. Cosmetic settings and harvest timestamps no longer discard geometry; current evidence is rescored.
+- Preserve time-cap results, and add explicit improvement seeded with the compatible saved circuit. New Optimal/Nearest runs number the closest stop as 1; active-run restoration retains progress.
+- Add per-character saved recording drafts, exact-path playback, validated preview/confirm route exports/imports, deletion confirmation and saved-session comparisons. Current gathering totals resume after logout/reload with offline time excluded.
+- Fix observed-only cross-zone ranking and keep generated-loop comparison identities stable when the start rotates.
+- Add optional Shortest Path Forever travel handoff via its public API. It is never required for Nexus planning.
+- Add Lua 5.1 CI and a reproducible source-verified installable ZIP. Full profession-target planning and a collision mesh are outside this release.

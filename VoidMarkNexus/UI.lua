@@ -48,7 +48,8 @@ function N:TextDialog(title,text,import)
   e:SetScript('OnTextChanged',function() N.pendingImport=nil end)
   e:SetScript('OnEscapePressed',function() e:ClearFocus() end); f.edit=e
   f.preview=button(f,'Preview import',18,-438,160,function()
-   local preview,err=N:PreviewImport(e:GetText()); f.status:SetText(preview and 'Review changes above, then confirm. Close to cancel.' or tostring(err))
+   local preview,err
+   if f.importMode=='route' then preview,err=N:PreviewRouteImport(e:GetText()) else preview,err=N:PreviewImport(e:GetText()) end; f.status:SetText(preview and 'Review changes above, then confirm. Close to cancel.' or tostring(err))
    if preview then local pending=N.pendingImport; e:SetText(preview); N.pendingImport=pending; f.preview:Disable(); N.importPreview=preview; f.confirm:Enable() else f.confirm:Disable() end
   end)
   f.confirm=button(f,'Confirm import',188,-438,160,function() N:ConfirmImport(); f:Hide() end)
@@ -56,8 +57,8 @@ function N:TextDialog(title,text,import)
   f.review=button(f,'View preview',358,-438,150,function() if N.importPreview then N:Print(N.importPreview) end end)
   self.dialog=f
  end
- local f=self.dialog; f.title:SetText(title); f.edit:SetText(text or ''); f.edit:HighlightText(); f.confirm:Disable()
- f.preview:SetShown(import==true); f.confirm:SetShown(import==true); f.review:SetShown(import==true)
+ local f=self.dialog; f.importMode=import;N.pendingImport=nil; f.title:SetText(title); f.edit:SetText(text or ''); f.edit:HighlightText(); f.confirm:Disable()
+ f.preview:SetShown(import==true or import=='route'); f.confirm:SetShown(import==true or import=='route'); f.review:SetShown(import==true or import=='route')
  f.preview:Enable(); f.status:SetText(import and 'Paste VMN1 export, then preview and review before confirming.' or 'Ctrl+A, Ctrl+C to copy.'); f:Show()
 end
 function N:Show(tab)
@@ -588,24 +589,16 @@ function N:Render()
  elseif tab=='Routes' then
   local map=self:Position(); local nodes=map and self:ZoneNodes(map) or {}; local s=self.db.settings
   detail='Strategy: '..({optimal='Optimal Loop',nearest='Nearest Efficient Loop',here='Start Here'})[s.routeStrategy or 'optimal']..'\nResource: '..(s.target~='' and s.target or ({all='All nodes',herb='Herbs',ore='Mining'})[s.kind] or 'All nodes')..'\nTravel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use learned directional corridors, marked obstacle detours and bounded 2-opt. Cyan segments are observed trails; purple segments are unverified. Cliffs and live availability cannot be read from artwork. Waypoints remain potential spawns.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn terrain on|off|clear\n/vmn pause\n/vmn restart\n/vmn check empty|available\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
-  for name,r in pairs(self.db.routes) do rows[#rows+1]={text='Saved: '..name..' | '..#r.points..' waypoints',routeName=name,detail='Use Load selected to navigate this saved route.'} end
+  for name,r in pairs(self.db.routes) do
+   local valid=self:CleanNavigationRoute(r)
+   rows[#rows+1]={text='Saved: '..tostring(name)..(valid and (' | '..#valid.points..' waypoints') or ' | invalid data retained'),
+    routeName=name,detail=valid and (self:SavedRunSummary(valid)..'\nUse Load selected to navigate this saved route.') or 'Invalid saved geometry was retained. Delete this route through Route tools if no longer needed.'}
+  end
   if self.activeRoute then for i,p in ipairs(self.activeRoute.points) do rows[#rows+1]={text=i..'. '..(p.name or 'Waypoint')..string.format(' (%.1f, %.1f)',p.x*100,p.y*100),icon=self:ResourceNodeIcon(p),detail=p.source or 'Custom waypoint'} end end
-  self:SetActions({'Travel mode','Generate','Load selected'},{function()
-   local choices={}; for i,m in ipairs(N.travelModes) do choices[#choices+1]={label=m[1],value=i} end
-   N:Choice(u.actions[1],choices,function(i) local m=N.travelModes[i]; s.travel=m[1]; if m[1]~='Custom' then s.speed=m[2]; s.mountDelay=m[3] end end)
-  end,function() N:GenerateRoute() end,function() if u.selected and u.selected.routeName then
-   local saved=N:Copy(N.db.routes[u.selected.routeName])
-   N:RunPlanner(function()
-    local map,x,y=N:Position()
-    if (saved.strategy=='nearest' or saved.strategy=='optimal') and map and x and y then
-     return N:StartRouteAtNearest(saved,{map=map,x=x,y=y})
-    end
-    return N:PrepareTerrainRoute(saved)
-   end,function(route)
-    if route.unreachable then return N:Print('Saved route contains an unreachable leg. Regenerate it.') end
-    N.activeRoute=route;N.waypoint=1;N.terrainIndex=1;N.routePaused=false;N:ShowArrow()
-   end)
-  end end})
+  detail=self:CacheSummary()..'\n'..self:RecordingStatus()..'\n\n'..detail
+  self:SetActions({'Route tools','Generate','Load selected'},{function()
+   N:RouteTools(u.actions[1])
+  end,function() N:GenerateRoute() end,function() if u.selected and u.selected.routeName then N:ReplayRoute(u.selected.routeName) end end})
  else
   local n=0; for _ in pairs(self.db.characters) do n=n+1 end
   rows={{text=self.character.name..' - '..self.character.realm..' / '..self.character.faction},
@@ -647,3 +640,41 @@ function N:ShowLeveling(mode)
  self:TextDialog('Leveling: '..mode,table.concat(lines,'\n'))
 end
 
+
+function N:RouteTools(anchor)
+ self:Choice(anchor,{
+  {label='Travel mode',value='travel'},
+  {label=self.recording and 'Finish recording' or 'Record a farming run',value='record'},
+  {label='Discard recording draft',value='discard'},
+  {label='Travel to selected route',value='trip'},
+  {label='Export selected route',value='export'},
+  {label='Import route',value='import'},
+  {label='Delete selected route',value='delete'},
+  {label='Improve route using saved work',value='improve'},
+  {label='Saved calculation status',value='status'},
+  {label='Clear computed cache',value='clear'}
+ },function(value)
+  local selected=self.ui and self.ui.selected;local name=selected and selected.routeName
+  if value=='travel' then
+   local options={};for i,m in ipairs(self.travelModes) do options[#options+1]={label=m[1],value=i} end
+   self:Choice(anchor,options,function(i)
+    local m=self.travelModes[i];self.db.settings.travel=m[1]
+    if m[1]~='Custom' then self.db.settings.speed=m[2];self.db.settings.mountDelay=m[3] end
+    self.dirty=true
+   end)
+  elseif value=='record' then if self.recording then self:FinishRecording() else
+   local text=self.ui and self.ui.value:GetText();self:StartRecording(text~='1' and text or '') end
+  elseif value=='discard' then self:DiscardRecording()
+  elseif value=='trip' then self:TravelToRoute(name)
+  elseif value=='import' then self:TextDialog('Route import','','route')
+  elseif value=='export' then local raw,err=self:ExportRoute(name);if raw then self:TextDialog('Route export',raw) else self:Print(err) end
+  elseif value=='delete' then
+   if name then self:Choice(anchor,{{label='Delete '..name,value=true},{label='Keep route',value=false}},function(yes)
+    if yes then self.db.routes[name]=nil;self.ui.selected=nil;self.dirty=true end
+   end) else self:Print('Select a saved route first.') end
+  elseif value=='improve' then self:GenerateRoute(true)
+  elseif value=='clear' then self:ClearCalculations()
+  elseif value=='status' then self:TextDialog('Saved calculations',self:CacheSummary()..'\n'..self:RecordingStatus()) end
+  self.dirty=true
+ end)
+end

@@ -1,8 +1,6 @@
 local _, N = ...
 local function seconds() return GetTime and GetTime() or time() end
 
--- Session-only, exact-input cache. Never reuse a route across changed terrain,
--- obstacles, node filters, movement settings, gathering evidence or start position.
 function N:PlannerCacheKey(value)
  local function encode(v)
   if type(v)~='table' then local s=tostring(v);return type(v)..#s..':'..s end
@@ -13,18 +11,42 @@ function N:PlannerCacheKey(value)
  end
  return encode(value)
 end
+local function validResult(self,route)
+ if type(route)~='table' then return false end
+ if route.points then return self:CleanNavigationRoute(route)~=nil end
+ if #route>5 then return false end
+ for _,entry in ipairs(route) do
+  if type(entry)~='table' or not self:Finite(entry.map,1,100000)
+   or type(entry.name)~='string' or not self:CleanNavigationRoute(entry.route) then return false end
+  if entry.alternatives then
+   if type(entry.alternatives)~='table' or #entry.alternatives>5 then return false end
+   for _,r in ipairs(entry.alternatives) do if not self:CleanNavigationRoute(r) then return false end end
+  end
+ end
+ return true
+end
 function N:GetPlannerCache(key)
- for _,entry in ipairs(self.plannerCache or {}) do
-  if entry.key==key and seconds()-entry.at<120 then
+ if self.cacheReadOnly then return end
+ local entries=self.db.calculations.routes
+ for i,entry in ipairs(entries) do
+  if entry.key==key and self:Finite(entry.at,0,self:Now()) and self:Now()-entry.at<=604800
+   and validResult(self,entry.route) then
+   table.remove(entries,i);table.insert(entries,1,entry)
    if self.planningJob then self.planningJob.cached=true end
+   self.cacheStats.routes=self.cacheStats.routes+1
    return self:Copy(entry.route)
   end
  end
+ self.cacheStats.misses=self.cacheStats.misses+1
 end
 function N:PutPlannerCache(key,route)
- self.plannerCache=self.plannerCache or {}
- table.insert(self.plannerCache,1,{key=key,route=self:Copy(route),at=seconds()})
- while #self.plannerCache>6 do table.remove(self.plannerCache) end
+ if self.cacheReadOnly or type(key)~='string' or #key>200000 then return end
+ local copy=self:PortableCache(route)
+ if not copy or not validResult(self,copy) then return end
+ local entries=self.db.calculations.routes
+ for i=#entries,1,-1 do if entries[i].key==key then table.remove(entries,i) end end
+ table.insert(entries,1,{key=key,route=copy,at=self:Now()})
+ self:PruneCalculationCache()
 end
 function N:SetPlannerProgress(stage,done,total)
  local job=self.planningJob;if not job then return end
@@ -83,6 +105,9 @@ function N:RunPlanner(work,complete)
   if self:Call(InCombatLockdown) then self:CancelPlanner('Route calculation cancelled by combat.');return end
   if seconds()-self.planningJob.started>=30 then
    local best=self.planningJob.best
+   if best and self.planningJob.cacheKey then
+    best.bestSoFar=true;self:PutPlannerCache(self.planningJob.cacheKey,best)
+   end
    self:CancelPlanner()
    if best then self:Print('30-second limit reached; using the best completed circuit so far.');self:Guard('route result',complete,best)
    else self:Print('Calculation stopped after 30 seconds. Try Start Here or narrower resource filters.') end
@@ -94,7 +119,7 @@ function N:RunPlanner(work,complete)
   if coroutine.status(thread)=='dead' then
    local elapsed=seconds()-self.planningJob.started
    local cached=self.planningJob.cached
-   self:CancelPlanner();self:Print(string.format('Route calculation finished in %.1fs%s.',elapsed,cached and ' (reused recent result)' or ''))
+   self:CancelPlanner();self:Print(string.format('Route calculation finished in %.1fs%s.',elapsed,cached and ' (reused saved result)' or ''))
    self:Guard('route result',complete,value)
   elseif C_Timer and C_Timer.After then
    self:ShowPlannerStatus();C_Timer.After(0,step)

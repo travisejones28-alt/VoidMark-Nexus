@@ -114,11 +114,12 @@ function N:BuildRoute(nodes,start,width,height,s)
  -- The imported spawn database can contain several records for one farming patch.
  -- Collapse near-identical/adjacent candidates before constructing navigation.
  local cache={}
+ local context=self:TravelContext(start.map,width,height,s.speed)
  local function distance(a,b)
   local row=cache[a]
   if row and row[b] then return row[b] end
   self:PlannerCheckpoint()
-  local d,_,info=self:TerrainLeg(a,b,width,height,start.map,s.speed)
+  local d,_,info=self:CachedTerrainLeg(a,b,width,height,start.map,s.speed,context)
   local value=info and info.seconds and info.seconds*s.speed or d
   -- Cache is local to this build: changes to speed, learned trails or obstacles
   -- cannot leak into subsequent calculations.
@@ -282,8 +283,7 @@ function N:StartRouteAtNearest(route,here)
  local nearest,best=1,math.huge
  for i,p in ipairs(route.points) do
   self:PlannerCheckpoint()
-  local distance,_,info=self:TerrainLeg(here,p,route.width,route.height,route.map,route.speed)
-  local cost=info and info.seconds or distance/math.max(1,route.speed or self.db.settings.speed)
+  local cost=self:Distance(here,p,route.width,route.height)
   if cost<best then nearest,best=i,cost end
  end
  if best==math.huge then return route end
@@ -304,14 +304,18 @@ function N:PlanRoute(strategy)
  local w,h=self:MapSize(map)
  if not w then return self:Print('Map dimensions unavailable.') end
  local here={map=map,x=x,y=y}
- local settings=self:Copy(self.db.settings)
- strategy=strategy or settings.routeStrategy or 'optimal'
+ local settings=self:RouteSettings()
+ strategy=strategy or self.db.settings.routeStrategy or 'optimal'
  local key=self:PlannerCacheKey({map=map,w=w,h=h,strategy=strategy,
-  origin=strategy~='optimal' and here or nil,settings=settings,nodes=nodes,
-  terrain=self:TerrainZone(map),blocks=(self.db.terrainBlocks or {})[map],
-  evidence=(self.db.gatherEvidence or {})[map]})
+  compat=self:CacheCompatibility(),origin=strategy~='optimal' and here or nil,settings=settings,nodes=self:RoutingNodes(nodes),
+  terrain=self:RoutingTerrain(map),blocks=(self.db.terrainBlocks or {})[map]})
  local cached=self:GetPlannerCache(key)
- if cached then self:SetPlannerProgress('Reusing recent route');return self:StartRouteAtNearest(cached,here) end
+ if cached then
+  self:ScoreRouteEvidence(cached)
+  if not (self.planningJob and self.planningJob.refresh) then self:SetPlannerProgress('Reusing saved route');return self:StartRouteAtNearest(cached,here) end
+  self.planningJob.best=self:Copy(cached)
+ end
+ if self.planningJob then self.planningJob.cacheKey=key end
  local starts={here}
  if strategy~='here' then
   starts={}
@@ -335,6 +339,11 @@ function N:PlanRoute(strategy)
   if strategy=='nearest' then starts[#starts+1]=here end
  end
  local best,bestScore
+ if cached then
+  best=cached
+  local denominator=math.max(600,(cached.seconds or 600)+(strategy=='nearest' and self:Distance(here,cached.origin,w,h)/math.max(1,settings.speed) or 0))
+  bestScore=#cached.points*math.min(1,#cached.points/12)/denominator
+ end
  for index,origin in ipairs(starts) do
   self:SetPlannerProgress("Comparing route starts",index-1,#starts)
   local route=self:BuildRoute(nodes,origin,w,h,settings)
@@ -366,7 +375,7 @@ end
 -- Cross-zone comparisons are based on accessible imported coordinates, not active spawns.
 function N:RankResourceZones(resource)
  if not resource or resource=='' then return {} end
- local settings=self:Copy(self.db.settings)
+ local settings=self:RouteSettings()
  local maps={}
  for object,kind in pairs(self.nodeTypes or {}) do
   if kind.name==resource then
@@ -380,20 +389,20 @@ function N:RankResourceZones(resource)
  local eligible={}
  for map in pairs(self.db.nodes or {}) do
   if not maps[map] and not self:IsGatheringCityMap(map) then
-   local nodes=inputs.zones[map].nodes;if #nodes>0 then maps[map]=#nodes end
+   local nodes=self:ZoneNodes(map,'all',resource);if #nodes>0 then maps[map]=#nodes end
   end
  end
  for map,count in pairs(maps) do if count>=4 then eligible[#eligible+1]={map=map,count=count} end end
  table.sort(eligible,function(a,b) return a.count>b.count end)
- local inputs={resource=resource,settings=settings,zones={}}
+ local inputs={compat=self:CacheCompatibility(),resource=resource,settings=settings,zones={}}
  for _,entry in ipairs(eligible) do
   local map=entry.map
-  inputs.zones[map]={nodes=self:ZoneNodes(map,'all',resource),terrain=self:TerrainZone(map),
-   blocks=(self.db.terrainBlocks or {})[map],evidence=(self.db.gatherEvidence or {})[map]}
+  inputs.zones[map]={nodes=self:RoutingNodes(self:ZoneNodes(map,'all',resource)),terrain=self:RoutingTerrain(map),
+   blocks=(self.db.terrainBlocks or {})[map],evidence=(self.db.gatherEvidence or {})[map],dimensions={self:MapSize(map)}}
  end
  local key=self:PlannerCacheKey(inputs)
  local cached=self:GetPlannerCache(key)
- if cached then self:SetPlannerProgress('Reusing recent zone comparison');return cached end
+ if cached then self:SetPlannerProgress('Reusing saved zone comparison');return self:RefreshZoneScores(cached) end
  -- Every eligible zone is compared; the UI runs this through the incremental queue.
  local results={}
  for index=1,#eligible do
@@ -439,6 +448,12 @@ function N:RankResourceZones(resource)
    end
   end
  end
+ self:RefreshZoneScores(results)
+ self:PutPlannerCache(key,results)
+ return results
+end
+function N:RefreshZoneScores(results)
+ for _,r in ipairs(results) do self:ScoreRouteEvidence(r.route) end
  local allObserved=#results>0
  for _,r in ipairs(results) do if not r.route.expectedResourcesPerHour then allObserved=false end end
  for _,r in ipairs(results) do
@@ -451,18 +466,19 @@ function N:RankResourceZones(resource)
   return a.rankScore>b.rankScore
  end)
  while #results>5 do table.remove(results) end
- self:PutPlannerCache(key,results)
  return results
 end
+
 function N:PrepareTerrainRoute(route)
  if not route or not route.points or not route.width or not route.height or not route.origin then return route end
  local points,indices={{x=route.origin.x,y=route.origin.y,map=route.map,transit=true,starting=true,name='Route start'}},{}
  local previous=route.origin
+ local context=self:TravelContext(route.map,route.width,route.height,route.speed or self.db.settings.speed)
  local seconds,length,validated=0,0,0
  local speed=math.max(1,route.speed or self.db.settings.speed)
  route.unreachable=nil
  local function append(destination,closing)
-  local distance,detour,info=self:TerrainLeg(previous,destination,route.width,route.height,route.map,speed)
+  local distance,detour,info=self:CachedTerrainLeg(previous,destination,route.width,route.height,route.map,speed,context)
   if distance==math.huge then route.unreachable=true;return false end
   for _,via in ipairs(detour) do
    if #points>=2048 then route.unreachable=true;return false end
@@ -488,8 +504,8 @@ function N:PrepareTerrainRoute(route)
  route.terrainMode='learned-and-estimated'
  return route
 end
-function N:GenerateRoute()
- self:RunPlanner(function() return self:PlanRoute() end,function(best)
+function N:GenerateRoute(refresh)
+ self:RunPlanner(function() self.planningJob.refresh=refresh==true;return self:PlanRoute() end,function(best)
   if not best then return end
   local map,x,y=self:Position()
   if map and x and y then self:StartRouteAtNearest(best,{map=map,x=x,y=y}) end
@@ -709,6 +725,9 @@ function N:UpdateArrow()
  if distance<8 then
   if point.transit then
    self.terrainIndex=(self.terrainIndex or 1)+1
+   if route.recorded then
+    while (self.waypoint or 1)<#route.points and route.travelStopIndices[self.waypoint or 1]<self.terrainIndex do self.waypoint=(self.waypoint or 1)+1 end
+   end
    if self.terrainIndex>#route.travelPoints then self.activeRoute=nil;arrow:Hide();self:Print('Route loop complete.') end
   elseif not self.db.settings.manualStops then self:SkipWaypoint() end
   self.dirty=true
@@ -1054,6 +1073,14 @@ local function navigationRoute(self,source)
  if type(source)~='table' or not self:Finite(source.map,1,100000)
   or not self:Finite(source.width,1,100000) or not self:Finite(source.height,1,100000)
   or type(source.points)~='table' or #source.points<1 or #source.points>150 then return end
+ for _,field in ipairs({'speed','seconds','terrainSeconds','length','gatherDelay','mountDelay'}) do
+  if source[field]~=nil and not self:Finite(source[field],0,1e12) then return end
+ end
+ if source.recorded~=nil and type(source.recorded)~='boolean' then return end
+ if source.recorded and not source.travelPoints then return end
+ for _,field in ipairs({'mode','strategy'}) do
+  if source[field]~=nil and (type(source[field])~='string' or #source[field]>80) then return end
+ end
  local route={}
  for k,v in pairs(source) do
   if type(k)=='string' and (type(v)=='boolean' or type(v)=='string' and #v<=512
@@ -1064,6 +1091,11 @@ local function navigationRoute(self,source)
   local copy={x=p.x,y=p.y,map=source.map}
   for _,k in ipairs({'name','source','object','transit','validated','closing','starting'}) do
    local v=p[k]
+   if v~=nil then
+    if k=='name' or k=='source' then if type(v)~='string' or #v>160 then return end
+    elseif k=='object' then if not self:Finite(v,0,1e12) then return end
+    elseif type(v)~='boolean' then return end
+   end
    if type(v)=='boolean' or type(v)=='string' and #v<=160 or type(v)=='number' and self:Finite(v,0,1e12) then copy[k]=v end
   end
   return copy
@@ -1077,14 +1109,17 @@ local function navigationRoute(self,source)
   for i,p in ipairs(source.travelPoints) do route.travelPoints[i]=point(p);if not route.travelPoints[i] then return end end
   if type(source.travelStopIndices)~='table' then return end
   route.travelStopIndices={}
+  local previous=0
   for i=1,#route.points do
    local value=source.travelStopIndices[i]
-   if not self:Finite(value,1,#route.travelPoints) or value~=math.floor(value) then return end
+   if not self:Finite(value,1,#route.travelPoints) or value~=math.floor(value) or value<=previous then return end
    route.travelStopIndices[i]=value
+   previous=value
   end
  end
  return route
 end
+function N:CleanNavigationRoute(route) return navigationRoute(self,route) end
 function N:SaveNavigation()
  if not self.db or not self.characterID then return end
  self.db.navigation=type(self.db.navigation)=='table' and self.db.navigation or {}
