@@ -539,13 +539,20 @@ end
 local function nexusDeltaAngle(a,b)
  return (b-a+math.pi)%(2*math.pi)-math.pi
 end
+function N:SetArrowScale(value)
+ value=tonumber(value)
+ if not self:Finite(value,.5,2) then self:Print('Navigation size must be 0.5 to 2.0.');return false end
+ self.db.settings.arrowScale=value
+ if self.arrow then self.arrow:SetScale(value) end
+ return true
+end
 function N:ShowArrow()
  if not self.arrow then
   local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
   f:SetSize(320,262)
   f:SetPoint('TOP',UIParent,'TOP',0,-135)
   f:SetFrameStrata('HIGH')
-  f:SetMovable(true); f:EnableMouse(true)
+  f:SetMovable(true); f:EnableMouse(true);f:SetClampedToScreen(true)
   f:RegisterForDrag('LeftButton')
   f:SetScript('OnDragStart',function(w) w:StartMoving() end)
   f:SetScript('OnDragStop',function(w) w:StopMovingOrSizing() end)
@@ -593,9 +600,15 @@ function N:ShowArrow()
     {label='Skip waypoint',value='skip'},
     {label='Restart from waypoint 1',value='restart'},
     {label='Pause / resume',value='pause'},
+    {label='Smaller display',value='smaller'},
+    {label='Larger display',value='larger'},
+    {label='Reset display size',value='sizeReset'},
     {label='Cancel route',value='cancel'}
    },function(action)
-    if action=='skip' then N:SkipWaypoint()
+    if action=='smaller' then N:SetArrowScale(math.max(.5,(N.db.settings.arrowScale or 1)-.1))
+    elseif action=='larger' then N:SetArrowScale(math.min(2,(N.db.settings.arrowScale or 1)+.1))
+    elseif action=='sizeReset' then N:SetArrowScale(1)
+    elseif action=='skip' then N:SkipWaypoint()
     elseif action=='restart' and N.activeRoute then N.waypoint=1;N.terrainIndex=1;N.routePaused=false; N.dirty=true
     elseif action=='pause' then N.routePaused=not N.routePaused
     elseif action=='cancel' then N.activeRoute=nil; N.waypoint=nil; f:Hide(); N.dirty=true end
@@ -633,6 +646,7 @@ function N:ShowArrow()
   end)
   self.arrow=f
  end
+ self.arrow:SetScale(self.db.settings.arrowScale or 1)
  self.arrow.refreshAt=0
  self.arrow:Show()
 end

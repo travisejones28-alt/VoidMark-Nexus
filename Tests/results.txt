@@ -55,4 +55,5 @@ PASS Minimap dots number gathering stops and hide completed/offscreen stops
 PASS Nearest loop rotates stop order and rebuilds detours without reversing direction
 PASS Cached optimal loops renumber the nearest stop after the player moves
 PASS Reference-style arrow HUD updates live progress, distance, ETA and next-stop action
-PASS: 57 tests; Lua 5.1 / LuaJIT 2.0.5
+PASS Navigation display scales as one saved unit with safe size bounds
+PASS: 58 tests; Lua 5.1 / LuaJIT 2.0.5

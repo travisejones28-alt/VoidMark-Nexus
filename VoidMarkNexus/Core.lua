@@ -1,6 +1,6 @@
 local _, N = ...
 _G.VoidMarkNexus = N
-N.version, N.schema = '0.2.7-alpha', 1
+N.version, N.schema = '0.2.8-alpha', 1
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
 function N:Finite(v, lo, hi)
@@ -56,9 +56,9 @@ function N:Initialize()
  local defaults={native=true,learn=true,importedNodes=true,observedNodes=true,nodesVisible=true,routeVisible=true,minimapRoute=true,stats=true,
  includeAlts=true,includeBanks=true,includeImports=false,includeStale=false,maxAge=86400,inventoryAge=604800,
  market=true,auctionator=false,manualFirst=false,cut=.05,deposit=0,failedAuctions=0,saleFraction=1,waste=0,
- speed=7,travel='Foot',mountDelay=0,gatherDelay=3,routeMinutes=20,nodeLimit=100,kind='all',target='',minimap=true,scale=1,mapIconSize=7,terrainLearn=true,manualStops=false}
+ speed=7,travel='Foot',mountDelay=0,gatherDelay=3,routeMinutes=20,nodeLimit=100,kind='all',target='',minimap=true,scale=1,arrowScale=1,mapIconSize=7,terrainLearn=true,manualStops=false}
  for k,v in pairs(defaults) do if type(d.settings[k])~=type(v) then d.settings[k]=v end end
- local bounds={maxAge={60,2592000},inventoryAge={60,2592000},cut={0,.3},deposit={0,1e8},failedAuctions={0,20},saleFraction={0,1},waste={0,1},speed={1,50},mountDelay={0,30},gatherDelay={0,60},routeMinutes={1,120},nodeLimit={2,150},scale={.6,1.5}}
+ local bounds={maxAge={60,2592000},inventoryAge={60,2592000},cut={0,.3},deposit={0,1e8},failedAuctions={0,20},saleFraction={0,1},waste={0,1},speed={1,50},mountDelay={0,30},gatherDelay={0,60},routeMinutes={1,120},nodeLimit={2,150},scale={.6,1.5},arrowScale={.5,2}}
  for k,b in pairs(bounds) do if not self:Finite(d.settings[k],b[1],b[2]) then d.settings[k]=defaults[k] end end
  if d.settings.kind~='all' and d.settings.kind~='herb' and d.settings.kind~='ore' then d.settings.kind='all' end
  local position=d.settings.position
