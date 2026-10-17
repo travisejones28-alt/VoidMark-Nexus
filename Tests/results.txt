@@ -49,4 +49,7 @@ PASS Exact-input route cache avoids rebuilding and invalidates on relevant chang
 PASS Progress, approximate ETA, cancel, timeout and old queued callbacks
 PASS Minimap clipping covers crossing, offscreen and circular legs
 PASS Thin minimap lines track zoom, rotation, detours, visibility and fallback
-PASS: 51 tests; Lua 5.1 / LuaJIT 2.0.5
+PASS Active navigation survives reload per character without replanning
+PASS Malformed navigation is rejected and invalid progress is safely reset
+PASS Minimap dots number gathering stops and hide completed/offscreen stops
+PASS: 54 tests; Lua 5.1 / LuaJIT 2.0.5

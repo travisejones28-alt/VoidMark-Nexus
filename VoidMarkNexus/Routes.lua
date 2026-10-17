@@ -957,3 +957,65 @@ function N:RefreshMap()
  end
 end
 
+
+-- SavedVariables are written after PLAYER_LOGOUT, including /reload.
+-- Store navigation per character, separately from the account's named routes.
+local function navigationRoute(self,source)
+ if type(source)~='table' or not self:Finite(source.map,1,100000)
+  or not self:Finite(source.width,1,100000) or not self:Finite(source.height,1,100000)
+  or type(source.points)~='table' or #source.points<1 or #source.points>150 then return end
+ local route={}
+ for k,v in pairs(source) do
+  if type(k)=='string' and (type(v)=='boolean' or type(v)=='string' and #v<=512
+   or type(v)=='number' and self:Finite(v,-1e15,1e15)) then route[k]=v end
+ end
+ local function point(p)
+  if type(p)~='table' or not self:Finite(p.x,0,1) or not self:Finite(p.y,0,1) then return end
+  local copy={x=p.x,y=p.y,map=source.map}
+  for _,k in ipairs({'name','source','object','transit','validated','closing','starting'}) do
+   local v=p[k]
+   if type(v)=='boolean' or type(v)=='string' and #v<=160 or type(v)=='number' and self:Finite(v,0,1e12) then copy[k]=v end
+  end
+  return copy
+ end
+ route.points={}
+ for i,p in ipairs(source.points) do route.points[i]=point(p);if not route.points[i] then return end end
+ route.origin=point(source.origin) or self:Copy(route.points[1])
+ if source.travelPoints~=nil then
+  if type(source.travelPoints)~='table' or #source.travelPoints<1 or #source.travelPoints>2048 then return end
+  route.travelPoints={}
+  for i,p in ipairs(source.travelPoints) do route.travelPoints[i]=point(p);if not route.travelPoints[i] then return end end
+  if type(source.travelStopIndices)~='table' then return end
+  route.travelStopIndices={}
+  for i=1,#route.points do
+   local value=source.travelStopIndices[i]
+   if not self:Finite(value,1,#route.travelPoints) or value~=math.floor(value) then return end
+   route.travelStopIndices[i]=value
+  end
+ end
+ return route
+end
+function N:SaveNavigation()
+ if not self.db or not self.characterID then return end
+ self.db.navigation=type(self.db.navigation)=='table' and self.db.navigation or {}
+ local route=navigationRoute(self,self.activeRoute)
+ self.db.navigation[self.characterID]=route and {version=1,route=route,
+  waypoint=self.waypoint or 1,terrainIndex=self.terrainIndex or 1,paused=self.routePaused==true} or nil
+end
+function N:RestoreNavigation()
+ local saved=type(self.db.navigation)=='table' and self.db.navigation[self.characterID]
+ if type(saved)~='table' or saved.version~=1 then return end
+ local route=navigationRoute(self,saved.route)
+ if not route then return end
+ local function index(value,maximum)
+  if not self:Finite(value,1,maximum) or value~=math.floor(value) then return 1 end
+  return value
+ end
+ self.activeRoute=route
+ self.waypoint=index(saved.waypoint,#route.points+(route.travelPoints and 1 or 0))
+ self.terrainIndex=index(saved.terrainIndex,route.travelPoints and #route.travelPoints or 1)
+ self.routePaused=saved.paused==true;self.dirty=true
+ self:ShowArrow()
+ self:Print('Restored active route and waypoint'..(self.routePaused and ' (paused).' or '.'))
+end
+N:On('PLAYER_LOGOUT',function() N:SaveNavigation() end)

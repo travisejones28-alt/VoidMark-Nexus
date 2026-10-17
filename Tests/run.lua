@@ -43,7 +43,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.1-alpha') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.2-alpha') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -420,6 +420,54 @@ test('Thin minimap lines track zoom, rotation, detours, visibility and fallback'
  N.Position,Minimap=oldPosition,oldMinimap
  C_Minimap,GetCVarBool,GetPlayerFacing=oldC,oldBool,oldFacing
  GetMinimapShape=oldShape;N.activeRoute=nil
+end)
+
+
+test('Active navigation survives reload per character without replanning',function()
+ local id=N.characterID;local originalPlanner=N.RunPlanner
+ N.activeRoute={map=1411,width=5000,height=3000,speed=7,points={{x=.41,y=.4},{x=.42,y=.4}},
+  origin={x=.4,y=.4},travelPoints={{x=.4,y=.4,starting=true,transit=true},{x=.41,y=.4},{x=.42,y=.4},{x=.4,y=.4,closing=true,transit=true}},travelStopIndices={2,3}}
+ N.waypoint=2;N.terrainIndex=3;N.routePaused=true
+ for _,fn in ipairs(N.handlers.PLAYER_LOGOUT) do fn() end
+ assert(N.db.navigation[id]);N.activeRoute=nil;N.waypoint=nil;N.terrainIndex=nil;N.routePaused=false
+ N.characterID='Different character';N:RestoreNavigation();eq(N.activeRoute,nil)
+ N.characterID=id;N.RunPlanner=function() error('Restoring must not replan') end
+ N:RestoreNavigation();eq(N.waypoint,2);eq(N.terrainIndex,3);eq(N.routePaused,true)
+ eq(#N.activeRoute.travelPoints,4);eq(N.activeRoute.travelStopIndices[2],3)
+ N.activeRoute.points[1].x=.7;eq(N.db.navigation[id].route.points[1].x,.41)
+ N.RunPlanner=originalPlanner
+ N.activeRoute=nil;N:SaveNavigation();eq(N.db.navigation[id],nil)
+ N:RestoreNavigation();eq(N.activeRoute,nil)
+end)
+
+test('Malformed navigation is rejected and invalid progress is safely reset',function()
+ local id=N.characterID
+ N.db.navigation[id]={version=1,route={map=1411,width=5000,height=3000,points={{x=99,y=.4}}}}
+ N:RestoreNavigation();eq(N.activeRoute,nil)
+ N.db.navigation[id].route.points[1].x=.4
+ N.db.navigation[id].waypoint=0/0;N.db.navigation[id].terrainIndex=999999
+ N:RestoreNavigation();eq(N.waypoint,1);eq(N.terrainIndex,1)
+ N.activeRoute=nil;N:SaveNavigation()
+end)
+
+test('Minimap dots number gathering stops and hide completed/offscreen stops',function()
+ local position,oldMinimap=N.Position,Minimap
+ local oldC,oldShape=C_Minimap,GetMinimapShape
+ C_Minimap={GetViewRadius=function() return 100 end}
+ GetMinimapShape=function() return 'SQUARE' end
+ Minimap=widget();Minimap.GetWidth=function() return 200 end;Minimap.GetHeight=function() return 200 end
+ Minimap.GetEffectiveScale=function() return 1 end
+ N.Position=function() return 1411,.4,.4 end
+ N.db.settings.routeVisible=true;N.db.settings.minimapRoute=true
+ N.activeRoute={map=1411,origin={x=.4,y=.4},points={{x=.402,y=.4},{x=.404,y=.4},{x=.9,y=.9}},
+  travelPoints={{x=.401,y=.4,transit=true},{x=.402,y=.4},{x=.404,y=.4},{x=.9,y=.9}}}
+ N.waypoint=1;N.terrainIndex=1
+ N:UpdateMinimapRoute();eq(#N.minimapRoutePins,2)
+ eq(N.minimapRoutePins[1].label.text,'1');eq(N.minimapRoutePins[2].label.text,'2')
+ N.waypoint=2;N:UpdateMinimapRoute();eq(N.minimapRoutePins[1].label.text,'2')
+ assert(not N.minimapRoutePins[2]:IsShown())
+ N.activeRoute=nil;N:UpdateMinimapRoute();assert(not N.minimapRouteOverlay:IsShown())
+ N.Position,Minimap=position,oldMinimap;C_Minimap,GetMinimapShape=oldC,oldShape
 end)
 
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')

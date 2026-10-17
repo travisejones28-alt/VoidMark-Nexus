@@ -106,6 +106,39 @@ function N:UpdateMinimapRoute()
   end
   previous=p
  end
+ -- Number actual gathering stops, not intermediate terrain detours.
+ self.minimapRoutePins=self.minimapRoutePins or {}
+ local shown=0
+ for index=self.waypoint or 1,math.min(#(route.points or {}),150) do
+  local px,py=project(route.points[index])
+  local margin=10/math.max(.25,scale)
+  local inside=px and (square and math.abs(px*width)<=width-margin and math.abs(py*height)<=height-margin
+   or not square and px*px+py*py<=(1-margin/math.min(width,height))^2)
+  if inside then
+   shown=shown+1
+   local pin=self.minimapRoutePins[shown]
+   if not pin then
+    pin=CreateFrame('Frame',nil,overlay);pin:EnableMouse(false)
+    pin.background=pin:CreateTexture(nil,'ARTWORK');pin.background:SetAllPoints(pin)
+    if type(pin.CreateMaskTexture)=='function' then
+     local mask=pin:CreateMaskTexture()
+     if mask then
+      mask:SetTexture('Interface\\CHARACTERFRAME\\TempPortraitAlphaMask')
+      mask:SetAllPoints(pin.background);pin.background:AddMaskTexture(mask);pin.mask=mask
+     end
+    end
+    pin.label=pin:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
+    pin.label:SetPoint('CENTER');pin.label:SetShadowColor(0,0,0,1);pin.label:SetShadowOffset(1,-1)
+    self.minimapRoutePins[shown]=pin
+   end
+   pin:SetSize(18/math.max(.25,scale),18/math.max(.25,scale))
+   pin:SetFrameLevel(overlay:GetFrameLevel()+2)
+   pin:ClearAllPoints();pin:SetPoint('CENTER',Minimap,'CENTER',px*width,py*height)
+   pin.background:SetColorTexture(index==(self.waypoint or 1) and .5 or .15,.05,.3,.95)
+   pin.label:SetText(tostring(index));pin:Show()
+  end
+ end
+ for i=shown+1,#self.minimapRoutePins do self.minimapRoutePins[i]:Hide() end
  for i=used+1,#self.minimapRouteLines do self.minimapRouteLines[i]:Hide() end
  for i=dots+1,#self.minimapRouteDots do self.minimapRouteDots[i]:Hide() end
 end
