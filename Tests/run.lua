@@ -43,7 +43,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.4-alpha') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.5-alpha') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -513,6 +513,29 @@ test('Cached optimal loops renumber the nearest stop after the player moves',fun
  local second=N:PlanRoute('optimal');eq(calls,built);eq(second.points[1].name,'C')
  eq(second.points[2].name,'A');eq(second.points[3].name,'B')
  N.Position,N.ZoneNodes,N.BuildRoute=position,zone,build
+end)
+
+
+test('Reference-style arrow HUD updates live progress, distance, ETA and next-stop action',function()
+ local position=N.Position
+ N.Position=function() return 1411,.4,.4 end
+ N.activeRoute={map=1411,width=5000,height=3000,speed=10,
+  points={{x=.45,y=.4,name='A'},{x=.5,y=.4,name='Silverleaf'},{x=.6,y=.4,name='C'}}}
+ N.waypoint=2;N.terrainIndex=1;N.routePaused=false
+ N.db.settings.routeVisible=true;N:ShowArrow()
+ local f=N.arrow
+ f.progress.SetValue=function(self,value) self.value=value end
+ f.texture.SetRotation=function(self,value) self.angle=value end
+ N:UpdateArrow()
+ eq(f.count.text,'2 / 3');eq(f.label.text,'500 yd');eq(f.eta.text,'~50 sec')
+ eq(f.status.text,'Silverleaf');assert(math.abs(f.progress.value-1/3)<.00001)
+ f.angle=nil;f.scripts.OnUpdate(f,1)
+ assert(math.abs(f.texture.angle+math.pi/2)<.00001,'North-facing artwork should turn right for an east target')
+ f.skip.scripts.OnClick();eq(N.waypoint,3)
+ N.routePaused=true;N:UpdateArrow();eq(f.status.text,'Route paused');eq(f.eta.text,'-- sec')
+ N.routePaused=false;N.Position=function() return 999,.4,.4 end
+ N:UpdateArrow();eq(f.status.text,'Return to route zone');assert(not f.texture:IsShown())
+ N.Position=position;N.activeRoute=nil
 end)
 
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')

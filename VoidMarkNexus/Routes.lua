@@ -542,7 +542,7 @@ end
 function N:ShowArrow()
  if not self.arrow then
   local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
-  f:SetSize(152,100)
+  f:SetSize(320,262)
   f:SetPoint('TOP',UIParent,'TOP',0,-135)
   f:SetFrameStrata('HIGH')
   f:SetMovable(true); f:EnableMouse(true)
@@ -550,16 +550,52 @@ function N:ShowArrow()
   f:SetScript('OnDragStart',function(w) w:StartMoving() end)
   f:SetScript('OnDragStop',function(w) w:StopMovingOrSizing() end)
   if f.SetBackdrop then f:SetBackdrop(nil) end
-  local top=f:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
-  top:SetPoint('TOPLEFT',8,-6); top:SetText('|cffad9bbfRoute|r')
-  -- Compact directional pointer without a compass ring or cardinal lettering.
+  local top=f:CreateFontString(nil,'OVERLAY','GameFontNormalLarge')
+  top:SetPoint('TOP',0,-2);top:SetText('Route');top:SetTextColor(.85,.6,1)
+  top:SetShadowColor(0,0,0,1);top:SetShadowOffset(1,-1)
+  local rule=f:CreateTexture(nil,'ARTWORK')
+  rule:SetTexture('Interface\\Buttons\\WHITE8X8');rule:SetVertexColor(.7,.35,1,.8)
+  rule:SetSize(160,1);rule:SetPoint('TOP',0,-29)
+  local gem=f:CreateTexture(nil,'OVERLAY')
+  gem:SetTexture('Interface\\Buttons\\WHITE8X8');gem:SetVertexColor(.85,.55,1,1)
+  gem:SetSize(6,6);gem:SetPoint('TOP',0,-26);gem:SetRotation(math.pi/4)
+  -- Arrow art points north; its compass pivot sits 60.6% down the texture.
   f.texture=f:CreateTexture(nil,'ARTWORK')
-  f.texture:SetSize(40,40); f.texture:SetPoint('TOP',0,-20)
-  f.texture:SetTexture('Interface\\Minimap\\MinimapArrow')
-  f.texture:SetVertexColor(.72,.57,.86,.95)
-  f.label=f:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
-  f.label:SetPoint('BOTTOM',0,12); f.label:SetWidth(146)
-  f.label:SetJustifyH('CENTER')
+  f.texture:SetSize(104,104);f.texture:SetPoint('TOP',0,-35)
+  f.texture:SetTexture('Interface\\AddOns\\VoidMarkNexus\\Media\\RouteCompass')
+  f.rotationPivot=CreateVector2D and CreateVector2D(.5,.606) or nil
+  local panel=f:CreateTexture(nil,'BACKGROUND')
+  panel:SetTexture('Interface\\AddOns\\VoidMarkNexus\\Media\\RoutePanel')
+  panel:SetSize(320,112);panel:SetPoint('TOP',0,-145)
+  f.progress=CreateFrame('StatusBar',nil,f)
+  f.progress:SetSize(136,9);f.progress:SetPoint('TOPLEFT',53,-181)
+  f.progress:SetStatusBarTexture('Interface\\Buttons\\WHITE8X8')
+  f.progress:SetStatusBarColor(.72,.3,1,1);f.progress:SetMinMaxValues(0,1)
+  local track=f.progress:CreateTexture(nil,'BACKGROUND');track:SetAllPoints(f.progress)
+  track:SetColorTexture(.16,.12,.23,1)
+  local function text(x,y,font)
+   local label=f:CreateFontString(nil,'OVERLAY',font or 'GameFontHighlight')
+   label:SetPoint('TOP',f,'TOP',x,y);label:SetShadowColor(0,0,0,1);label:SetShadowOffset(1,-1)
+   return label
+  end
+  f.count=text(84,-176,'GameFontHighlightLarge')
+  f.label=text(-77,-211,'GameFontHighlightLarge')
+  f.eta=text(53,-211,'GameFontHighlightLarge')
+  f.status=text(0,-137,'GameFontHighlightSmall');f.status:SetTextColor(.82,.72,.92)
+  f.status:SetWidth(280);f.status:SetWordWrap(false)
+  local divider=f:CreateTexture(nil,'ARTWORK')
+  divider:SetTexture('Interface\\Buttons\\WHITE8X8');divider:SetVertexColor(.7,.4,.9,.7)
+  divider:SetSize(1,18);divider:SetPoint('TOP',-9,-210)
+  f.skip=CreateFrame('Button',nil,f)
+  f.skip:SetSize(28,28);f.skip:SetPoint('TOPRIGHT',-29,-202)
+  f.skip:SetHighlightTexture('Interface\\Buttons\\ButtonHilight-Square')
+  local skipLabel=f.skip:CreateFontString(nil,'OVERLAY','GameFontHighlightLarge')
+  skipLabel:SetPoint('CENTER');skipLabel:SetText('>');skipLabel:SetTextColor(.9,.7,1)
+  f.skip:SetScript('OnClick',function() N:SkipWaypoint();f.refreshAt=0 end)
+  f.skip:SetScript('OnEnter',function(self)
+   GameTooltip:SetOwner(self,'ANCHOR_RIGHT');GameTooltip:SetText('Next gathering stop');GameTooltip:Show()
+  end)
+  f.skip:SetScript('OnLeave',function() GameTooltip:Hide() end)
   f.angle=nil
   local function menu()
    N:Choice(f,{
@@ -607,7 +643,9 @@ function N:ShowArrow()
     if not w.angle then w.angle=goal end
     local fraction=math.min(1,dt*13)
     w.angle=w.angle+nexusDeltaAngle(w.angle,goal)*fraction
-    if type(w.texture.SetRotation)=='function' then w.texture:SetRotation(w.angle) end
+    if type(w.texture.SetRotation)=='function' then
+     if w.rotationPivot then w.texture:SetRotation(w.angle,w.rotationPivot) else w.texture:SetRotation(w.angle) end
+    end
    end
   end)
   self.arrow=f
@@ -619,14 +657,23 @@ function N:UpdateArrow()
  local arrow=self.arrow
  if not arrow then return end
  local route=self.activeRoute
- if self.routePaused and route then arrow.label:SetText('Route paused');arrow.bearing=nil;return end
+ if route then
+  local count=#route.points
+  local current=math.min(self.waypoint or 1,count)
+  arrow.count:SetText(current..' / '..count)
+  arrow.progress:SetValue(count>0 and math.min(count,math.max(0,(self.waypoint or 1)-1))/count or 0)
+ end
+ if self.routePaused and route then
+  arrow.status:SetText('Route paused');arrow.label:SetText('-- yd');arrow.eta:SetText('-- sec')
+  arrow.texture:SetAlpha(.35);arrow.bearing=nil;return
+ end
  local node=route and route.points[self.waypoint or 1]
  local transit=route and route.travelPoints and route.travelPoints[self.terrainIndex or 1]
  local point=transit or node
  if not point or not self.db.settings.routeVisible then arrow:Hide(); return end
  local map,x,y=self:Position()
  if map~=route.map or not x or not y then
-  arrow.label:SetText('Return to route zone')
+  arrow.status:SetText('Return to route zone');arrow.label:SetText('-- yd');arrow.eta:SetText('-- sec')
   arrow.texture:Hide()
   arrow.bearing=nil
   return
@@ -636,7 +683,10 @@ function N:UpdateArrow()
  local distance=math.sqrt(dx*dx+dy*dy)
  arrow.bearing=nexusAngle(-dx,-dy)
  arrow.texture:Show()
- arrow.label:SetText(string.format('%s  |  %d/%d\n%.0f yd � ~%.0f sec',point.transit and (point.closing and 'Return to start' or 'Trail / detour') or (point.name or 'Waypoint'),math.min(self.waypoint,#route.points),#route.points,distance,distance/math.max(1,route.speed or self.db.settings.speed)))
+ arrow.texture:SetAlpha(1)
+ arrow.status:SetText(point.transit and (point.closing and 'Return to start' or 'Following route') or (point.name or 'Gathering stop'))
+ arrow.label:SetText(string.format('%.0f yd',distance))
+ arrow.eta:SetText(string.format('~%.0f sec',distance/math.max(1,route.speed or self.db.settings.speed)))
  if distance<8 then
   if point.transit then
    self.terrainIndex=(self.terrainIndex or 1)+1

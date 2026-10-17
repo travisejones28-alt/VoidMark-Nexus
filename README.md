@@ -102,3 +102,10 @@ Validation: 51 Lua 5.1/LuaJIT tests passed, covering cache invalidation/copy iso
 - Cached Optimal loops are reused, then renumbered for the current player position. Reload restoration continues to preserve in-progress navigation rather than restarting it. Start Here retains its existing player-origin behavior.
 - Kept zone-ranking timeout results separate from single-route results.
 - Validation: 56 Lua 5.1 tests pass, including Optimal route rotation after movement and cache reuse.
+
+## 0.2.5-alpha: purple navigation HUD
+
+- Restyled the live waypoint display to match the supplied reference: violet compass arrow, Route title with a diamond rule, an ornate two-tier panel, progress bar, stop count, yards, estimated seconds and a next-stop button.
+- Artwork is transparent RGBA TGA at power-of-two sizes for the game client. The compass rotates around its medallion pivot; labels and progress remain live UI elements.
+- Keeps smooth heading updates, left-drag movement and the existing right-click Skip/Restart/Pause/Cancel menu. Pause and wrong-zone states clear unavailable distance/ETA instead of leaving stale values.
+- Validation: 57 Lua 5.1 tests pass, including live HUD values, progress, direction, next-stop action, pause and wrong-zone states. Alpha and runtime texture dimensions checked. In-game visual verification remains needed.
