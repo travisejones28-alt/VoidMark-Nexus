@@ -1,3 +1,7 @@
+# 0.3.1 hardening
+
+92 stock Lua 5.1 regression tests plus shared four-addon mock startup/UI checks in two load orders. See HARDENING.md. Historical validation follows.
+
 # Current validation: 0.3.0 beta
 
 79 Lua 5.1-compatible runtime tests pass, covering the original addon and persistent route/leg caches, bounds, forward-schema preservation, serialized reloads, dependency invalidation, best-so-far retention, explicit improvement, recording/replay, route import validation, session restoration and optional travel integration failures.

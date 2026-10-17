@@ -13,3 +13,25 @@ jobs:
         run: lua5.1 Tests/run.lua
       - name: Verify shipped ZIP matches source
         run: python3 tools/package.py --check
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: travisejones28-alt/VoidMark-Mini-Map
+          path: integration/mini
+      - uses: actions/checkout@v4
+        with:
+          repository: travisejones28-alt/VoidMark-Forever
+          path: integration/forever
+      - uses: actions/checkout@v4
+        with:
+          repository: travisejones28-alt/VoidMark-Market
+          path: integration/market
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install lupa==2.8
+      - name: Run real addon sources in one mocked client
+        run: python Tests/integration.py --mini integration/mini --forever integration/forever --market integration/market

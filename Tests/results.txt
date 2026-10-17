@@ -77,4 +77,17 @@ PASS Observed-only zones participate in zone ranking without uninitialized input
 PASS Cold versus saved imported-zone planning benchmark after serialized reload
 PASS Active gathering totals survive reload while offline time is excluded
 PASS Selected Start Here strategy survives narrow routing-settings extraction
-PASS: 79 tests; Lua 5.1 / standard interpreter
+PASS Partial bags and unresolved occupied slots preserve the prior inventory snapshot
+PASS Malformed optional Market records fall back without Lua errors
+PASS A partial modern schematic cannot become a zero-reagent cost calculation
+PASS Future-dated inventory is not accepted as fresh stock
+PASS Disabling guidance hides a paused HUD without reintroducing a title or hover help
+PASS Passing a transit point advances without skipping the unvisited gathering stop
+PASS Reload repairs inconsistent geometry progress without rewinding visited gathering stops
+PASS Explicit rejoin stays forward and cannot jump over an unvisited gathering stop
+PASS HUD compass bearings agree with all four cardinal directions
+PASS Closing gathering loot clears the cast correlation before another loot window
+PASS Repeated trail sample counts alone do not discard reusable routing work
+PASS Restricted API returns become unknown without losing later public values
+PASS Malformed schematic slots and output ranges remain incomplete estimates
+PASS: 92 tests; Lua 5.1 / standard interpreter

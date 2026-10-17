@@ -44,7 +44,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.3.0-beta') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.3.1-beta') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -800,6 +800,8 @@ test('Selected Start Here strategy survives narrow routing-settings extraction',
  N.ZoneNodes,N.BuildRoute=nodes,build;N.db.settings.routeStrategy=strategy
 end)
 
+
+assert(loadfile(root..'/Tests/hardening.lua'))(N,test,eq)
 
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary

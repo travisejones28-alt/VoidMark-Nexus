@@ -76,8 +76,15 @@ function N:RouteSettings()
  return self:Copy(out)
 end
 function N:RoutingTerrain(map)
- local z=self:TerrainZone(map)
- return z and {points=z.points,edges=z.edges} or nil
+ local z=self:TerrainZone(map);if not z then return end
+ local edges={}
+ for a,list in pairs(z.edges or {}) do
+  edges[a]={}
+  for b,e in pairs(list) do
+   edges[a][b]={distance=e.distance,seconds=e.seconds,speed=e.speed,mode=e.mode}
+  end
+ end
+ return {points=z.points,edges=edges}
 end
 function N:RoutingNodes(nodes)
  local out={}

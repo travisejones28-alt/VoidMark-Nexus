@@ -639,6 +639,7 @@ function N:ShowArrow()
     {label='Skip waypoint',value='skip'},
     {label='Restart from waypoint 1',value='restart'},
     {label='Pause / resume',value='pause'},
+    {label='Rejoin remaining route',value='rejoin'},
     {label='Display',
      decrease=function() N:SetArrowScale(math.max(.5,(N.db.settings.arrowScale or 1)-.1)) end,
      increase=function() N:SetArrowScale(math.min(2,(N.db.settings.arrowScale or 1)+.1)) end},
@@ -647,6 +648,7 @@ function N:ShowArrow()
     if action=='skip' then N:SkipWaypoint()
     elseif action=='restart' and N.activeRoute then N.waypoint=1;N.terrainIndex=1;N.routePaused=false; N.dirty=true
     elseif action=='pause' then N.routePaused=not N.routePaused
+    elseif action=='rejoin' then N:RejoinRoute()
     elseif action=='cancel' then N.activeRoute=nil; N.waypoint=nil; f:Hide(); N.dirty=true end
     f.refreshAt=0
     if WorldMapFrame and WorldMapFrame:IsShown() then N:RefreshMap() end
@@ -692,6 +694,7 @@ function N:UpdateArrow()
  local arrow=self.arrow
  if not arrow then return end
  local route=self.activeRoute
+ if not route or not self.db.settings.routeVisible then arrow.bearing=nil;arrow:Hide();return end
  if route then
   local count=#route.points
   local current=math.min(self.waypoint or 1,count)
@@ -722,7 +725,7 @@ function N:UpdateArrow()
  arrow.status:SetText(point.transit and (point.closing and 'Return to start' or 'Following route') or (point.name or 'Gathering stop'))
  arrow.label:SetText(string.format('%.0f yd',distance))
  arrow.eta:SetText(string.format('~%.0f sec',distance/math.max(1,route.speed or self.db.settings.speed)))
- if distance<8 then
+ if distance<8 or (point.transit and self:PassedTransit(route,self.terrainIndex or 1,{x=x,y=y})) then
   if point.transit then
    self.terrainIndex=(self.terrainIndex or 1)+1
    if route.recorded then
@@ -1139,8 +1142,54 @@ function N:RestoreNavigation()
  self.activeRoute=route
  self.waypoint=index(saved.waypoint,#route.points+(route.travelPoints and 1 or 0))
  self.terrainIndex=index(saved.terrainIndex,route.travelPoints and #route.travelPoints or 1)
+ self:NormalizeRouteProgress()
  self.routePaused=saved.paused==true;self.dirty=true
  self:ShowArrow()
  self:Print('Restored active route and waypoint'..(self.routePaused and ' (paused).' or '.'))
 end
 N:On('PLAYER_LOGOUT',function() N:SaveNavigation() end)
+
+-- Keep geometric progress within the next unvisited gathering stop. Never
+-- silently jump to a later loop crossing or reset valid reload progress.
+function N:NormalizeRouteProgress()
+ local route=self.activeRoute
+ if not route or not route.travelPoints or not route.travelStopIndices then return end
+ local waypoint=math.max(1,math.min(#route.points+1,self.waypoint or 1))
+ local low=waypoint>1 and (route.travelStopIndices[waypoint-1] or 0)+1 or 1
+ local high=route.travelStopIndices[waypoint] or #route.travelPoints
+ if low>high then
+  waypoint=#route.points;low=waypoint>1 and route.travelStopIndices[waypoint-1]+1 or 1
+  high=route.travelStopIndices[waypoint]
+ end
+ local index=self.terrainIndex
+ if not self:Finite(index,low,high) or index%1~=0 then index=low end
+ self.waypoint,self.terrainIndex=waypoint,index
+ return low,high
+end
+function N:PassedTransit(route,index,here)
+ local geometry=route.travelPoints
+ local target=geometry and geometry[index]
+ local previous=geometry and (geometry[index-1] or route.origin)
+ if not (target and target.transit and previous) then return false end
+ local vx,vy=(target.x-previous.x)*route.width,(target.y-previous.y)*route.height
+ local length=vx*vx+vy*vy;if length<1 then return false end
+ local px,py=(here.x-previous.x)*route.width,(here.y-previous.y)*route.height
+ local t=(px*vx+py*vy)/length
+ if t<1 or (t-1)*math.sqrt(length)>50 then return false end
+ return (px-t*vx)^2+(py-t*vy)^2<=64
+end
+function N:RejoinRoute()
+ local route=self.activeRoute;local map,x,y=self:Position()
+ if not route or map~=route.map or not x or not y then return self:Print('Return to the active route zone before rejoining.') end
+ local _,high=self:NormalizeRouteProgress()
+ if route.travelPoints then
+  local best,index=math.huge,self.terrainIndex or 1
+  for i=self.terrainIndex or 1,high or #route.travelPoints do
+   local d=self:Distance({x=x,y=y},route.travelPoints[i],route.width,route.height)
+   if d<best then best,index=d,i end
+  end
+  self.terrainIndex=index
+ end
+ self.routePaused=false;self.dirty=true
+ self:ShowArrow();self:Print('Rejoined the remaining leg; unvisited gathering stops retained.')
+end

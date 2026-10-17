@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.3.0 beta
+# VoidMark Nexus 0.3.1 beta
 
 Saved route reuse, shared directed travel legs, persistent farming recordings and active-session restoration for WoW Forever interface **16001**.
 
@@ -136,3 +136,5 @@ The navigation HUD now saves its screen anchor after dragging and restores it wh
 - Fix observed-only cross-zone ranking and keep generated-loop comparison identities stable when the start rotates.
 - Add optional Shortest Path Forever travel handoff via its public API. It is never required for Nexus planning.
 - Add Lua 5.1 CI and a reproducible source-verified installable ZIP. Full profession-target planning and a collision mesh are outside this release.
+
+0.3.1 hardening: see https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/HARDENING.md .

@@ -12,8 +12,9 @@ function N:Stock(targetID)
   if allowed and not seen[physical] then
    seen[physical]=true
    for _,location in ipairs({'bags','bank'}) do
-    local at=c[location..'At']; local fresh=at and self:Now()-at<=self.db.settings.inventoryAge
-    if (location~='bank' or self.db.settings.includeBanks) and (fresh or self.db.settings.includeStale) then
+    local at=c[location..'At']; local sane=self:Finite(at,0,self:Now()+300)
+    local fresh=sane and self:Now()-at<=self.db.settings.inventoryAge
+    if (location~='bank' or self.db.settings.includeBanks) and (fresh or self.db.settings.includeStale and (sane or at==nil)) then
      for item,qty in pairs(c[location] or {}) do
       if self:Finite(qty,1,1e9) then
        stock[item]=stock[item] or {}; table.insert(stock[item],{id=id,location=location,qty=qty,at=at,imported=c.imported,

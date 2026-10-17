@@ -127,5 +127,8 @@ N:On('LOOT_SLOT_CLEARED',function(slot)
  s.zones[g.map]=(s.zones[g.map] or 0)+item.qty; s.kinds[g.kind]=(s.kinds[g.kind] or 0)+item.qty
  N.db.itemNames[item.id]=item.name; N.dirty=true
 end)
-N:On('LOOT_CLOSED',function() N.lootSlots=nil; N.lootGather=nil end)
+N:On('LOOT_CLOSED',function()
+ if N.gatherCast==N.lootGather then N.gatherCast=nil end
+ N.lootSlots=nil;N.lootGather=nil
+end)
 

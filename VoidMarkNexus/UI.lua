@@ -367,7 +367,7 @@ function N:ShowTopGatheringZones()
 end
 function N:CreateUI()
  local f=CreateFrame('Frame','VoidMarkNexusWindow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil); skin(f)
- f:SetSize(1060,660); f:SetFrameStrata('MEDIUM'); f:SetClampedToScreen(true); f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag('LeftButton')
+ f:SetSize(1060,660); f:SetFrameStrata('MEDIUM'); f:SetToplevel(true); f:SetClampedToScreen(true); f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag('LeftButton')
  local position=self.db.settings.position; if type(position)=='table' then f:SetPoint('CENTER',UIParent,'CENTER',position[1],position[2]) else f:SetPoint('CENTER') end
  f:SetScale(self.db.settings.scale)
  f:SetScript('OnDragStart',function() f:StartMoving() end)

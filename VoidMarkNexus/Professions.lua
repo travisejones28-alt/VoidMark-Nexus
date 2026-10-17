@@ -38,12 +38,24 @@ function N:ModernRecipe(id)
  local s=self:Call(api.GetRecipeSchematic,id,false)
  if type(s)=='table' then
   r.output=s.outputItemID or r.output; r.outputMin=s.quantityMin or 1; r.outputMax=s.quantityMax or r.outputMin
-  for _,slot in ipairs(s.reagentSlotSchematics or {}) do
-   if slot.required~=false and (slot.quantityRequired or 0)>0 then
-    local g=slot.reagents and slot.reagents[1]; local item=g and (g.itemID or g.item and g.item.itemID)
-    r.reagents[#r.reagents+1]={id=item,qty=slot.quantityRequired}
-    if not item or #(slot.reagents or {})~=1 then r.incomplete=true end
+  if type(s.reagentSlotSchematics)~='table' then r.incomplete=true end
+  for _,slot in ipairs(type(s.reagentSlotSchematics)=='table' and s.reagentSlotSchematics or {}) do
+   if type(slot)~='table' then r.incomplete=true
+   elseif slot.required~=false then
+    local quantity=slot.quantityRequired
+    if not self:Finite(quantity,0,1e6) or quantity%1~=0 then r.incomplete=true
+    elseif quantity>0 then
+     local reagents=type(slot.reagents)=='table' and slot.reagents or {}
+     local g=reagents[1]
+     local item=type(g)=='table' and (g.itemID or type(g.item)=='table' and g.item.itemID)
+     if not self:Finite(item,1,1e9) or item%1~=0 then item=nil end
+     r.reagents[#r.reagents+1]={id=item,qty=quantity}
+     if not item or #reagents~=1 then r.incomplete=true end
+    end
    end
+  end
+  if not self:Finite(r.outputMin,1,1e6) or not self:Finite(r.outputMax,1,1e6) or r.outputMax<r.outputMin then
+   r.outputMin,r.outputMax=1,1;r.incomplete=true
   end
  else r.incomplete=true end
  if r.output then

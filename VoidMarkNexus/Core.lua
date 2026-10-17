@@ -1,6 +1,6 @@
 local _, N = ...
 _G.VoidMarkNexus = N
-N.version, N.schema = '0.3.0-beta', 1
+N.version, N.schema = '0.3.1-beta', 1
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
 function N:Finite(v, lo, hi)
@@ -11,7 +11,10 @@ function N:Call(fn,...)
  if type(fn)~='function' then return nil end
  local function pack(...) return {n=select('#',...),...} end
  local result=pack(pcall(fn,...))
- if result[1] then return unpack(result,2,result.n) end
+ if result[1] then
+  if issecretvalue then for i=2,result.n do if issecretvalue(result[i]) then result[i]=nil end end end
+  return unpack(result,2,result.n)
+ end
 end
 function N:Copy(t)
  if type(t)~='table' then return t end

@@ -1,4 +1,7 @@
-# VoidMark Nexus 0.3.0 beta
+# VoidMark Nexus 0.3.1 beta
+
+Current hardening release: see [HARDENING.md](HARDENING.md) for confirmed fixes, validation and in-game checks. Download the rebuilt addon from `dist/`.
+
 
 Saved route reuse, shared directed travel legs, persistent farming recordings and active-session restoration for WoW Forever interface **16001**.
 
