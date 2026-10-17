@@ -3,6 +3,7 @@
 Reviewed main at `2bfbf6e` and retained existing saved routes, learned trails, cached calculations, settings and artwork.
 
 Confirmed fixes:
+- Temporary map-data unavailability after reload no longer marks a valid recording draft interrupted. Confirmed zone changes and large position jumps retain their existing interruption rules.
 - A partial bag/bank read, unresolved occupied slot or failed item-info call no longer replaces the last complete inventory snapshot. Readable empty containers still clear outdated stock. Missing link labels preserve cached item names.
 - Future-dated inventory is not treated as fresh. Malformed optional Market records fall back cleanly; the live integration test verifies economy isolation.
 - Missing/invalid modern reagent schematics and output ranges remain incomplete estimates rather than becoming zero-cost recipes. Restricted API results become unknown without shifting later return values.
@@ -13,7 +14,7 @@ Confirmed fixes:
 - Closing a gathering loot window clears its cast correlation, preventing another window from inheriting that cast.
 - Trail sample-count changes alone no longer invalidate calculations when geometry and measured costs are identical; cost changes still invalidate them.
 
-Validation: **92 stock Lua 5.1 mock tests** pass, plus the complete four-addon shared-client integration in both Nexus/Mini Map load orders. The shared test uses actual addon sources and tests handlers and frame attributes, not pixels, z-order rendering or protected execution. GitHub CI now includes this integration and the source/ZIP consistency check.
+Validation: **93 stock Lua 5.1 mock tests** pass, plus the complete four-addon shared-client integration in both Nexus/Mini Map load orders. The shared test uses actual addon sources and tests handlers and frame attributes, not pixels, z-order rendering or protected execution. GitHub CI now includes this integration and the source/ZIP consistency check.
 
 Known limits remain: bounded heuristic optimization, a 30-second time cap, selected candidate stops rather than a global optimum, observed trails rather than a collision mesh, unknown live resource availability, and current-target ETA rather than a guarantee of total trip time. Derived caches remain capped; historical user records are retained. Large production saves still need in-game profiling. Settings and SavedVariables schema were not reset.
 

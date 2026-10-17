@@ -113,3 +113,13 @@ test('Malformed schematic slots and output ranges remain incomplete estimates',f
  assert(N:Evaluate(recipe,1,N.characterID).cost==nil)
  C_TradeSkillUI=old
 end)
+
+test('A recording draft tolerates unavailable map data while reloading',function()
+ local position=N.Position;local loading=false;local x=.4
+ N.Position=function() if loading then return nil end return 1411,x,.4 end
+ N:StartRecording('Loading data regression');assert(N.recording)
+ loading=true;N:SampleRecording();assert(not N.recording.interrupted)
+ N:InitializeRecording();loading=false;x=.403;N:SampleRecording()
+ assert(not N.recording.interrupted);eq(#N.recording.points,2)
+ N:DiscardRecording();N.Position=position
+end)

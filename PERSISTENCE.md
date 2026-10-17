@@ -17,7 +17,7 @@ For a new Optimal or Nearest run, the closest stop is numbered 1 and circuit dir
 3. Choose **Finish recording**, or `/vmn record finish`. Existing names are not overwritten; `/vmn recordname NAME` renames the draft.
 4. Select the saved recording and choose **Load selected**, or `/vmn replay NAME`.
 
-Recorded geometry is preserved, not reordered by the gathering solver. Sampling occurs at most once per second after moving eight yards. A draft holds at most 2,047 trail points. Its navigation markers are a smaller set of progress anchors, capped below 150; the line retains all trail points. A position jump over 80 yards, zone change, taxi, flight, death or falling interrupts recording rather than inventing a walked connection. Finish the valid portion or discard it and begin another segment. This conservative behavior may interrupt a recording during loading or an unavailable position reading.
+Recorded geometry is preserved, not reordered by the gathering solver. Sampling occurs at most once per second after moving eight yards. A draft holds at most 2,047 trail points. Its navigation markers are a smaller set of progress anchors, capped below 150; the line retains all trail points. A position jump over 80 yards, zone change, taxi, flight, death or falling interrupts recording rather than inventing a walked connection. Finish the valid portion or discard it and begin another segment. Temporary unavailable position readings during loading are deferred; a confirmed changed zone or excessive position jump still interrupts the recording.
 
 `/vmn record status` shows the draft; `/vmn record discard` removes it. Finishing requires at least two points. Route tools can delete an unused named route after confirmation; the saved route limit remains 50.
 

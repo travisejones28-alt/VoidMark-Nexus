@@ -90,4 +90,5 @@ PASS Closing gathering loot clears the cast correlation before another loot wind
 PASS Repeated trail sample counts alone do not discard reusable routing work
 PASS Restricted API returns become unknown without losing later public values
 PASS Malformed schematic slots and output ranges remain incomplete estimates
-PASS: 92 tests; Lua 5.1 / standard interpreter
+PASS A recording draft tolerates unavailable map data while reloading
+PASS: 93 tests; Lua 5.1 / standard interpreter

@@ -36,7 +36,9 @@ function N:SampleRecording()
  if self:Call(UnitOnTaxi,'player') or self:Call(IsFlying) or self:Call(UnitIsDeadOrGhost,'player') or self:Call(IsFalling) then
   d.interrupted=true;return
  end
- local map,x,y=self:Position();if map~=d.map or not x or not y then d.interrupted=true;return end
+ local map,x,y=self:Position()
+ if not map or not x or not y then return end -- loading is not evidence of a discontinuity
+ if map~=d.map then d.interrupted=true;return end
  local p={x=x,y=y};local previous=d.points[#d.points]
  if previous and self:Distance(previous,p,d.width,d.height)<8 then return end
  if #d.points>=2047 then

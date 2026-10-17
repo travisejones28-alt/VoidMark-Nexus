@@ -1,6 +1,6 @@
 # 0.3.1 hardening
 
-92 stock Lua 5.1 regression tests plus shared four-addon mock startup/UI checks in two load orders. See HARDENING.md. Historical validation follows.
+93 stock Lua 5.1 regression tests plus shared four-addon mock startup/UI checks in two load orders. See HARDENING.md. Historical validation follows.
 
 # Current validation: 0.3.0 beta
 
