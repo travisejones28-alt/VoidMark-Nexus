@@ -612,14 +612,6 @@ function N:ShowArrow()
    end
   end
   f:SetScript('OnMouseUp',function(_,button) if button=='RightButton' then menu() end end)
-  f:SetScript('OnEnter',function()
-   GameTooltip:SetOwner(f,'ANCHOR_RIGHT')
-   GameTooltip:SetText('VoidMark Nexus navigation')
-   GameTooltip:AddLine('Right-click: Skip / Restart / Pause / Cancel')
-   GameTooltip:AddLine('Left-drag: Move',.8,.8,.8)
-   GameTooltip:Show()
-  end)
-  f:SetScript('OnLeave',function() GameTooltip:Hide() end)
   -- Smooth facing updates every frame; update expensive map coordinates 10x/sec.
   f.refreshAt=0
   f:SetScript('OnUpdate',function(w,dt)

@@ -113,3 +113,7 @@ Validation: 51 Lua 5.1/LuaJIT tests passed, covering cache invalidation/copy iso
 ## 0.2.6-alpha
 
 Removed the Route title and decorative line above the compass arrow. Live guidance and the lower progress panel remain.
+
+## 0.2.7-alpha
+
+Removed the navigation HUD hover-help tooltip. Dragging and the right-click action menu still work.
