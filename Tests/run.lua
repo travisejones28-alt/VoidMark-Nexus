@@ -43,7 +43,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.3-alpha') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.4-alpha') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -490,7 +490,29 @@ test('Nearest loop rotates stop order and rebuilds detours without reversing dir
  eq(route.travelPoints[route.travelStopIndices[1]].name,'C')
  assert(route.travelPoints[#route.travelPoints].closing)
  local before=route.points[1]
- route.strategy='optimal';N:StartRouteAtNearest(route,{map=1411,x=.1,y=.1});eq(route.points[1],before)
+ route.strategy='optimal';N:StartRouteAtNearest(route,{map=1411,x=.1,y=.1});eq(route.points[1].name,'A')
+ local original=route.points[1];route.strategy='here'
+ N:StartRouteAtNearest(route,{map=1411,x=.4,y=.4});eq(route.points[1],original)
+end)
+
+
+test('Cached optimal loops renumber the nearest stop after the player moves',function()
+ local position,zone,build,rotate=N.Position,N.ZoneNodes,N.BuildRoute,N.StartRouteAtNearest
+ local x=.1;local calls=0
+ local nodes={{x=.1,y=.1,name='A'},{x=.2,y=.2,name='B'},{x=.4,y=.4,name='C'}}
+ N.plannerCache={};N.db.terrain.zones={};N.db.terrainBlocks={}
+ N.Position=function() return 1411,x,x end
+ N.ZoneNodes=function() return nodes end
+ N.BuildRoute=function(_,_,start,w,h,settings)
+  calls=calls+1
+  return {points=N:Copy(nodes),origin=start,map=1411,width=w,height=h,speed=settings.speed,
+   seconds=600,strategy='optimal',potentialStopsPerHour=18}
+ end
+ local first=N:PlanRoute('optimal');eq(first.points[1].name,'A')
+ local built=calls;x=.4
+ local second=N:PlanRoute('optimal');eq(calls,built);eq(second.points[1].name,'C')
+ eq(second.points[2].name,'A');eq(second.points[3].name,'B')
+ N.Position,N.ZoneNodes,N.BuildRoute=position,zone,build
 end)
 
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')

@@ -278,7 +278,7 @@ end
 -- Compare a small, geographically distributed set of candidate loop starts.
 -- Scores are estimated stops/hour; imported points are potential, not live nodes.
 function N:StartRouteAtNearest(route,here)
- if not route or route.strategy~='nearest' or not here or here.map~=route.map or #route.points==0 then return route end
+ if not route or (route.strategy~='nearest' and route.strategy~='optimal') or not here or here.map~=route.map or #route.points==0 then return route end
  local nearest,best=1,math.huge
  for i,p in ipairs(route.points) do
   self:PlannerCheckpoint()
@@ -292,6 +292,7 @@ function N:StartRouteAtNearest(route,here)
  route.points=points
  route.origin=self:Copy(points[1]);route.origin.map=route.map
  self:PrepareTerrainRoute(route);self:ScoreRouteEvidence(route)
+ route.estimatedStopsPerHour=route.potentialStopsPerHour
  return route
 end
 
@@ -310,7 +311,7 @@ function N:PlanRoute(strategy)
   terrain=self:TerrainZone(map),blocks=(self.db.terrainBlocks or {})[map],
   evidence=(self.db.gatherEvidence or {})[map]})
  local cached=self:GetPlannerCache(key)
- if cached then self:SetPlannerProgress('Reusing recent route');return cached end
+ if cached then self:SetPlannerProgress('Reusing recent route');return self:StartRouteAtNearest(cached,here) end
  local starts={here}
  if strategy~='here' then
   starts={}
@@ -337,7 +338,10 @@ function N:PlanRoute(strategy)
  for index,origin in ipairs(starts) do
   self:SetPlannerProgress("Comparing route starts",index-1,#starts)
   local route=self:BuildRoute(nodes,origin,w,h,settings)
-  if route then route.strategy=strategy;self:StartRouteAtNearest(route,here) end
+  if route then
+   route.strategy=strategy
+   if strategy=='nearest' then self:StartRouteAtNearest(route,here) end
+  end
   if route and not route.unreachable and #route.points>0 and route.seconds<=settings.routeMinutes*60+.01 then
    local seconds=math.max(1,route.seconds or settings.routeMinutes*60)
    local travel=self:Distance(here,route.origin,w,h)/math.max(1,settings.speed)
@@ -357,7 +361,7 @@ function N:PlanRoute(strategy)
  best.estimatedStopsPerHour=best.potentialStopsPerHour
  self:SetPlannerProgress("Route ready",#starts,#starts)
  self:PutPlannerCache(key,best)
- return best
+ return self:StartRouteAtNearest(best,here)
 end
 -- Cross-zone comparisons are based on accessible imported coordinates, not active spawns.
 function N:RankResourceZones(resource)
@@ -421,11 +425,7 @@ function N:RankResourceZones(resource)
      local coverage=math.min(1,#route.points/10)
      local score=#route.points*coverage/seconds
      alternatives[#alternatives+1]=route
-     if not bestScore or score>bestScore then
-    best,bestScore=route,score
-    best.strategy=strategy
-    if self.planningJob then self.planningJob.best=self:Copy(best) end
-   end
+     if not bestScore or score>bestScore then best,bestScore=route,score;best.strategy='optimal' end
     end
    end
    if best then
@@ -491,6 +491,8 @@ end
 function N:GenerateRoute()
  self:RunPlanner(function() return self:PlanRoute() end,function(best)
   if not best then return end
+  local map,x,y=self:Position()
+  if map and x and y then self:StartRouteAtNearest(best,{map=map,x=x,y=y}) end
   self.activeRoute=best; self.waypoint=1; self.terrainIndex=1;self.routePaused=false; self.dirty=true; self:ShowArrow()
   self:Print(string.format('%s: %d stops, %.1f minute loop; %.0f%% learned corridor distance. Unverified connectors remain estimates.',best.strategy,#best.points,(best.seconds or 0)/60,(best.traversalConfidence or 0)*100))
  end)

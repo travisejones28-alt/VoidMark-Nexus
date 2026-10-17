@@ -51,3 +51,10 @@ Validation: 51 Lua 5.1/LuaJIT tests passed, covering cache invalidation/copy iso
 - Numbered markers are smaller (12 instead of 18 units at standard scale) with softer backgrounds.
 - Route overlays follow the minimap's own UI layer. VoidMark Mini Map 0.1.9 moves the map into the background so quest objectives and normal panels can appear above it.
 - Validation: 55 Lua 5.1 tests pass, including nearest-stop rotation, preserved circuit order, rebuilt detours and waypoint tooltip contents.
+
+## 0.2.4-alpha
+
+- Optimal loops now also renumber the nearest reachable gathering stop as waypoint 1, keeping circuit direction. Preview activation and loading a saved Optimal route recheck your current position.
+- Cached Optimal loops are reused, then renumbered for the current player position. Reload restoration continues to preserve in-progress navigation rather than restarting it. Start Here retains its existing player-origin behavior.
+- Kept zone-ranking timeout results separate from single-route results.
+- Validation: 56 Lua 5.1 tests pass, including Optimal route rotation after movement and cache reuse.

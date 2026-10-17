@@ -133,6 +133,8 @@ function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
  end
  local route=prebuiltRoute or self:PlanRoute(strategy)
  if not route then return end
+ local map,x,y=self:Position()
+ if map and x and y then self:StartRouteAtNearest(route,{map=map,x=x,y=y}) end
  displayMode=displayMode or self.db.settings.previewMode or 'map'
  if self.previewWindow then self.previewWindow:Hide() end
  local w=CreateFrame('Frame',nil,UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
@@ -584,7 +586,7 @@ function N:Render()
    local saved=N:Copy(N.db.routes[u.selected.routeName])
    N:RunPlanner(function()
     local map,x,y=N:Position()
-    if saved.strategy=='nearest' and map and x and y then
+    if (saved.strategy=='nearest' or saved.strategy=='optimal') and map and x and y then
      return N:StartRouteAtNearest(saved,{map=map,x=x,y=y})
     end
     return N:PrepareTerrainRoute(saved)
