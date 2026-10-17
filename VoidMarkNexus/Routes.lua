@@ -551,7 +551,7 @@ function N:ShowArrow()
   local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
   f:SetSize(320,262)
   f:SetPoint('TOP',UIParent,'TOP',0,-135)
-  f:SetFrameStrata('HIGH')
+  f:SetFrameStrata('LOW')
   f:SetMovable(true); f:EnableMouse(true);f:SetClampedToScreen(true)
   f:RegisterForDrag('LeftButton')
   f:SetScript('OnDragStart',function(w) w:StartMoving() end)
@@ -646,6 +646,7 @@ function N:ShowArrow()
   end)
   self.arrow=f
  end
+ self.arrow:SetFrameStrata('LOW')
  self.arrow:SetScale(self.db.settings.arrowScale or 1)
  self.arrow.refreshAt=0
  self.arrow:Show()

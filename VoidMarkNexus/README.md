@@ -113,3 +113,7 @@ Removed the navigation HUD hover-help tooltip. Dragging and the right-click acti
 ## 0.2.8-alpha
 
 Resize the entire navigation HUD through its right-click menu: Smaller display, Larger display, or Reset display size. Nexus Settings also has Navigation display scale (0.5-2.0); `/vmn arrowscale 0.8` sets an exact size. This saved setting scales the arrow, panel, text, progress and button together. The navigation hover-help tooltip is removed.
+
+## 0.2.9-alpha
+
+The complete navigation HUD now uses the LOW UI layer, so the world map and normal application windows cover its arrow, panel, labels and controls. Showing or resizing it preserves this layer.
