@@ -1,6 +1,6 @@
 local _, N = ...
 _G.VoidMarkNexus = N
-N.version, N.schema = '0.2.0-alpha', 1
+N.version, N.schema = '0.2.1-alpha', 1
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
 function N:Finite(v, lo, hi)
@@ -53,7 +53,7 @@ function N:Initialize()
  local d=VoidMarkNexusDB
  if tonumber(d.schema) and d.schema>self.schema then self:Print('Newer saved schema detected; Nexus disabled to preserve your data.'); return false end
  for _,k in ipairs({'characters','settings','prices','itemNames','plans','nodes','routes','sessions','wish','excluded'}) do if type(d[k])~='table' then d[k]={} end end
- local defaults={native=true,learn=true,importedNodes=true,observedNodes=true,nodesVisible=true,routeVisible=true,stats=true,
+ local defaults={native=true,learn=true,importedNodes=true,observedNodes=true,nodesVisible=true,routeVisible=true,minimapRoute=true,stats=true,
  includeAlts=true,includeBanks=true,includeImports=false,includeStale=false,maxAge=86400,inventoryAge=604800,
  market=true,auctionator=false,manualFirst=false,cut=.05,deposit=0,failedAuctions=0,saleFraction=1,waste=0,
  speed=7,travel='Foot',mountDelay=0,gatherDelay=3,routeMinutes=20,nodeLimit=100,kind='all',target='',minimap=true,scale=1,mapIconSize=7,terrainLearn=true,manualStops=false}

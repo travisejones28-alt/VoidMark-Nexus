@@ -56,7 +56,7 @@ function N:TerrainZone(map,create)
  return zones[map]
 end
 function N:ClearTerrain()
- self.planningThread=nil
+ self:CancelPlanner()
  local map=self:Position(); if not map or self.terrainDisabled then return end
  self.db.terrain.zones[map]=nil;self.trailPrevious=nil;self.dirty=true
  self:Print('Learned trails cleared in this zone. Walk corridors to rebuild them; obstacle marks remain.')
@@ -144,30 +144,6 @@ function N:LearnedTerrainLeg(a,b,w,h,map,speed)
  end
  local via={};for j=#reverse,1,-1 do via[#via+1]={x=reverse[j].x,y=reverse[j].y,validated=j<#reverse} end
  return length+da+db,via,{kind='learned',seconds=cost[last]+(da+db)/speed,validatedDistance=length,connectorDistance=da+db}
-end
-function N:PlannerCheckpoint()
- if not self.planningThread or coroutine.running()~=self.planningThread then return end
- self.planningWork=(self.planningWork or 0)+1
- local clock=type(debugprofilestop)=='function' and debugprofilestop() or nil
- if self.planningWork>=2500 or (clock and self.planningClock and clock-self.planningClock>=3) then
-  coroutine.yield();self.planningWork=0;self.planningClock=type(debugprofilestop)=='function' and debugprofilestop() or nil
- end
-end
-function N:RunPlanner(work,complete)
- if self.planningThread then return self:Print('A route calculation is already running. /vmn cancelplan to cancel.') end
- if self:Call(InCombatLockdown) then return self:Print('Plan routes outside combat.') end
- local thread=coroutine.create(work);self.planningThread=thread
- local function step()
-  if self.planningThread~=thread then return end
-  if self:Call(InCombatLockdown) then self.planningThread=nil;self:Print('Route calculation cancelled by combat.');return end
-  self.planningClock=type(debugprofilestop)=='function' and debugprofilestop() or nil
-  local ok,value=coroutine.resume(thread)
-  if not ok then self.planningThread=nil;self:Error('route calculation',value);return end
-  if coroutine.status(thread)=='dead' then self.planningThread=nil;self:Guard('route result',complete,value)
-  elseif C_Timer and C_Timer.After then C_Timer.After(.01,step)
-  else self.planningThread=nil;self:Print('Incremental route calculation requires client timers.') end
- end
- step()
 end
 for _,event in ipairs({'PLAYER_ENTERING_WORLD','PLAYER_LEAVING_WORLD','ZONE_CHANGED_NEW_AREA'}) do
  N:On(event,function() N.trailPrevious=nil end)

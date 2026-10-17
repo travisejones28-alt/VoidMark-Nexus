@@ -36,14 +36,14 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Data/Nodes','Data/Spawns','Model','Transfer','Professions','Inventory','Prices','Gathering','Analytics','Terrain','Routes','UI','Boot'}
+local files={'Core','Data/Nodes','Data/Spawns','Model','Transfer','Professions','Inventory','Prices','Gathering','Analytics','Planner','Terrain','Routes','MinimapRoute','UI','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/VoidMarkNexus/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.0-alpha') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.1-alpha') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -325,6 +325,103 @@ test('Real imported-zone planning completes through the incremental queue',funct
  assert(route and #route.points>0);assert(route.seconds<=N.db.settings.routeMinutes*60+.01)
  print(string.format('BENCH imported-zone start-here: %.3f CPU sec, %d stops',os.clock()-started,#route.points))
 end)
+
+test('Exact-input route cache avoids rebuilding and invalidates on relevant changes',function()
+ local position,nodes,build=N.Position,N.ZoneNodes,N.BuildRoute
+ local calls=0;local x=.4;local list={{x=.4,y=.4,object=1},{x=.41,y=.4,object=1},{x=.41,y=.41,object=1}}
+ N.plannerCache={};N.db.terrain.zones={};N.db.terrainBlocks={};N.db.gatherEvidence={}
+ N.Position=function() return 1411,x,.4 end
+ N.ZoneNodes=function() return list end
+ N.BuildRoute=function(_,_,start)
+  calls=calls+1
+  return {points=N:Copy(list),origin=start,map=1411,seconds=600,potentialStopsPerHour=18}
+ end
+ local first=N:PlanRoute('here');eq(calls,1)
+ first.points[1].x=.99
+ local again=N:PlanRoute('here');eq(calls,1);eq(again.points[1].x,.4)
+ N.db.settings.speed=N.db.settings.speed+1;N:PlanRoute('here');eq(calls,2)
+ x=.401;N:PlanRoute('here');eq(calls,3)
+ N.db.terrainBlocks[1411]={{x=.8,y=.8,r=30}};N:PlanRoute('here');eq(calls,4)
+ N.db.gatherEvidence[1411]={sample={checks=5}};N:PlanRoute('here');eq(calls,5)
+ list[1].x=.402;N:PlanRoute('here');eq(calls,6)
+ N.db.terrain.zones[1411]={revision=1,points={},edges={}};N:PlanRoute('here');eq(calls,7)
+ now=now+121;N:PlanRoute('here');eq(calls,8)
+ assert(#N.plannerCache<=6)
+ N.Position,N.ZoneNodes,N.BuildRoute=position,nodes,build
+ N.db.settings.speed=N.db.settings.speed-1
+end)
+
+test('Progress, approximate ETA, cancel, timeout and old queued callbacks',function()
+ local result
+ N:RunPlanner(function()
+  N:SetPlannerProgress('Comparing starts',1,4)
+  for i=1,5001 do N:PlannerCheckpoint() end
+  return 'old'
+ end,function(v) result=v end)
+ assert(N.planningThread and N.plannerWindow:IsShown())
+ now=now+2
+ assert(N:PlannerStatus():find('1 / 4',1,true) and N:PlannerStatus():find('left',1,true))
+ N:CancelPlanner();assert(not N.plannerWindow:IsShown());flush();eq(result,nil)
+ N:RunPlanner(function()
+  N.planningJob.best={points={{x=.4,y=.4}},strategy='here'}
+  for i=1,5001 do N:PlannerCheckpoint() end
+ end,function(v) result=v end)
+ now=now+31;flush();assert(result and result.strategy=='here');eq(N.planningThread,nil)
+ assert(not N.plannerWindow:IsShown())
+ N:RunPlanner(function() return 7 end,function(v) result=v end);eq(result,7)
+end)
+
+test('Minimap clipping covers crossing, offscreen and circular legs',function()
+ local ax,ay,bx,by=N:ClipMinimapLeg(-2,.5,2,.5,true)
+ eq(ax,-1);eq(bx,1);eq(ay,.5);eq(by,.5)
+ eq(N:ClipMinimapLeg(-2,2,2,2,true),nil)
+ ax,ay,bx,by=N:ClipMinimapLeg(-2,0,2,0,false);eq(ax,-1);eq(bx,1)
+ eq(N:ClipMinimapLeg(-2,1.1,2,1.1,false),nil)
+end)
+
+test('Thin minimap lines track zoom, rotation, detours, visibility and fallback',function()
+ local oldPosition,oldMinimap=N.Position,Minimap
+ local oldC,oldBool,oldFacing=C_Minimap,GetCVarBool,GetPlayerFacing
+ local oldShape=GetMinimapShape
+ local radius=100;local rotate=false
+ C_Minimap={GetViewRadius=function() return radius end}
+ GetCVarBool=function() return rotate end
+ GetPlayerFacing=function() return math.pi/2 end
+ GetMinimapShape=function() return 'SQUARE' end
+ Minimap=widget();Minimap.GetWidth=function() return 200 end;Minimap.GetHeight=function() return 200 end
+ Minimap.GetEffectiveScale=function() return 1 end
+ N.Position=function() return 1411,.4,.4 end
+ N.db.settings.routeVisible=true;N.db.settings.minimapRoute=true
+ N.activeRoute={map=1411,origin={x=.39,y=.4},points={{x=.41,y=.4}},
+  travelPoints={{x=.39,y=.4},{x=.4,y=.39,validated=true},{x=.41,y=.4}}}
+ N.terrainIndex=1;N.minimapRouteOverlay=widget();N.minimapRouteLines={};N.minimapRouteDots={}
+ N.minimapLineUnavailable=nil
+ N.minimapRouteOverlay.CreateLine=function()
+  local line=widget()
+  line.SetStartPoint=function(self,anchor,parent,x,y,...)
+   eq(select('#',...),0);eq(type(x),'number');eq(type(y),'number');self.ax,self.ay=x,y
+  end
+  line.SetEndPoint=function(self,anchor,parent,x,y,...) eq(select('#',...),0);self.bx,self.by=x,y end
+  line.SetThickness=function(self,n) self.thickness=n end
+  return line
+ end
+ N:UpdateMinimapRoute();local line=N.minimapRouteLines[1]
+ assert(line and line:IsShown());eq(line.thickness,1.5)
+ local before=line.by;assert(before>0)
+ radius=200;N:UpdateMinimapRoute();assert(math.abs(line.by-before/2)<.001)
+ rotate=true;N:UpdateMinimapRoute();assert(math.abs(line.by)<.001 and line.bx>0)
+ N.db.settings.minimapRoute=false;N:UpdateMinimapRoute();assert(not N.minimapRouteOverlay:IsShown())
+ N.db.settings.minimapRoute=true;N.Position=function() return 999,.4,.4 end
+ N:UpdateMinimapRoute();assert(not N.minimapRouteOverlay:IsShown())
+ N.Position=function() return 1411,.4,.4 end
+ N.minimapRouteLines={};N.minimapRouteOverlay.CreateLine=function() error('unsupported') end
+ N:UpdateMinimapRoute();assert(#N.minimapRouteDots>0 and #N.minimapRouteDots<=768)
+ C_Minimap={};N:UpdateMinimapRoute();assert(not N.minimapRouteOverlay:IsShown())
+ N.Position,Minimap=oldPosition,oldMinimap
+ C_Minimap,GetCVarBool,GetPlayerFacing=oldC,oldBool,oldFacing
+ GetMinimapShape=oldShape;N.activeRoute=nil
+end)
+
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()

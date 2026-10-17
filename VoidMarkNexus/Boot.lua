@@ -36,7 +36,7 @@ function N:Slash(msg)
   if args=='empty' or args=='available' then self:CheckGatherStop(args=='available') else self:Print('/vmn check empty|available') end
  elseif command=='pause' then self.routePaused=not self.routePaused
  elseif command=='restart' then self.waypoint=1;self.terrainIndex=1;self.routePaused=false
- elseif command=='cancelplan' then self.planningThread=nil
+ elseif command=='cancelplan' then self:CancelPlanner('Route calculation cancelled.')
  elseif command=='route' then self:GenerateRoute()
  elseif command=='skip' then self:SkipWaypoint()
  elseif command=='stop' then self.activeRoute=nil; if self.arrow then self.arrow:Hide() end

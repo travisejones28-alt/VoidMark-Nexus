@@ -13,7 +13,7 @@ end
 -- Player-marked obstacles provide local geometry absent from the WoW map API.
 -- Each circle uses normalized map coordinates and a radius in world yards.
 function N:MarkRouteObstacle(radius)
- self.planningThread=nil
+ self:CancelPlanner()
  local map,x,y=self:Position()
  if not map then return self:Print('Current zone position unavailable.') end
  local r=math.max(15,math.min(500,tonumber(radius) or 90))
@@ -26,7 +26,7 @@ function N:MarkRouteObstacle(radius)
  self:Print('Marked obstacle ('..r..' yards) at your location. Regenerate route.')
 end
 function N:ClearRouteObstacles()
- self.planningThread=nil
+ self:CancelPlanner()
  local map=self:Position()
  if not map then return end
  self.db.terrainBlocks=self.db.terrainBlocks or {}
@@ -115,9 +115,9 @@ function N:BuildRoute(nodes,start,width,height,s)
  -- Collapse near-identical/adjacent candidates before constructing navigation.
  local cache={}
  local function distance(a,b)
-  self:PlannerCheckpoint()
   local row=cache[a]
   if row and row[b] then return row[b] end
+  self:PlannerCheckpoint()
   local d,_,info=self:TerrainLeg(a,b,width,height,start.map,s.speed)
   local value=info and info.seconds and info.seconds*s.speed or d
   -- Cache is local to this build: changes to speed, learned trails or obstacles
@@ -139,6 +139,7 @@ function N:BuildRoute(nodes,start,width,height,s)
   if not blocked then ordered[#ordered+1]=node end
   end
  end
+ self:SetPlannerProgress("Selecting nearby gathering stops")
  local fromStart={}
  for _,p in ipairs(ordered) do fromStart[p]=distance(start,p) end
  table.sort(ordered,function(a,b)
@@ -178,18 +179,35 @@ function N:BuildRoute(nodes,start,width,height,s)
   return seconds+distance(previous,start,width,height)/speed
  end
  local function optimize(path)
-  -- Full 2-opt on a bounded path, always including the closing edge.
+  -- Directed 2-opt: include reversed internal edge costs, not just endpoints.
+  -- Prefix sums make each candidate O(1); rebuild only after accepting a reversal.
+  local forward,reverse,blocked
+  local function prefixes()
+   forward,reverse,blocked={[0]=0},{[0]=0},{[0]=0}
+   for k=1,#path-1 do
+    local f=distance(path[k],path[k+1])
+    local r=distance(path[k+1],path[k])
+    forward[k]=forward[k-1]+f
+    reverse[k]=reverse[k-1]+(r<math.huge and r or 0)
+    blocked[k]=blocked[k-1]+(r==math.huge and 1 or 0)
+   end
+  end
+  prefixes()
   for pass=1,5 do
    local improved=false
    for i=1,#path-1 do
     for j=i+1,#path do
-     -- Learned trails are directed; compare the whole reversed circuit.
-     local trial={};for k,p in ipairs(path) do trial[k]=p end
-     local l,r=i,j;while l<r do trial[l],trial[r]=trial[r],trial[l];l=l+1;r=r-1 end
-     if duration(trial)+.01<duration(path) then
-      local left,right=i,j
-      while left<right do path[left],path[right]=path[right],path[left];left=left+1;right=right-1 end
-      improved=true
+     self:PlannerCheckpoint()
+     if blocked[j-1]==blocked[i-1] then
+      local before=i==1 and start or path[i-1]
+      local after=j==#path and start or path[j+1]
+      local old=distance(before,path[i])+distance(path[j],after)+forward[j-1]-forward[i-1]
+      local new=distance(before,path[j])+distance(path[i],after)+reverse[j-1]-reverse[i-1]
+      if new+.01*speed<old then
+       local l,r=i,j
+       while l<r do path[l],path[r]=path[r],path[l];l=l+1;r=r-1 end
+       improved=true;prefixes()
+      end
      end
     end
    end
@@ -215,7 +233,8 @@ function N:BuildRoute(nodes,start,width,height,s)
  local best,bestScore,bestSeconds={},-1,0
  local strategies={{distance=1,returnWeight=.05},{distance=1,returnWeight=.35},
                    {distance=1,returnWeight=.75},{distance=1,returnWeight=.15,observed=12}}
- for _,mode in ipairs(strategies) do
+ for modeIndex,mode in ipairs(strategies) do
+  self:SetPlannerProgress("Improving circuit "..modeIndex.." / "..#strategies)
   local path,used,last,elapsed={},{},start,0
   while #path<limit do
    local choice,choiceScore,choiceDistance
@@ -268,6 +287,12 @@ function N:PlanRoute(strategy)
  local here={map=map,x=x,y=y}
  local settings=self:Copy(self.db.settings)
  strategy=strategy or settings.routeStrategy or 'optimal'
+ local key=self:PlannerCacheKey({map=map,w=w,h=h,strategy=strategy,
+  origin=strategy~='optimal' and here or nil,settings=settings,nodes=nodes,
+  terrain=self:TerrainZone(map),blocks=(self.db.terrainBlocks or {})[map],
+  evidence=(self.db.gatherEvidence or {})[map]})
+ local cached=self:GetPlannerCache(key)
+ if cached then self:SetPlannerProgress('Reusing recent route');return cached end
  local starts={here}
  if strategy~='here' then
   starts={}
@@ -291,7 +316,8 @@ function N:PlanRoute(strategy)
   if strategy=='nearest' then starts[#starts+1]=here end
  end
  local best,bestScore
- for _,origin in ipairs(starts) do
+ for index,origin in ipairs(starts) do
+  self:SetPlannerProgress("Comparing route starts",index-1,#starts)
   local route=self:BuildRoute(nodes,origin,w,h,settings)
   if route and not route.unreachable and #route.points>0 then
    local seconds=math.max(1,route.seconds or settings.routeMinutes*60)
@@ -300,12 +326,18 @@ function N:PlanRoute(strategy)
    local denominator=seconds+(strategy=='nearest' and travel or 0)
    local coverage=math.min(1,#route.points/12)
    local score=(#route.points*coverage)/math.max(600,denominator)
-   if not bestScore or score>bestScore then best,bestScore=route,score end
+   if not bestScore or score>bestScore then
+    best,bestScore=route,score
+    best.strategy=strategy
+    if self.planningJob then self.planningJob.best=self:Copy(best) end
+   end
   end
  end
  if not best then return self:Print('No circuit fits your filters and time budget.') end
  best.strategy=strategy
  best.estimatedStopsPerHour=best.potentialStopsPerHour
+ self:SetPlannerProgress("Route ready",#starts,#starts)
+ self:PutPlannerCache(key,best)
  return best
 end
 -- Cross-zone comparisons are based on accessible imported coordinates, not active spawns.
@@ -325,18 +357,28 @@ function N:RankResourceZones(resource)
  local eligible={}
  for map in pairs(self.db.nodes or {}) do
   if not maps[map] and not self:IsGatheringCityMap(map) then
-   local nodes=self:ZoneNodes(map,'all',resource);if #nodes>0 then maps[map]=#nodes end
+   local nodes=inputs.zones[map].nodes;if #nodes>0 then maps[map]=#nodes end
   end
  end
  for map,count in pairs(maps) do if count>=4 then eligible[#eligible+1]={map=map,count=count} end end
  table.sort(eligible,function(a,b) return a.count>b.count end)
+ local inputs={resource=resource,settings=settings,zones={}}
+ for _,entry in ipairs(eligible) do
+  local map=entry.map
+  inputs.zones[map]={nodes=self:ZoneNodes(map,'all',resource),terrain=self:TerrainZone(map),
+   blocks=(self.db.terrainBlocks or {})[map],evidence=(self.db.gatherEvidence or {})[map]}
+ end
+ local key=self:PlannerCacheKey(inputs)
+ local cached=self:GetPlannerCache(key)
+ if cached then self:SetPlannerProgress('Reusing recent zone comparison');return cached end
  -- Every eligible zone is compared; the UI runs this through the incremental queue.
  local results={}
  for index=1,#eligible do
+  self:SetPlannerProgress("Comparing zones",index-1,#eligible)
   local map=eligible[index].map
   local width,height=self:MapSize(map)
   if width and height then
-   local nodes=self:ZoneNodes(map,'all',resource)
+   local nodes=inputs.zones[map].nodes
    local cells={}
    for _,node in ipairs(nodes) do
     local cell=math.floor(node.x*5)..':'..math.floor(node.y*5)
@@ -360,7 +402,11 @@ function N:RankResourceZones(resource)
      local coverage=math.min(1,#route.points/10)
      local score=#route.points*coverage/seconds
      alternatives[#alternatives+1]=route
-     if not bestScore or score>bestScore then best,bestScore=route,score end
+     if not bestScore or score>bestScore then
+    best,bestScore=route,score
+    best.strategy=strategy
+    if self.planningJob then self.planningJob.best=self:Copy(best) end
+   end
     end
    end
    if best then
@@ -386,6 +432,7 @@ function N:RankResourceZones(resource)
   return a.rankScore>b.rankScore
  end)
  while #results>5 do table.remove(results) end
+ self:PutPlannerCache(key,results)
  return results
 end
 function N:PrepareTerrainRoute(route)

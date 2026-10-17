@@ -493,7 +493,7 @@ end
 function N:SettingsRows()
  local rows={}; local s=self.db.settings
  local booleans={{'native','Open native profession UI'},{'learn','Learn gathering nodes'},{'importedNodes','Show potential spawns'},{'observedNodes','Show observed nodes'},
- {'nodesVisible','Map nodes'},{'routeVisible','Route guidance'},{'terrainLearn','Learn movement corridors'},{'manualStops','Require manual skip at gathering stops'},{'stats','Gathering statistics'},{'includeAlts','Use alt inventory'},{'includeBanks','Use bank inventory'},
+ {'nodesVisible','Map nodes'},{'routeVisible','Route guidance'},{'minimapRoute','Thin minimap route line'},{'terrainLearn','Learn movement corridors'},{'manualStops','Require manual skip at gathering stops'},{'stats','Gathering statistics'},{'includeAlts','Use alt inventory'},{'includeBanks','Use bank inventory'},
  {'includeImports','Use imported inventory'},{'includeStale','Use stale inventory'},{'market','VoidMark Market prices'},{'auctionator','Auctionator prices (age unknown)'},{'manualFirst','Prefer manual prices'},{'minimap','Minimap button'}}
  for _,v in ipairs(booleans) do rows[#rows+1]={text=v[2]..': '..tostring(s[v[1]]),key=v[1],boolean=true,detail='Select and press Apply to toggle. Foreign realms/factions remain excluded. Item binding/transfer restrictions must be checked in game.'} end
  for _,v in ipairs({{'maxAge','Price expiration (seconds)',60,2592000},{'inventoryAge','Inventory expiration (seconds)',60,2592000},

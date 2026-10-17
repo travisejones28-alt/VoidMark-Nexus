@@ -45,4 +45,8 @@ PASS A different loot source after gathering is not counted
 PASS Route performance measures active time and excludes pause
 PASS Graph storage bounds reject additional samples without deleting history
 PASS Real imported-zone planning completes through the incremental queue
-PASS: 47 tests; Lua 5.1 / LuaJIT 2.0.5
+PASS Exact-input route cache avoids rebuilding and invalidates on relevant changes
+PASS Progress, approximate ETA, cancel, timeout and old queued callbacks
+PASS Minimap clipping covers crossing, offscreen and circular legs
+PASS Thin minimap lines track zoom, rotation, detours, visibility and fallback
+PASS: 51 tests; Lua 5.1 / LuaJIT 2.0.5
