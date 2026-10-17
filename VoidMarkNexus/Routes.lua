@@ -277,6 +277,24 @@ function N:BuildRoute(nodes,start,width,height,s)
 end
 -- Compare a small, geographically distributed set of candidate loop starts.
 -- Scores are estimated stops/hour; imported points are potential, not live nodes.
+function N:StartRouteAtNearest(route,here)
+ if not route or route.strategy~='nearest' or not here or here.map~=route.map or #route.points==0 then return route end
+ local nearest,best=1,math.huge
+ for i,p in ipairs(route.points) do
+  self:PlannerCheckpoint()
+  local distance,_,info=self:TerrainLeg(here,p,route.width,route.height,route.map,route.speed)
+  local cost=info and info.seconds or distance/math.max(1,route.speed or self.db.settings.speed)
+  if cost<best then nearest,best=i,cost end
+ end
+ if best==math.huge then return route end
+ local points={}
+ for offset=0,#route.points-1 do points[#points+1]=route.points[(nearest+offset-1)%#route.points+1] end
+ route.points=points
+ route.origin=self:Copy(points[1]);route.origin.map=route.map
+ self:PrepareTerrainRoute(route);self:ScoreRouteEvidence(route)
+ return route
+end
+
 function N:PlanRoute(strategy)
  local map,x,y=self:Position()
  if not map then return self:Print('Zone position unavailable.') end
@@ -319,9 +337,10 @@ function N:PlanRoute(strategy)
  for index,origin in ipairs(starts) do
   self:SetPlannerProgress("Comparing route starts",index-1,#starts)
   local route=self:BuildRoute(nodes,origin,w,h,settings)
-  if route and not route.unreachable and #route.points>0 then
+  if route then route.strategy=strategy;self:StartRouteAtNearest(route,here) end
+  if route and not route.unreachable and #route.points>0 and route.seconds<=settings.routeMinutes*60+.01 then
    local seconds=math.max(1,route.seconds or settings.routeMinutes*60)
-   local travel=self:Distance(here,origin,w,h)/math.max(1,settings.speed)
+   local travel=self:Distance(here,route.origin,w,h)/math.max(1,settings.speed)
    -- For 'nearest', include getting to the circuit; for 'optimal', do not.
    local denominator=seconds+(strategy=='nearest' and travel or 0)
    local coverage=math.min(1,#route.points/12)

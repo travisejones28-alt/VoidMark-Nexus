@@ -43,7 +43,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.2-alpha') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.3-alpha') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -463,11 +463,34 @@ test('Minimap dots number gathering stops and hide completed/offscreen stops',fu
   travelPoints={{x=.401,y=.4,transit=true},{x=.402,y=.4},{x=.404,y=.4},{x=.9,y=.9}}}
  N.waypoint=1;N.terrainIndex=1
  N:UpdateMinimapRoute();eq(#N.minimapRoutePins,2)
+ local tooltip=GameTooltip;local entries={}
+ GameTooltip=widget();GameTooltip.SetOwner=function(self,pin) self.owner=pin end
+ GameTooltip.AddLine=function(self,text) entries[#entries+1]=text end
+ N.activeRoute.points[1].name='Silverleaf'
+ N.minimapRoutePins[1].scripts.OnEnter(N.minimapRoutePins[1])
+ eq(GameTooltip.text,'Stop 1 / 3');eq(entries[1],'Silverleaf')
+ assert(entries[2]:find('yards away',1,true))
+ GameTooltip=tooltip
  eq(N.minimapRoutePins[1].label.text,'1');eq(N.minimapRoutePins[2].label.text,'2')
  N.waypoint=2;N:UpdateMinimapRoute();eq(N.minimapRoutePins[1].label.text,'2')
  assert(not N.minimapRoutePins[2]:IsShown())
  N.activeRoute=nil;N:UpdateMinimapRoute();assert(not N.minimapRouteOverlay:IsShown())
  N.Position,Minimap=position,oldMinimap;C_Minimap,GetMinimapShape=oldC,oldShape
+end)
+
+
+test('Nearest loop rotates stop order and rebuilds detours without reversing direction',function()
+ N.db.terrain.zones={};N.db.terrainBlocks={}
+ local route={strategy='nearest',map=1411,width=5000,height=3000,speed=7,
+  gatherDelay=3,mountDelay=0,points={{x=.1,y=.1,name='A'},{x=.2,y=.2,name='B'},{x=.4,y=.4,name='C'},{x=.3,y=.3,name='D'}}}
+ N:StartRouteAtNearest(route,{map=1411,x=.4001,y=.4})
+ eq(route.points[1].name,'C');eq(route.points[2].name,'D')
+ eq(route.points[3].name,'A');eq(route.points[4].name,'B')
+ eq(route.origin.x,.4)
+ eq(route.travelPoints[route.travelStopIndices[1]].name,'C')
+ assert(route.travelPoints[#route.travelPoints].closing)
+ local before=route.points[1]
+ route.strategy='optimal';N:StartRouteAtNearest(route,{map=1411,x=.1,y=.1});eq(route.points[1],before)
 end)
 
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')

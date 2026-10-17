@@ -87,3 +87,11 @@ Validation: 51 Lua 5.1/LuaJIT tests passed, covering cache invalidation/copy iso
 - Active navigation is saved per character on logout or `/reload`, including the route, waypoint, terrain-path position and pause state. Login restores it without running the planner. Stopping/completing a route clears its saved navigation at logout. Named saved routes remain separate.
 - Restoration checks route geometry and bounds, rejects malformed snapshots and resets invalid indices.
 - Validation: 54 Lua 5.1 tests pass, including route restoration, character isolation, cancellation persistence, malformed saved data, numbered stops and hiding completed markers.
+
+## 0.2.3-alpha
+
+- Closest/Nearest loops rotate the stop order so the nearest reachable gathering stop is number 1. Circuit direction is preserved and terrain detours are rebuilt; previews and saved nearest loops recheck the entry stop when activated.
+- The next leg is warm gold and brighter; later route segments are faded. Hover numbered stops to see resource, stop number and distance.
+- Numbered markers are smaller (12 instead of 18 units at standard scale) with softer backgrounds.
+- Route overlays follow the minimap's own UI layer. VoidMark Mini Map 0.1.9 moves the map into the background so quest objectives and normal panels can appear above it.
+- Validation: 55 Lua 5.1 tests pass, including nearest-stop rotation, preserved circuit order, rebuilt detours and waypoint tooltip contents.

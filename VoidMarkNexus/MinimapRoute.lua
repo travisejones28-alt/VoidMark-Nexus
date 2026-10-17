@@ -26,6 +26,25 @@ function N:ClipMinimapLeg(ax,ay,bx,by,square)
  end
  return ax+dx*low,ay+dy*low,ax+dx*high,ay+dy*high
 end
+function N:MinimapStopTooltip(pin)
+ local route=self.activeRoute
+ local index=pin.stopIndex
+ local p=route and route==pin.route and route.points[index]
+ if not p or not GameTooltip then return end
+ GameTooltip:SetOwner(pin,'ANCHOR_RIGHT')
+ local resource=p.name or (p.object and self.nodeTypes[p.object] and self.nodeTypes[p.object].name) or 'Gathering stop'
+ GameTooltip:SetText('Stop '..index..' / '..#route.points)
+ GameTooltip:AddLine(resource,1,1,1)
+ local map,x,y=self:Position()
+ local w,h=route.width,route.height
+ if not self:Finite(w,1,100000) or not self:Finite(h,1,100000) then w,h=self:MapSize(route.map) end
+ if map==route.map and x and y and w and h then
+  local distance=self:Distance({x=x,y=y},p,w,h)
+  GameTooltip:AddLine(string.format('%.0f yards away',distance),.8,.8,.8)
+ end
+ GameTooltip:AddLine(index==(self.waypoint or 1) and 'Next gathering stop' or 'Upcoming gathering stop',1,.85,.35)
+ GameTooltip:Show()
+end
 function N:HideMinimapRoute()
  if self.minimapRouteOverlay then self.minimapRouteOverlay:Hide() end
 end
@@ -53,6 +72,7 @@ function N:UpdateMinimapRoute()
   self.minimapRouteOverlay=f;self.minimapRouteLines={};self.minimapRouteDots={}
  end
  local overlay=self.minimapRouteOverlay
+ overlay:SetFrameStrata(Minimap:GetFrameStrata())
  overlay:SetFrameLevel(Minimap:GetFrameLevel()+1);overlay:Show()
  local square=GetMinimapShape and GetMinimapShape()=='SQUARE'
  local function project(p)
@@ -79,13 +99,17 @@ function N:UpdateMinimapRoute()
      local ok,value=pcall(overlay.CreateLine,overlay,nil,'ARTWORK')
      if ok then line=value;self.minimapRouteLines[used]=line end
     end
+    local destination=route.travelStopIndices and route.travelStopIndices[self.waypoint or 1]
+    local nextLeg=i<=(destination or current)
+    local red,green,blue,alpha=p.validated and .35 or .8,p.validated and .95 or .5,1,nextLeg and 1 or .35
+    if nextLeg then red,green,blue=1,.85,.35 end
     local drawn=false
     if line then
      drawn=pcall(function()
       line:SetStartPoint('CENTER',Minimap,ax,ay)
       line:SetEndPoint('CENTER',Minimap,bx,by)
-      line:SetThickness(thickness)
-      line:SetColorTexture(p.validated and .35 or .8,p.validated and .95 or .5,1,.9)
+      line:SetThickness(nextLeg and thickness*1.25 or thickness)
+      line:SetColorTexture(red,green,blue,alpha)
       line:Show()
      end)
      if not drawn then line:Hide() end
@@ -99,7 +123,7 @@ function N:UpdateMinimapRoute()
       if not dot then dot=overlay:CreateTexture(nil,'ARTWORK');self.minimapRouteDots[dots]=dot end
       dot:SetSize(thickness,thickness);dot:ClearAllPoints()
       dot:SetPoint('CENTER',Minimap,'CENTER',ax+dx*step/steps,ay+dy*step/steps)
-      dot:SetColorTexture(p.validated and .35 or .8,p.validated and .95 or .5,1,.9);dot:Show()
+      dot:SetColorTexture(red,green,blue,alpha);dot:Show()
      end
     end
    end
@@ -118,7 +142,9 @@ function N:UpdateMinimapRoute()
    shown=shown+1
    local pin=self.minimapRoutePins[shown]
    if not pin then
-    pin=CreateFrame('Frame',nil,overlay);pin:EnableMouse(false)
+    pin=CreateFrame('Frame',nil,overlay);pin:EnableMouse(true)
+    pin:SetScript('OnEnter',function(self) N:MinimapStopTooltip(self) end)
+    pin:SetScript('OnLeave',function(self) if GameTooltip and GameTooltip:IsOwned(self) then GameTooltip:Hide() end end)
     pin.background=pin:CreateTexture(nil,'ARTWORK');pin.background:SetAllPoints(pin)
     if type(pin.CreateMaskTexture)=='function' then
      local mask=pin:CreateMaskTexture()
@@ -131,10 +157,11 @@ function N:UpdateMinimapRoute()
     pin.label:SetPoint('CENTER');pin.label:SetShadowColor(0,0,0,1);pin.label:SetShadowOffset(1,-1)
     self.minimapRoutePins[shown]=pin
    end
-   pin:SetSize(18/math.max(.25,scale),18/math.max(.25,scale))
+   pin:SetSize(12/math.max(.25,scale),12/math.max(.25,scale))
    pin:SetFrameLevel(overlay:GetFrameLevel()+2)
    pin:ClearAllPoints();pin:SetPoint('CENTER',Minimap,'CENTER',px*width,py*height)
-   pin.background:SetColorTexture(index==(self.waypoint or 1) and .5 or .15,.05,.3,.95)
+   pin.background:SetColorTexture(.12,.06,.2,index==(self.waypoint or 1) and .8 or .5)
+   pin.stopIndex=index;pin.route=route
    pin.label:SetText(tostring(index));pin:Show()
   end
  end

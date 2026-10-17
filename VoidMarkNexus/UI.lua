@@ -294,7 +294,10 @@ function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
   N:ShowRoutePreview(strategy,newMode,route)
  end)
   button(w,'Activate route',182,-499,160,function()
-  N.activeRoute=N:Copy(route);N.waypoint=1;N.terrainIndex=1;N.routePaused=false;N.dirty=true;N:ShowArrow();w:Hide()
+  local selected=N:Copy(route)
+  local map,x,y=N:Position()
+  if map and x and y then N:StartRouteAtNearest(selected,{map=map,x=x,y=y}) end
+  N.activeRoute=selected;N.waypoint=1;N.terrainIndex=1;N.routePaused=false;N.dirty=true;N:ShowArrow();w:Hide()
  end)
  self.previewWindow=w
 end
@@ -579,7 +582,13 @@ function N:Render()
    N:Choice(u.actions[1],choices,function(i) local m=N.travelModes[i]; s.travel=m[1]; if m[1]~='Custom' then s.speed=m[2]; s.mountDelay=m[3] end end)
   end,function() N:GenerateRoute() end,function() if u.selected and u.selected.routeName then
    local saved=N:Copy(N.db.routes[u.selected.routeName])
-   N:RunPlanner(function() return N:PrepareTerrainRoute(saved) end,function(route)
+   N:RunPlanner(function()
+    local map,x,y=N:Position()
+    if saved.strategy=='nearest' and map and x and y then
+     return N:StartRouteAtNearest(saved,{map=map,x=x,y=y})
+    end
+    return N:PrepareTerrainRoute(saved)
+   end,function(route)
     if route.unreachable then return N:Print('Saved route contains an unreachable leg. Regenerate it.') end
     N.activeRoute=route;N.waypoint=1;N.terrainIndex=1;N.routePaused=false;N:ShowArrow()
    end)
