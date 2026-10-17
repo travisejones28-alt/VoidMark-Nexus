@@ -117,3 +117,7 @@ Resize the entire navigation HUD through its right-click menu: Smaller display, 
 ## 0.2.9-alpha
 
 The complete navigation HUD now uses the LOW UI layer, so the world map and normal application windows cover its arrow, panel, labels and controls. Showing or resizing it preserves this layer.
+
+## 0.2.10-alpha
+
+Replaced the three navigation sizing menu entries with one Display row containing minus and plus buttons. Repeated clicks resize the entire HUD without closing the menu; limits remain 50%-200%.

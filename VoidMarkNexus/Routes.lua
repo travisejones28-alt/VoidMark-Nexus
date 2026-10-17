@@ -600,15 +600,12 @@ function N:ShowArrow()
     {label='Skip waypoint',value='skip'},
     {label='Restart from waypoint 1',value='restart'},
     {label='Pause / resume',value='pause'},
-    {label='Smaller display',value='smaller'},
-    {label='Larger display',value='larger'},
-    {label='Reset display size',value='sizeReset'},
+    {label='Display',
+     decrease=function() N:SetArrowScale(math.max(.5,(N.db.settings.arrowScale or 1)-.1)) end,
+     increase=function() N:SetArrowScale(math.min(2,(N.db.settings.arrowScale or 1)+.1)) end},
     {label='Cancel route',value='cancel'}
    },function(action)
-    if action=='smaller' then N:SetArrowScale(math.max(.5,(N.db.settings.arrowScale or 1)-.1))
-    elseif action=='larger' then N:SetArrowScale(math.min(2,(N.db.settings.arrowScale or 1)+.1))
-    elseif action=='sizeReset' then N:SetArrowScale(1)
-    elseif action=='skip' then N:SkipWaypoint()
+    if action=='skip' then N:SkipWaypoint()
     elseif action=='restart' and N.activeRoute then N.waypoint=1;N.terrainIndex=1;N.routePaused=false; N.dirty=true
     elseif action=='pause' then N.routePaused=not N.routePaused
     elseif action=='cancel' then N.activeRoute=nil; N.waypoint=nil; f:Hide(); N.dirty=true end

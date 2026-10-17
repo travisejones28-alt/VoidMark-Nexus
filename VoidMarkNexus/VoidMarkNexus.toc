@@ -2,7 +2,7 @@
 ## Title: VoidMark Nexus
 ## Notes: Professions, offline alts, planning, profitability and gathering navigation.
 ## Author: VoidMark
-## Version: 0.2.9-alpha
+## Version: 0.2.10-alpha
 ## SavedVariables: VoidMarkNexusDB
 ## OptionalDeps: VoidMarkMarket, Auctionator
 ## IconTexture: Interface\Icons\INV_Misc_Gem_Amethyst_02

@@ -23,7 +23,18 @@ function N:Choice(anchor,choices,fn)
  menu:SetFrameStrata('DIALOG'); menu:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT'); menu:SetSize(270,math.min(15,#choices)*25+10)
  local scroll=CreateFrame('ScrollFrame',nil,menu,'UIPanelScrollFrameTemplate'); scroll:SetPoint('TOPLEFT',4,-4); scroll:SetPoint('BOTTOMRIGHT',-26,4)
  local child=CreateFrame('Frame',nil,scroll); child:SetSize(235,#choices*25); scroll:SetScrollChild(child)
- for i,c in ipairs(choices) do button(child,c.label,0,-(i-1)*25,230,function() menu:Hide(); fn(c.value); N.dirty=true end) end
+ for i,c in ipairs(choices) do
+  local y=-(i-1)*25
+  if c.decrease and c.increase then
+   label(child,c.label,10,y-5,'GameFontHighlight')
+   local minus=button(child,'-',143,y,38,c.decrease)
+   local plus=button(child,'+',187,y,38,c.increase)
+   menu.adjustments=menu.adjustments or {}
+   menu.adjustments[#menu.adjustments+1]={minus=minus,plus=plus}
+  else
+   button(child,c.label,0,y,230,function() menu:Hide(); fn(c.value); N.dirty=true end)
+  end
+ end
  self.menu=menu
 end
 function N:TextDialog(title,text,import)
