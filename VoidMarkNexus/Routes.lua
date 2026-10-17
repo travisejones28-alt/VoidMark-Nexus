@@ -539,6 +539,25 @@ end
 local function nexusDeltaAngle(a,b)
  return (b-a+math.pi)%(2*math.pi)-math.pi
 end
+local arrowAnchors={TOPLEFT=true,TOP=true,TOPRIGHT=true,LEFT=true,CENTER=true,RIGHT=true,
+ BOTTOMLEFT=true,BOTTOM=true,BOTTOMRIGHT=true}
+function N:SaveArrowPosition()
+ if not self.arrow then return end
+ local point,relative,relativePoint,x,y=self.arrow:GetPoint(1)
+ if (relative==UIParent or relative==nil) and arrowAnchors[point] and arrowAnchors[relativePoint]
+  and self:Finite(x,-20000,20000) and self:Finite(y,-20000,20000) then
+  self.db.settings.arrowPosition={point=point,relativePoint=relativePoint,x=x,y=y}
+ end
+end
+function N:RestoreArrowPosition()
+ if not self.arrow then return end
+ local position=self.db.settings.arrowPosition
+ self.arrow:ClearAllPoints()
+ if type(position)=='table' and arrowAnchors[position.point] and arrowAnchors[position.relativePoint]
+  and self:Finite(position.x,-20000,20000) and self:Finite(position.y,-20000,20000) then
+  self.arrow:SetPoint(position.point,UIParent,position.relativePoint,position.x,position.y)
+ else self.arrow:SetPoint('TOP',UIParent,'TOP',0,-135) end
+end
 function N:SetArrowScale(value)
  value=tonumber(value)
  if not self:Finite(value,.5,2) then self:Print('Navigation size must be 0.5 to 2.0.');return false end
@@ -550,12 +569,16 @@ function N:ShowArrow()
  if not self.arrow then
   local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
   f:SetSize(320,262)
-  f:SetPoint('TOP',UIParent,'TOP',0,-135)
   f:SetFrameStrata('LOW')
   f:SetMovable(true); f:EnableMouse(true);f:SetClampedToScreen(true)
   f:RegisterForDrag('LeftButton')
-  f:SetScript('OnDragStart',function(w) w:StartMoving() end)
-  f:SetScript('OnDragStop',function(w) w:StopMovingOrSizing() end)
+  f:SetScript('OnDragStart',function(w) w.dragging=true;w:StartMoving() end)
+  f:SetScript('OnDragStop',function(w)
+   w:StopMovingOrSizing();w.dragging=false;N:SaveArrowPosition()
+  end)
+  f:SetScript('OnHide',function(w)
+   if w.dragging then w:StopMovingOrSizing();w.dragging=false;N:SaveArrowPosition() end
+  end)
   if f.SetBackdrop then f:SetBackdrop(nil) end
   -- Arrow art points north; its compass pivot sits 60.6% down the texture.
   f.texture=f:CreateTexture(nil,'ARTWORK')
@@ -645,6 +668,7 @@ function N:ShowArrow()
  end
  self.arrow:SetFrameStrata('LOW')
  self.arrow:SetScale(self.db.settings.arrowScale or 1)
+ if not self.arrow.positionRestored then self:RestoreArrowPosition();self.arrow.positionRestored=true end
  self.arrow.refreshAt=0
  self.arrow:Show()
 end

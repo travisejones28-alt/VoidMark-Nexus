@@ -20,6 +20,7 @@ local function widget()
  local w={shown=true,text='',scripts={}}
  local methods={SetText=function(self,t) self.text=t end,GetText=function(self) return self.text end,
   Show=function(self) self.shown=true end,Hide=function(self) self.shown=false end,IsShown=function(self) return self.shown end,
+  SetPoint=function(self,...) self.anchor={...} end,ClearAllPoints=function(self) self.anchor=nil end,
   SetShown=function(self,v) self.shown=v end,SetScript=function(self,k,fn) self.scripts[k]=fn end,
   GetWidth=function() return 1000 end,GetHeight=function() return 600 end,GetStringHeight=function() return 500 end,
   GetCenter=function() return 500,300 end,GetMapID=function() return 1411 end,
@@ -43,7 +44,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.10-alpha') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.2.11-alpha') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -564,6 +565,21 @@ test('Display minus/plus row resizes repeatedly without closing its menu',functi
  for i=1,25 do controls.minus.scripts.OnClick() end
  eq(N.db.settings.arrowScale,.5);assert(menu:IsShown())
  N:SetArrowScale(1)
+end)
+
+
+test('Navigation display restores its dragged anchor after UI recreation',function()
+ local f=N.arrow
+ f.GetPoint=function() return 'TOPLEFT',UIParent,'TOPLEFT',180,-220 end
+ f.scripts.OnDragStop(f)
+ eq(N.db.settings.arrowPosition.x,180);eq(N.db.settings.arrowPosition.y,-220)
+ N.arrow=nil;N:ShowArrow()
+ eq(N.arrow.anchor[1],'TOPLEFT');eq(N.arrow.anchor[4],180);eq(N.arrow.anchor[5],-220)
+ local anchor=N.arrow.anchor
+ N:ShowArrow();eq(N.arrow.anchor,anchor)
+ N.db.settings.arrowPosition={point='garbage',relativePoint='CENTER',x=0/0,y=999999}
+ N:RestoreArrowPosition();eq(N.arrow.anchor[1],'TOP');eq(N.arrow.anchor[5],-135)
+ N.db.settings.arrowPosition=nil
 end)
 
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')

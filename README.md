@@ -129,3 +129,7 @@ The complete navigation HUD now uses the LOW UI layer, so the world map and norm
 ## 0.2.10-alpha
 
 Replaced the three navigation sizing menu entries with one Display row containing minus and plus buttons. Repeated clicks resize the entire HUD without closing the menu; limits remain 50%-200%.
+
+## 0.2.11-alpha
+
+The navigation HUD now saves its screen anchor after dragging and restores it when recreated after login or `/reload`, applying its saved scale first. Repeated route activation does not reset placement. Invalid saved anchors fall back to the default, and the display stays clamped to screen.

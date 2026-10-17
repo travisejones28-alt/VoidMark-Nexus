@@ -57,4 +57,5 @@ PASS Cached optimal loops renumber the nearest stop after the player moves
 PASS Reference-style arrow HUD updates live progress, distance, ETA and next-stop action
 PASS Navigation display scales as one saved unit with safe size bounds
 PASS Display minus/plus row resizes repeatedly without closing its menu
-PASS: 59 tests; Lua 5.1 / LuaJIT 2.0.5
+PASS Navigation display restores its dragged anchor after UI recreation
+PASS: 60 tests; Lua 5.1 / LuaJIT 2.0.5
