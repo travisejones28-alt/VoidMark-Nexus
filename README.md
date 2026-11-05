@@ -1,25 +1,14 @@
 # VoidMark Nexus 0.3.1 beta
 
-Current hardening release: see [HARDENING.md](HARDENING.md) for confirmed fixes, validation and in-game checks. Download the rebuilt addon from `dist/`.
-
-
 Saved route reuse, shared directed travel legs, persistent farming recordings and active-session restoration for WoW Forever interface **16001**.
 
 Generate prefers compatible saved work. Routes → **Route tools** provides record/finish/replay tools, route export/import, explicit improvement, cache management and optional Shortest Path travel guidance. Named routes, learned trails, UI placement and active waypoint progress remain separate from computed caches.
 
-See [PERSISTENCE.md](PERSISTENCE.md) for the new behavior, commands, limits and backup details; [VALIDATION.md](VALIDATION.md) records automated validation and remaining in-game checks. Download the installable [VoidMarkNexus.zip](dist/VoidMarkNexus.zip). Existing profession, inventory, crafting, price and gathering features remain available. Actual game-client visual and taint verification remains necessary.
+See [persistence guide](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/PERSISTENCE.md) for the new behavior, commands, limits and backup details; [validation notes](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/VALIDATION.md) records automated validation and remaining in-game checks. Download the installable [VoidMarkNexus.zip](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/dist/VoidMarkNexus.zip). Existing profession, inventory, crafting, price and gathering features remain available. Actual game-client visual and taint verification remains necessary.
 
 ## Install
 
 Copy **VoidMarkNexus** (the folder containing `VoidMarkNexus.toc`) into `World of Warcraft/_classic_beta_/Interface/AddOns/`. Enable it and use `/vmn`. Log into each character, open every profession, and visit the bank to populate records. Keybinding: Open VoidMark Nexus. The minimap gem opens the window; right-click opens Settings.
-
-## Windows GitHub Desktop junction installation
-
-The GitHub repository root contains a nested **VoidMarkNexus** directory. **Point the WoW junction at this inner directory**, not the repository root. The inner directory contains `VoidMarkNexus.toc`.
-
-If you cloned the repo to `C:\WoW Forever Addons\VoidMark  Nexus` (two spaces), run `Install-WoWLinks.ps1` from that root in PowerShell as Administrator. It installs or repairs junctions for both `_classic_beta_` and `_forever_`. It never deletes a regular addon directory. Existing junctions are updated without touching the repository's addon files.
-
-Alternatively, install the distributable `dist/VoidMarkNexus.zip` directly. It already has the correct top-level `VoidMarkNexus/` folder. **Do not extract the whole repository ZIP into AddOns.**
 
 ## Implemented
 
@@ -29,7 +18,7 @@ Alternatively, install the distributable `dist/VoidMarkNexus.zip` directly. It a
 - Craft queues with shared stock allocation, shopping lists and per-source transfer instructions. Offline crafts remain plans; current-character crafting requires the open profession and a user click. Enchantments with no output item have no assumed sale value.
 - Buy-all costs, buy-missing cash, owned-material value, economic profit, net sale-of-reagents comparison, variable output range, configurable fees, deposit cash/loss, sold fraction and waste assumptions. Unknown prices invalidate totals rather than becoming free materials. Conservative minimum recipe output is used for profit.
 - Read-only VoidMark Market schema-1 integration, realm/faction scoped; optional Auctionator lookup, timestamp-preserving Nexus cache, manual prices. Manual-first is configurable. Market is optional. Market navigation filters its existing opportunities view; it does not purchase materials or inject an order.
-- VoidMark gathering database and resource definitions, with deduplicated observed nodes, herb/ore and name filters, world-map pins, recorded gathering loot statistics and bounded session history.
+- GatherLite's MIT-licensed Forever potential spawn data and resource definitions. Deduplicated observed nodes, herb/ore and name filters, world-map pins, recorded gathering loot statistics and bounded session history.
 - Foot, 60% mount, 100% mount, Travel Form and custom route assumptions. Bounded nearest-neighbor plus 2-opt route improvement, time budget, save/load, manual waypoint creation, numbered map pins and independent purple arrow. No TomTom dependency or copied TomTom art.
 - Short-horizon leveling ranking by purchase cost or fewest missing materials, using explicit approximate difficulty probabilities. Rescan after each skill gain.
 - Ten-page dark interface, item tooltips, character/profession dropdowns, search, paging, movable window, saved position, scale, settings and diagnostics.
@@ -72,7 +61,7 @@ Nexus reads `VoidMarkMarketDB.schemaVersion == 1`, `economies[normalizedRealm ..
 
 ## Licensing
 
-VoidMark Nexus implementation: see LICENSE. The bundled gathering dataset and resource definitions retain the source notice in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. VoidMark's interface and routing remain standalone; no third-party addon is required.
+Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and data: Copyright (c) 2019 Wuild, MIT; full license in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. Other reference addons and TomTom artwork are not redistributed.
 
 
 ## 0.2.1-alpha: faster planning and minimap routes
@@ -147,3 +136,5 @@ The navigation HUD now saves its screen anchor after dragging and restores it wh
 - Fix observed-only cross-zone ranking and keep generated-loop comparison identities stable when the start rotates.
 - Add optional Shortest Path Forever travel handoff via its public API. It is never required for Nexus planning.
 - Add Lua 5.1 CI and a reproducible source-verified installable ZIP. Full profession-target planning and a collision mesh are outside this release.
+
+0.3.1 hardening: see https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/HARDENING.md .
