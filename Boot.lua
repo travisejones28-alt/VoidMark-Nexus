@@ -60,6 +60,12 @@ function N:Slash(msg)
  elseif command=='waypoint' then self:AddWaypoint()
  elseif command=='target' then self.db.settings.target=args; self:Print('Node filter: '..(args=='' and 'All' or args))
  elseif command=='kind' then if args=='herb' or args=='ore' or args=='all' then self.db.settings.kind=args end
+ elseif command=='mapcontrols' or command=='mapfilters' then
+  if WorldMapFrame and WorldMapFrame:IsShown() then
+   self:EnsureMapControls()
+   if self.mapControlsPanel then self.mapControlsPanel:Show() end
+   self:RefreshMap()
+  else self:Print('Open the world map first, then use /vmn mapcontrols.') end
  elseif command=='debug' then self:TextDialog('Diagnostics',self:Diagnostics())
  else if self.ui and self.ui.frame:IsShown() then self.ui.frame:Hide() else self:Show() end end
  self.dirty=true
