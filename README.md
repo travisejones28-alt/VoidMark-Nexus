@@ -8,7 +8,7 @@ See [persistence guide](https://github.com/travisejones28-alt/VoidMark-Nexus/blo
 
 ## Install
 
-Copy **VoidMarkNexus** (the folder containing `VoidMarkNexus.toc`) into `World of Warcraft/_classic_beta_/Interface/AddOns/`. Enable it and use `/vmn`. Log into each character, open every profession, and visit the bank to populate records. Keybinding: Open VoidMark Nexus. The minimap gem opens the window; right-click opens Settings.
+Install the repository root as **VoidMarkNexus** (it directly contains `VoidMarkNexus.toc`) into `World of Warcraft/_forever_/Interface/AddOns/`. Enable it and use `/vmn`. Log into each character, open every profession, and visit the bank to populate records. Keybinding: Open VoidMark Nexus. The minimap gem opens the window; right-click opens Settings.
 
 ## Implemented
 
