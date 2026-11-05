@@ -4,12 +4,14 @@ import argparse
 import zipfile
 
 root = Path(__file__).resolve().parents[1]
-source = root / "VoidMarkNexus"
+source = root
+runtime_dirs = {"Data", "Media", "Licenses"}
+runtime_files = {"VoidMarkNexus.toc", "Bindings.xml", "LICENSE", "README.md"}
 archive = root / "dist" / "VoidMarkNexus.zip"
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--check", action="store_true")
 args = parser.parse_args()
-files = {p.relative_to(root).as_posix(): p for p in source.rglob("*") if p.is_file()}
+files = {"VoidMarkNexus/" + p.relative_to(source).as_posix(): p for p in source.rglob("*") if p.is_file() and (p.relative_to(source).parts[0] in runtime_dirs or (len(p.relative_to(source).parts) == 1 and (p.suffix == ".lua" or p.name in runtime_files)))}
 if not args.check:
     archive.parent.mkdir(exist_ok=True)
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as output:
