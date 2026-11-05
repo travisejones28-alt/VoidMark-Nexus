@@ -799,83 +799,100 @@ function N:ResourceNodeIcon(node)
  if type(node)~='table' then return 'Interface\\Icons\\INV_Misc_Map_01' end
  return nexusResourceIcon(node)
 end
+-- A world-frame control survives alternate canvas implementations (OpenMap)
+-- and remains usable even if map pin placement is unavailable.
+function N:EnsureMapControls()
+ local world=WorldMapFrame
+ if not world then return end
+ if not self.mapControls or self.mapControls:GetParent()~=world then
+  if self.mapControls then self.mapControls:Hide() end
+  local outer=CreateFrame('Frame',nil,world)
+  outer:SetSize(156,26)
+  outer:SetPoint('TOPRIGHT',world,'TOPRIGHT',-30,-86)
+  outer:SetFrameStrata('FULLSCREEN_DIALOG')
+  outer:SetFrameLevel((world:GetFrameLevel() or 1)+250)
+  local open=CreateFrame('Button',nil,outer,'UIPanelButtonTemplate')
+  open:SetAllPoints(outer)
+  open:SetText('Nexus map filters')
+  local panel=CreateFrame('Frame',nil,world,BackdropTemplateMixin and 'BackdropTemplate' or nil)
+  panel:SetSize(190,200)
+  panel:SetPoint('TOPRIGHT',outer,'BOTTOMRIGHT',0,-3)
+  panel:SetFrameStrata('FULLSCREEN_DIALOG')
+  panel:SetFrameLevel(outer:GetFrameLevel()+2)
+  if panel.SetBackdrop then
+   panel:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1})
+   panel:SetBackdropColor(.04,.03,.08,.96)
+   panel:SetBackdropBorderColor(.56,.27,.78,1)
+  end
+  panel:Hide()
+  local title=panel:CreateFontString(nil,'OVERLAY','GameFontNormal')
+  title:SetPoint('TOPLEFT',panel,'TOPLEFT',10,-10)
+  title:SetText('Gathering map layers')
+  local function control(label,y,fn)
+   local button=CreateFrame('Button',nil,panel,'UIPanelButtonTemplate')
+   button:SetSize(172,23)
+   button:SetPoint('TOPLEFT',panel,'TOPLEFT',9,y)
+   button:SetText(label)
+   button:SetScript('OnClick',fn)
+   return button
+  end
+  local function setFilter(filter)
+   N.db.settings.mapNodeFilter=filter
+   N:RefreshMap()
+  end
+  local both=control('Herbs + Mining',-32,function() setFilter('all') end)
+  local herbs=control('Herbs only',-58,function() setFilter('herb') end)
+  local ore=control('Mining only',-84,function() setFilter('ore') end)
+  local hide=control('Hide gathering nodes',-110,function() setFilter('none') end)
+  local enabled=control('Map nodes: ON',-136,function()
+   N.db.settings.nodesVisible=not N.db.settings.nodesVisible
+   N:RefreshMap()
+  end)
+  local smaller=control('Smaller -',-162,function()
+   N.db.settings.mapIconSize=math.max(5,math.min(16,(tonumber(N.db.settings.mapIconSize) or 7)-1))
+   N:RefreshMap()
+  end)
+  smaller:SetSize(83,23)
+  local larger=CreateFrame('Button',nil,panel,'UIPanelButtonTemplate')
+  larger:SetSize(83,23)
+  larger:SetPoint('TOPLEFT',panel,'TOPLEFT',98,-162)
+  larger:SetText('Larger +')
+  larger:SetScript('OnClick',function()
+   N.db.settings.mapIconSize=math.max(5,math.min(16,(tonumber(N.db.settings.mapIconSize) or 7)+1))
+   N:RefreshMap()
+  end)
+  open:SetScript('OnClick',function()
+   if panel:IsShown() then panel:Hide() else panel:Show() end
+  end)
+  self.mapControls=outer
+  self.mapControlsPanel=panel
+  self.mapControlsEnabled=enabled
+  self.mapControlsOpen=open
+ end
+ local s=self.db and self.db.settings
+ if s and self.mapControlsEnabled then
+  self.mapControlsEnabled:SetText('Map nodes: '..(s.nodesVisible and 'ON' or 'OFF'))
+  local names={all='Herbs + Ore',herb='Herbs',ore='Mining',none='Hidden'}
+  self.mapControlsOpen:SetText('Nexus: '..(names[s.mapNodeFilter or 'all'] or names.all))
+ end
+ self.mapControls:Show()
+end
+
 function N:RefreshMap()
  local world=WorldMapFrame
- local canvas=world and world.GetCanvas and world:GetCanvas()
- if not canvas or not world:IsShown() then return end
+ if not world or not world:IsShown() then return end
+ self:EnsureMapControls()
+ local canvas=world.GetCanvas and world:GetCanvas()
+ if not canvas then return end
  local map=world:GetMapID()
  if not map then return end
  local s=self.db.settings
  local filter=s.mapNodeFilter or 'all'
- -- A standalone world-map control, independent of whether the Nexus main window is open.
- if not self.mapNodeFilterButton then
-  local b=CreateFrame('Button',nil,canvas,'UIPanelButtonTemplate')
-  b:SetSize(140,23)
-  b:SetPoint('TOPLEFT',canvas,'TOPLEFT',12,-12)
-  b:SetFrameStrata('HIGH')
-  b:SetScript('OnClick',function()
-   N:Choice(b,{
-    {label='Both: Herbs and Mining',value='all'},
-    {label='Herbs only',value='herb'},
-    {label='Mining only',value='ore'},
-    {label='No gathering nodes',value='none'}
-   },function(value)
-    N.db.settings.mapNodeFilter=value
-    N:RefreshMap()
-   end)
-  end)
-  self.mapNodeFilterButton=b
- end
- local names={all='Herbs + Ore',herb='Herbs',ore='Mining',none='Hidden'}
- -- Compact map-size slider, stored in account settings.
- if not self.mapIconSizeSlider then
-  local slider=CreateFrame('Slider',nil,canvas,'OptionsSliderTemplate')
-  slider:SetSize(120,16)
-  slider:SetPoint('TOPLEFT',canvas,'TOPLEFT',18,-49)
-  slider:SetMinMaxValues(5,16); slider:SetValueStep(1)
-  if slider.SetObeyStepOnDrag then slider:SetObeyStepOnDrag(true) end
-  slider:SetScript('OnValueChanged',function(_,value)
-   local n=math.floor(value+0.5)
-   if N.db.settings.mapIconSize~=n then
-    N.db.settings.mapIconSize=n
-    N:RefreshMap()
-   end
-  end)
-  local caption=canvas:CreateFontString(nil,'OVERLAY','GameFontNormalSmall')
-  caption:SetPoint('BOTTOM',slider,'TOP',0,3)
-  slider.caption=caption
-  self.mapIconSizeSlider=slider
- end
- local selectedSize=math.max(5,math.min(16,tonumber(s.mapIconSize) or 7))
- self.mapIconSizeSlider.caption:SetText('Icon size: '..selectedSize)
- self.mapIconSizeSlider:SetValue(selectedSize)
- self.mapIconSizeSlider:SetShown(filter~='none' and s.nodesVisible)
- self.mapNodeFilterButton:SetText('Nexus: '..(names[filter] or names.all)..'  v')
- self.mapNodeFilterButton:Show()
- -- Make active-route map selection explicit instead of silently hiding it.
- if not self.mapActiveRouteButton then
-  local b=CreateFrame('Button',nil,canvas,'UIPanelButtonTemplate')
-  b:SetSize(165,23)
-  b:SetPoint('TOPLEFT',canvas,'TOPLEFT',162,-12)
-  b:SetFrameStrata('HIGH')
-  b:SetScript('OnClick',function()
-   local route=N.activeRoute
-   if route and WorldMapFrame and WorldMapFrame.SetMapID then
-    WorldMapFrame:SetMapID(route.map)
-    N:RefreshMap()
-   end
-  end)
-  self.mapActiveRouteButton=b
- end
- local active=self.activeRoute
- if active and active.map then
-  local info=C_Map and C_Map.GetMapInfo and self:Call(C_Map.GetMapInfo,active.map)
-  local name=info and info.name or ('Zone '..tostring(active.map))
-  self.mapActiveRouteButton:SetText(active.map==map and ('Route: '..name..' ('..tostring(#(active.points or {}))..' stops)') or ('View route: '..name))
-  self.mapActiveRouteButton:Show()
- else
-  self.mapActiveRouteButton:Hide()
- end
+ -- The panel is attached to WorldMapFrame, not to OpenMap's replaceable canvas.
+ -- Hide legacy canvas buttons from earlier versions to avoid duplicate controls.
+ if self.mapNodeFilterButton then self.mapNodeFilterButton:Hide() end
+ if self.mapIconSizeSlider then self.mapIconSizeSlider:Hide() end
+ if self.mapActiveRouteButton then self.mapActiveRouteButton:Hide() end
  local nodes={}
  if s.nodesVisible and filter~='none' then
   -- Map display filters must NOT change the independent route-planning filter.
