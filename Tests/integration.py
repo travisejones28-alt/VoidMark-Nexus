@@ -75,7 +75,7 @@ for order in [('market', 'nexus', 'mini'), ('market', 'mini', 'nexus')]:
     runtime.execute(host)
     namespaces = {}
     for name in order:
-        root = paths[name] / ('VoidMarkNexus' if name == 'nexus' else '')
+        root = paths[name]
         toc = root / {'market': 'VoidMarkMarket.toc', 'mini': 'VoidMarkMiniMap.toc', 'nexus': 'VoidMarkNexus.toc'}[name]
         namespace = runtime.table()
         namespaces[name] = namespace
