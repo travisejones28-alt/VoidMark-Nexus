@@ -896,8 +896,13 @@ function N:RefreshMap()
  local nodes={}
  if s.nodesVisible and filter~='none' then
   -- Map display filters must NOT change the independent route-planning filter.
+  -- Legacy map dropdown acts as an additional filter when enabled.
   for _,node in ipairs(self:ZoneNodes(map,'all','')) do
-   if filter=='all' or node.kind==filter then nodes[#nodes+1]=node end
+   local kind=node.kind
+   local enabled=(kind=='herb' and s.mapShowHerbs~=false)
+      or (kind=='ore' and s.mapShowOre~=false)
+      or (kind~='herb' and kind~='ore' and s.mapShowOther~=false)
+   if enabled and (filter=='all' or kind==filter) then nodes[#nodes+1]=node end
   end
  end
  self.mapPins=self.mapPins or {}
