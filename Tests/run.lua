@@ -38,7 +38,7 @@ local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; asser
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
 local files={'Core','Data/Nodes','Data/Spawns','Model','Transfer','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','Recording','MinimapRoute','UI','Boot'}
-for _,f in ipairs(files) do assert(loadfile(root..'/VoidMarkNexus/'..f..'.lua'))('VoidMarkNexus',N) end
+for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
