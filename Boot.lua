@@ -70,6 +70,62 @@ function N:Slash(msg)
  else if self.ui and self.ui.frame:IsShown() then self.ui.frame:Hide() else self:Show() end end
  self.dirty=true
 end
+-- An independent map-layer menu avoids Open Map's replacement map canvas.
+function N:ToggleMapFilterMenu()
+ if not self.mapFilterMenu then
+  local f=CreateFrame('Frame','VoidMarkNexusMapFilterMenu',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
+  f:SetSize(218,215)
+  f:SetFrameStrata('FULLSCREEN_DIALOG')
+  f:SetClampedToScreen(true)
+  f:EnableMouse(true)
+  f:SetMovable(true)
+  f:RegisterForDrag('LeftButton')
+  f:SetScript('OnDragStart',function(w) w:StartMoving() end)
+  f:SetScript('OnDragStop',function(w) w:StopMovingOrSizing() end)
+  if f.SetBackdrop then
+   f:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1})
+   f:SetBackdropColor(.035,.025,.06,.97)
+   f:SetBackdropBorderColor(.48,.25,.72,1)
+  end
+  local title=f:CreateFontString(nil,'OVERLAY','GameFontNormal')
+  title:SetPoint('TOPLEFT',12,-14)
+  title:SetText('Nexus | Map Filters')
+  local close=CreateFrame('Button',nil,f,'UIPanelButtonTemplate')
+  close:SetSize(24,22);close:SetPoint('TOPRIGHT',-8,-7);close:SetText('X')
+  close:SetScript('OnClick',function() f:Hide() end)
+  local entries={{'mapShowHerbs','Show Herbs'},{'mapShowOre','Show Ore'},{'mapShowOther','Show Other Nodes'},{'routeVisible','Show Routes'}}
+  f.checks={}
+  for i,entry in ipairs(entries) do
+   local key=entry[1]
+   local cb=CreateFrame('CheckButton',nil,f,'UICheckButtonTemplate')
+   cb:SetSize(24,24);cb:SetPoint('TOPLEFT',10,-(26+i*31))
+   local text=f:CreateFontString(nil,'OVERLAY','GameFontHighlight')
+   text:SetPoint('LEFT',cb,'RIGHT',5,0);text:SetText(entry[2])
+   cb:SetScript('OnClick',function(w)
+    N.db.settings[key]=w:GetChecked() and true or false
+    N.dirty=true
+    N:RefreshMap()
+    if key=='routeVisible' then
+     if N.activeRoute and N.db.settings.routeVisible then N:ShowArrow()
+     elseif N.arrow then N.arrow:Hide() end
+     if N.UpdateMinimapRoute then N:UpdateMinimapRoute() end
+    end
+   end)
+   f.checks[key]=cb
+  end
+  local hint=f:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
+  hint:SetPoint('BOTTOMLEFT',12,11);hint:SetText('Right-click minimap icon to toggle')
+  f:Hide()
+  self.mapFilterMenu=f
+ end
+ local f=self.mapFilterMenu
+ if f:IsShown() then f:Hide();return end
+ for key,cb in pairs(f.checks) do cb:SetChecked(self.db.settings[key]~=false) end
+ f:ClearAllPoints()
+ if self.minimap then f:SetPoint('TOPLEFT',self.minimap,'BOTTOMRIGHT',8,-4)
+ else f:SetPoint('CENTER',UIParent,'CENTER') end
+ f:Show()
+end
 function N:MinimapButton()
  if not Minimap then return end
  local b=CreateFrame('Button','VoidMarkNexusMinimap',Minimap)
@@ -122,12 +178,12 @@ function N:MinimapButton()
  end)
  b:SetScript('OnClick',function(_,key)
   if key=='LeftButton' and wasDragged then wasDragged=false; return end
-  if key=='RightButton' then N:Show('Settings') else N:Slash('') end
+  if key=='RightButton' then N:ToggleMapFilterMenu() else N:Slash('') end
  end)
  b:SetScript('OnEnter',function()
   GameTooltip:SetOwner(b,'ANCHOR_LEFT')
   GameTooltip:SetText('VoidMark Nexus')
-  GameTooltip:AddLine('Left: Open | Right: Settings')
+  GameTooltip:AddLine('Left: Open | Right: Map filters')
   GameTooltip:AddLine('Left-drag: Move around minimap')
   GameTooltip:Show()
  end)
