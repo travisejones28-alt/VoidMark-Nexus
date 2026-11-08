@@ -105,4 +105,5 @@ PASS Paired live sync applies a peer account character and counts its bank
 PASS Sync ignores unpaired senders, own account and mismatched names
 PASS Trainer and recipe-vendor windows are recorded and used by the planner
 PASS Window layout follows its size and pages by visible rows
-PASS: 107 tests; Lua 5.1 / standard interpreter
+PASS Planner status window drags and remembers its position
+PASS: 108 tests; Lua 5.1 / standard interpreter

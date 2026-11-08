@@ -44,7 +44,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.4.1-beta') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.4.2-beta') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -804,6 +804,14 @@ end)
 assert(loadfile(root..'/Tests/hardening.lua'))(N,test,eq)
 assert(loadfile(root..'/Tests/v040.lua'))(N,test,eq,widget)
 assert(loadfile(root..'/Tests/v041.lua'))(N,test,eq,widget)
+test('Planner status window drags and remembers its position',function()
+ local f=N.plannerWindow;assert(f and f.scripts.OnDragStart and f.scripts.OnDragStop,'planner window must be draggable')
+ f.GetPoint=function() return 'TOPLEFT',UIParent,'TOPLEFT',250,-140 end
+ f.scripts.OnDragStart(f);f.scripts.OnDragStop(f)
+ local saved=N.db.settings.plannerPosition;eq(saved.point,'TOPLEFT');eq(saved.x,250);eq(saved.y,-140)
+ N:RestorePlannerPosition();eq(f.anchor[1],'TOPLEFT');eq(f.anchor[4],250);eq(f.anchor[5],-140)
+ N.db.settings.plannerPosition={point='BOGUS',x=1,y=1};N:RestorePlannerPosition();eq(f.anchor[1],'CENTER')
+end)
 
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary

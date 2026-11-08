@@ -63,10 +63,38 @@ function N:PlannerStatus()
  end
  return string.format('%s%s\nElapsed %ds%s',job.stage or 'Starting',count,elapsed,eta)
 end
+local plannerAnchors={TOPLEFT=true,TOP=true,TOPRIGHT=true,LEFT=true,CENTER=true,RIGHT=true,BOTTOMLEFT=true,BOTTOM=true,BOTTOMRIGHT=true}
+function N:SavePlannerPosition()
+ local f=self.plannerWindow;if not f or not f.GetPoint then return end
+ local point,relative,relativePoint,x,y=f:GetPoint(1)
+ if (relative==UIParent or relative==nil) and plannerAnchors[point] and plannerAnchors[relativePoint]
+  and type(x)=='number' and type(y)=='number' and x==x and y==y and math.abs(x)<20000 and math.abs(y)<20000 then
+  self.db.settings=self.db.settings or {}
+  self.db.settings.plannerPosition={point=point,relativePoint=relativePoint,x=x,y=y}
+ end
+end
+function N:RestorePlannerPosition()
+ local f=self.plannerWindow;if not f then return end
+ local saved=self.db and self.db.settings and self.db.settings.plannerPosition
+ f:ClearAllPoints()
+ if type(saved)=='table' and plannerAnchors[saved.point] and plannerAnchors[saved.relativePoint]
+  and type(saved.x)=='number' and type(saved.y)=='number' then
+  f:SetPoint(saved.point,UIParent,saved.relativePoint,saved.x,saved.y)
+ else
+  f:SetPoint('CENTER',UIParent,'CENTER',0,160)
+ end
+end
 function N:ShowPlannerStatus()
  if not self.plannerWindow then
   local f=CreateFrame('Frame',nil,UIParent,'BackdropTemplate')
-  f:SetSize(380,100);f:SetPoint('CENTER',UIParent,'CENTER',0,160);f:SetFrameStrata('DIALOG')
+  f:SetSize(380,100);f:SetFrameStrata('DIALOG')
+  -- Draggable anywhere on the box; position is remembered between runs.
+  f:SetMovable(true);f:EnableMouse(true);f:SetClampedToScreen(true);f:RegisterForDrag('LeftButton')
+  f:SetScript('OnDragStart',function(w) w.dragging=true;w:StartMoving() end)
+  f:SetScript('OnDragStop',function(w) w:StopMovingOrSizing();w.dragging=false;N:SavePlannerPosition() end)
+  f:SetScript('OnHide',function(w)
+   if w.dragging then w:StopMovingOrSizing();w.dragging=false;N:SavePlannerPosition() end
+  end)
   f:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1})
   f:SetBackdropColor(.025,.015,.04,.96);f:SetBackdropBorderColor(.55,.25,.85,1)
   local title=f:CreateFontString(nil,'OVERLAY','GameFontNormal')
@@ -77,6 +105,7 @@ function N:ShowPlannerStatus()
   cancel:SetSize(80,22);cancel:SetPoint('BOTTOMRIGHT',-10,8);cancel:SetText('Cancel')
   cancel:SetScript('OnClick',function() N:CancelPlanner('Route calculation cancelled.') end)
   self.plannerWindow=f
+  self:RestorePlannerPosition()
  end
  self.plannerWindow.status:SetText(self:PlannerStatus());self.plannerWindow:Show()
 end
