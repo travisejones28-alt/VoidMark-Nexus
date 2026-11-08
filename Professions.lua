@@ -1,9 +1,50 @@
 local _, N = ...
+-- One profession = one record. Different client APIs key the same profession by
+-- skill-line ID, profession ID or name; reuse whichever record already has that name.
+function N:ProfessionKey(name,preferred)
+ local list=self.character.professions
+ for key,p in pairs(list) do if p.name==name then return key end end
+ return tostring(preferred or name)
+end
+-- Merge records that share a name (left by older versions). Keeps every recipe;
+-- the newest skill reading wins.
+function N:MergeProfessions(character,cid)
+ local list=character and character.professions; if type(list)~='table' then return 0 end
+ local byName,merged={},0
+ local keys={}; for key in pairs(list) do keys[#keys+1]=key end
+ table.sort(keys,function(a,b) return tostring(a)<tostring(b) end)
+ for _,key in ipairs(keys) do
+  local p=list[key]
+  if type(p)=='table' and type(p.name)=='string' then
+   local keep=byName[p.name]
+   if not keep then byName[p.name]=key
+   else
+    local a=list[keep]
+    -- Prefer the key that holds recipes, so leveling/recipe references survive.
+    local function count(x) local n=0; for _ in pairs(x.recipes or {}) do n=n+1 end; return n end
+    local into,from,intoKey=a,p,keep
+    if count(p)>count(a) then into,from,intoKey=p,a,key; byName[p.name]=key end
+    into.recipes=into.recipes or {}
+    for rid,r in pairs(from.recipes or {}) do if into.recipes[rid]==nil then into.recipes[rid]=r end end
+    if (from.at or 0)>(into.at or 0) then into.skill,into.max,into.at=from.skill,from.max,from.at end
+    into.icon=into.icon or from.icon
+    local gone=intoKey==keep and key or keep
+    list[gone]=nil
+    merged=merged+1
+    -- Queued crafts point at the profession key; move them to the kept record.
+    for _,plan in ipairs(self.db and self.db.plans or {}) do
+     if plan.profession==gone and (cid==nil or plan.character==cid) then plan.profession=intoKey end
+    end
+   end
+  end
+ end
+ return merged
+end
 function N:ScanProfessions()
  local c=self.character
  local function save(key,name,skill,max,icon)
   if not self:Text(name) then return end
-  key=tostring(key or name); local p=c.professions[key] or {recipes={}}
+  key=self:ProfessionKey(name,key); local p=c.professions[key] or {recipes={}}
   p.name,p.skill,p.max,p.icon,p.at=name,tonumber(skill) or 0,tonumber(max) or 0,icon,self:Now(); c.professions[key]=p
  end
  if GetProfessions and GetProfessionInfo then
@@ -18,6 +59,7 @@ function N:ScanProfessions()
    if type(s)=='table' and not s.isHeader and s.isProfession then save(s.skillLineID,s.name,s.rank,s.maxRank) end
   end
  end
+ self:MergeProfessions(c,self.characterID)
  c.at=self:Now(); self.dirty=true
 end
 function N:OwnProfession()
@@ -68,7 +110,7 @@ function N:ScanModern()
  if not (api and api.GetAllRecipeIDs and api.GetRecipeInfo) then return false end
  local ids=self:Call(api.GetAllRecipeIDs); local info=self:Call(api.GetBaseProfessionInfo)
  if type(ids)~='table' or #ids==0 or type(info)~='table' or not self:Text(info.professionName or info.name) then return false end
- local pid=tostring(info.professionID or info.skillLineID or info.professionName or info.name)
+ local pid=self:ProfessionKey(info.professionName or info.name,info.professionID or info.skillLineID)
  local c=self.character; local p=c.professions[pid] or {recipes={}}
  p.name=info.professionName or info.name; p.skill=info.skillLevel or p.skill or 0; p.max=info.maxSkillLevel or p.max or 0
  p.recipes=p.recipes or {}; c.professions[pid]=p; self.activeProfession=pid
@@ -76,7 +118,7 @@ function N:ScanModern()
  local function batch()
   if token~=self.scanToken or not self:OwnProfession() then return end
   local current=N:Call(api.GetBaseProfessionInfo)
-  if not current or tostring(current.professionID or current.skillLineID or current.professionName or current.name)~=pid then return end
+  if not current or (current.professionName or current.name)~=p.name then return end
   for i=1,30 do
    local id=ids[cursor]; if not id then p.at=N:Now(); c.at=N:Now(); N.dirty=true; return end
    local r=N:ModernRecipe(id); if r then p.recipes[tostring(id)]=r; if r.learned then N:RecordDifficulty(p.name,tostring(id),tonumber(p.skill),r.difficulty) end end; cursor=cursor+1
@@ -91,8 +133,7 @@ function N:ScanLegacy(craft)
  local name,skill,max
  if craft then name,skill,max=self:Call(GetCraftDisplaySkillLine) else name,skill,max=self:Call(GetTradeSkillLine) end
  if not self:Text(name) or name=='UNKNOWN' or not self:Finite(count,1,10000) then return false end
- local pid=name
- for key,p in pairs(self.character.professions) do if p.name==name then pid=key; break end end
+ local pid=self:ProfessionKey(name,name)
  local p=self.character.professions[pid] or {recipes={}}; p.name,p.skill,p.max,p.at=name,skill or 0,max or 0,self:Now()
  self.character.professions[pid]=p; self.activeProfession=pid
  for index=1,count do

@@ -123,8 +123,9 @@ test('Modern profession scan and linked-view protection',function()
  C_TradeSkillUI={GetAllRecipeIDs=function() return {123} end,GetBaseProfessionInfo=function() return {professionID=171,professionName='Alchemy',skillLevel=100,maxSkillLevel=150} end,
  GetRecipeInfo=function() return {name='New Potion',learned=true,relativeDifficulty=1} end,
  GetRecipeSchematic=function() return {outputItemID=2,quantityMin=1,quantityMax=2,reagentSlotSchematics={{quantityRequired=2,reagents={{itemID=1}}}}} end}
- N:ScanRecipes(); flush(); eq(N.character.professions['171'].recipes['123'].name,'New Potion')
+ N:ScanRecipes(); flush(); eq(N.character.professions[N:ProfessionKey('Alchemy')].recipes['123'].name,'New Potion')
  C_TradeSkillUI.IsTradeSkillLinked=function() return true end; assert(not N:OwnProfession()); C_TradeSkillUI.IsTradeSkillLinked=nil
+ N.character.professions[N:ProfessionKey('Alchemy')].recipes['123']=nil
 end)
 test('Bag and bank scanning use distinct containers',function()
  C_Container={GetContainerNumSlots=function(bag) return (bag==0 or bag==-1) and 1 or 0 end,
@@ -854,6 +855,18 @@ test('Decluttered window: merged tabs, old names still open, plain settings',fun
  for _,r in ipairs(N:SettingsRows()) do assert(not r.text:find(': true',1,true) and not r.text:find(': false',1,true),r.text) end
  N:Show('Gathering');N:Render();assert(N.ui.detail.text:find('What:',1,true),'gathering summary shown')
  assert(not N.ui.detail.text:find('2-opt',1,true),'no jargon in gathering panel')
+end)
+test('Duplicate profession records merge without losing recipes or queued crafts',function()
+ local c=N.character; local saved=N:Copy(c.professions); local plans=N.db.plans
+ c.professions={['171']={name='Alchemy',skill=120,max=150,at=200,recipes={}},
+  ['2823']={name='Alchemy',skill=110,max=150,at=100,recipes={a={name='Minor Healing Potion'},b={name='Elixir of Lion'}}}}
+ N.db.plans={{character=N.characterID,profession='171',recipe='a',qty=1},{character=N.characterID,profession='2823',recipe='b',qty=2}}
+ eq(N:MergeProfessions(c,N.characterID),1)
+ local keys={};for k in pairs(c.professions) do keys[#keys+1]=k end; eq(#keys,1); eq(keys[1],'2823')
+ local p=c.professions['2823']; eq(p.skill,120); assert(p.recipes.a and p.recipes.b)
+ eq(N.db.plans[1].profession,'2823'); eq(N.db.plans[2].profession,'2823')
+ eq(N:ProfessionKey('Alchemy','999'),'2823'); eq(N:ProfessionKey('Mining','186'),'186')
+ c.professions=saved; N.db.plans=plans
 end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary

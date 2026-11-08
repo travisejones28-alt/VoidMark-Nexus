@@ -118,4 +118,5 @@ PASS Routes dropdown exposes skill-up modes and selecting one clears old resourc
 PASS Skill-up zone ranking preserves priority instead of replacing it with resource yield
 PASS Skill-up summary explains missing skills and the trainer rank cap
 PASS Decluttered window: merged tabs, old names still open, plain settings
-PASS: 120 tests; Lua 5.1 / standard interpreter
+PASS Duplicate profession records merge without losing recipes or queued crafts
+PASS: 121 tests; Lua 5.1 / standard interpreter
