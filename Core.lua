@@ -1,6 +1,6 @@
 local _, N = ...
 _G.VoidMarkNexus = N
-N.version, N.schema = '0.5.0-beta', 1
+N.version, N.schema = '0.5.1-beta', 1
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
 function N:Finite(v, lo, hi)

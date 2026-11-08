@@ -206,7 +206,7 @@ function N:MinimapButton()
  self.minimap=b
 end
 
-local frame=CreateFrame('Frame')
+local frame=CreateFrame('Frame'); N.eventFrame=frame
 frame:RegisterEvent('ADDON_LOADED'); frame:RegisterEvent('PLAYER_LOGIN')
 for event in pairs(N.handlers) do pcall(frame.RegisterEvent,frame,event) end
 frame:SetScript('OnEvent',function(_,event,...)
@@ -224,7 +224,13 @@ frame:SetScript('OnEvent',function(_,event,...)
     if N.activeRoute or N.tomtomUID then N:SyncTomTom() end
    end) end)
   end
- elseif N.ready then for _,fn in ipairs(N.handlers[event] or {}) do N:Guard(event,fn,...) end end
+ elseif N.ready and N.handlers[event] then
+  -- Forever can pass protected "secret" values (e.g. spell IDs); using one as a
+  -- table key or in a comparison throws, so handlers receive nil instead.
+  local args={n=select('#',...),...}
+  if issecretvalue then for i=1,args.n do local ok,secret=pcall(issecretvalue,args[i]); if not ok or secret then args[i]=nil end end end
+  for _,fn in ipairs(N.handlers[event]) do N:Guard(event,fn,unpack(args,1,args.n)) end
+ end
 end)
 SLASH_VOIDMARKNEXUS1='/vmn'
 SlashCmdList.VOIDMARKNEXUS=function(msg) N:Guard('command',function() N:Slash(msg) end) end

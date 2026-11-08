@@ -79,3 +79,17 @@ test('Zone loop: whole ring is drawn on the world map and the loop survives /rel
  N:StopRoute();N.db.navigation[N.characterID]=nil
  s.kind,s.routeSelectionMode=saved[1],saved[2]
 end)
+test('Secret event arguments reach handlers as nil instead of erroring',function()
+ local secret={}; local oldFn=issecretvalue; issecretvalue=function(v) return v==secret end
+ local before=#N.errors
+ N.activeRoute={map=1411,width=5000,height=3000,loop=true,points={{x=.4,y=.4,name='A'},{x=.6,y=.6,name='B'}}};N.waypoint=1
+ N.eventFrame.scripts.OnEvent(N.eventFrame,'UNIT_SPELLCAST_SUCCEEDED','player','cast',secret)
+ N.eventFrame.scripts.OnEvent(N.eventFrame,'UNIT_SPELLCAST_SENT','player','Peacebloom','cast',secret)
+ eq(#N.errors,before); eq(N.waypoint,1)
+ local got={}; local list=N.handlers.UNIT_SPELLCAST_SUCCEEDED
+ list[#list+1]=function(unit,cast,spell) got.unit,got.cast,got.spell,got.seen=unit,cast,spell,true end
+ N.eventFrame.scripts.OnEvent(N.eventFrame,'UNIT_SPELLCAST_SUCCEEDED','player','cast',secret)
+ table.remove(list)
+ assert(got.seen); eq(got.unit,'player'); eq(got.cast,'cast'); eq(got.spell,nil)
+ issecretvalue=oldFn; N:StopRoute()
+end)
