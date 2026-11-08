@@ -300,7 +300,7 @@ function N:ShowRoutePreview(strategy,displayMode,prebuiltRoute)
  if not route.travelPoints and #route.points>1 then connect(previous,origin) end
  point(origin,0)
  for i,p in ipairs(route.points) do point(p,i) end
- local foot=label(w,string.format('%.0f yd | %.0f%% learned corridors; remaining travel unverified.\n%s',route.length or 0,(route.traversalConfidence or 0)*100,route.dataQuality or 'Potential spawn route'),18,-460,'GameFontHighlightSmall')
+ local foot=label(w,string.format('%.0f yd | %.0f%% learned corridors; remaining travel unverified.\n%s',route.length or 0,(route.traversalConfidence or 0)*100,route.skillup and 'Skill-up route: estimated orange > yellow > green; gains not guaranteed.' or route.dataQuality or 'Potential spawn route'),18,-460,'GameFontHighlightSmall')
  foot:SetWidth(490)
  button(w,displayMode=='map' and 'Diagram view' or 'Map view',20,-499,125,function()
   local newMode=displayMode=='map' and 'diagram' or 'map'
@@ -327,6 +327,7 @@ function N:ShowTopGatheringZones()
   end
  end
  table.sort(choices,function(a,b) return a.label<b.label end)
+ if self.db.settings.routeSelectionMode=='skillup' then choices={{label='Best skill-up zones (current skills)',value='Skill-up routes'}} end
  if not self.ui then return end
  self:Choice(self.ui.zoneButton,choices,function(resource)
   self:RunPlanner(function() return self:RankResourceZones(resource) end,function(ranking)
@@ -340,7 +341,7 @@ function N:ShowTopGatheringZones()
   label(w,'TOP 5 FARMING ZONES | '..resource,16,-15,'GameFontNormalLarge')
   button(w,'Close',567,-10,86,function() w:Hide() end)
   label(w,'ZONE',20,-52,'GameFontNormalSmall')
-  label(w,'EST. STOPS/HR',265,-52,'GameFontNormalSmall')
+  label(w,resource=='Skill-up routes' and 'PRIORITY/HR' or 'EST. STOPS/HR',265,-52,'GameFontNormalSmall')
   label(w,'LOOP',400,-52,'GameFontNormalSmall')
   label(w,'STOPS',487,-52,'GameFontNormalSmall')
   for i,r in ipairs(ranking) do
@@ -348,7 +349,7 @@ function N:ShowTopGatheringZones()
    local name=r.name
    if #name>26 then name=name:sub(1,25)..'.' end
    label(w,i..'. '..name,20,y-7,'GameFontHighlightSmall')
-   label(w,string.format('%.0f%s',r.score,r.metric=='resources' and ' res' or ' stops'),285,y-7,'GameFontHighlightSmall')
+   label(w,string.format('%.0f%s',r.score,r.metric=='resources' and ' res' or r.metric=='skill priority' and ' pts' or ' stops'),285,y-7,'GameFontHighlightSmall')
    label(w,string.format('%.1f min',(r.route.seconds or 0)/60),400,y-7,'GameFontHighlightSmall')
    label(w,tostring(#r.route.points),500,y-7,'GameFontHighlightSmall')
    label(w,string.format('%d spawns | %.0f yd | %.0f%% trail | %d/%d observed stops',r.rawCount,r.route.length or 0,(r.route.traversalConfidence or 0)*100,r.route.observedStops or 0,#r.route.points),20,y-25,'GameFontHighlightSmall')
@@ -360,7 +361,7 @@ function N:ShowTopGatheringZones()
     N:Choice(w,choices,function(route) w:Hide();route.strategy='optimal';N:ShowRoutePreview('optimal',nil,route) end)
    end)
   end
-  label(w,'In-zone loops only; travel to zone excluded. Stops are potential; res uses sampled checks.',18,-300,'GameFontHighlightSmall')
+  label(w,resource=='Skill-up routes' and 'Estimated difficulty priority, not skill-ups/hour. Travel and zone danger excluded.' or 'In-zone loops only; travel to zone excluded. Stops are potential; res uses sampled checks.',18,-300,'GameFontHighlightSmall')
   self.zoneRankingWindow=w
   end)
  end)
@@ -419,10 +420,14 @@ function N:CreateUI()
     {label='All gathering',value='all'},
     {label='Herbs only',value='herb'},
     {label='Mining only',value='ore'},
+    {label='Herbalism skill-ups',value='skillherb'},
+    {label='Mining skill-ups',value='skillore'},
+    {label='Both gathering skill-ups',value='skillall'},
     {label='Multi-select...',value='multi'}
    },function(v)
     local settings=N.db.settings
     if v=='multi' then N:ShowResourcePicker(); return end
+    if v:sub(1,5)=='skill' then N:SelectSkillupRoute(v:sub(6));u.selected=nil;u.page=1;return end
     settings.kind=v; settings.target=''; settings.routeSelectionMode=v; settings.routeResources=nil
     u.selected=nil; u.page=1; N.dirty=true
    end)
@@ -570,7 +575,7 @@ function N:Render()
  self.renderStocks={}
  local rows,detail={},''; local selected=u.selected; local tab=u.tab
  local c=u.character and self.db.characters[u.character]
- u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Leveling' and (self.db.settings.levelMode..' route') or tab=='Routes' and (self.db.settings.routeSelectionMode=='multi' and 'Multi-select' or ({all='All gathering',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All gathering') or u.filter)
+ u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Leveling' and (self.db.settings.levelMode..' route') or tab=='Routes' and (self.db.settings.routeSelectionMode=='skillup' and (({herb='Herbalism',ore='Mining',all='Both'})[self.db.settings.kind]..' skill-ups') or self.db.settings.routeSelectionMode=='multi' and 'Multi-select' or ({all='All gathering',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All gathering') or u.filter)
  u.heading:SetText(tab..'  |  '..(tab=='Settings' and 'Select setting; Apply uses the bottom value field' or tab=='Leveling' and 'Bottom field: target skill (1 = current rank cap). Top-right button: route type.' or 'Search above; quantity or action value below'))
  self:SetActions({},{}); u.footer:SetText('Offline data is cached. Open each profession and bank once to record it. /vmn native restores Blizzard access.')
  if tab=='Recipes' or tab=='Profitability' then
@@ -658,6 +663,7 @@ function N:Render()
  elseif tab=='Routes' then
   local map=self:Position(); local nodes=map and self:ZoneNodes(map) or {}; local s=self.db.settings
   detail='Strategy: '..({optimal='Optimal Loop',nearest='Nearest Efficient Loop',here='Start Here'})[s.routeStrategy or 'optimal']..'\nResource: '..(s.target~='' and s.target or ({all='All nodes',herb='Herbs',ore='Mining'})[s.kind] or 'All nodes')..'\nTravel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use learned directional corridors, marked obstacle detours and bounded 2-opt. Cyan segments are observed trails; purple segments are unverified. Cliffs and live availability cannot be read from artwork. Waypoints remain potential spawns.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn terrain on|off|clear\n/vmn pause\n/vmn restart\n/vmn check empty|available\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
+  if s.routeSelectionMode=='skillup' then detail='SKILL-UP ROUTE\n'..self:GatheringSkillSummary()..'\n\n'..detail end
   for name,r in pairs(self.db.routes) do
    local valid=self:CleanNavigationRoute(r)
    rows[#rows+1]={text='Saved: '..tostring(name)..(valid and (' | '..#valid.points..' waypoints') or ' | invalid data retained'),

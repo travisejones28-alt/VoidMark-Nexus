@@ -158,3 +158,9 @@ The navigation HUD now saves its screen anchor after dragging and restores it wh
 - Add Lua 5.1 CI and a reproducible source-verified installable ZIP. A collision mesh is outside this release. (Profession-target planning was added in 0.4.0.)
 
 0.3.1 hardening: see https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/HARDENING.md .
+
+### Gathering skill-up routes (0.4.4)
+
+In Routes, open the resource filter and select Herbalism skill-ups, Mining skill-ups, or Both gathering skill-ups. Generate/Preview uses the current character's recorded gathering skills and rank caps. Top 5 zones compares eligible skill-up nodes across zones. You can also use `/vmn skillroute herb`, `/vmn skillroute ore`, or `/vmn skillroute all`.
+
+Orange nodes receive the highest planning priority, then yellow, then green. Locked nodes and estimated gray nodes are excluded. Difficulty bands use the same requirement-relative estimates as the companion minimap legend; Forever thresholds can differ. Priority/hour is a weighted planning score, not promised skill gains. Zone travel and combat danger are excluded from zone comparisons. Regenerate after gaining skill or training a new rank. Choosing a normal gathering filter exits skill-up mode. Map display filters remain independent.

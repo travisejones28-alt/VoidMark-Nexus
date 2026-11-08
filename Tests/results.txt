@@ -109,4 +109,12 @@ PASS Planner status window drags and remembers its position
 PASS Route entry uses reachable travel time instead of straight-line proximity
 PASS All unreachable entry stops preserve the existing route
 PASS Insertion planner respects a directed closed-loop budget and leaves input nodes unchanged
-PASS: 111 tests; Lua 5.1 / LuaJIT 2.0.5
+PASS Gathering skills use current character and localized profession IDs
+PASS Skill-up eligibility excludes locked nodes, estimated gray nodes and rank caps
+PASS Skill-up route filtering never hides nodes from independent map filters
+PASS Skill changes and rank-cap training invalidate skill-up planning settings
+PASS Skill-up route construction favors useful difficulty without exceeding the circuit budget
+PASS Routes dropdown exposes skill-up modes and selecting one clears old resource restrictions
+PASS Skill-up zone ranking preserves priority instead of replacing it with resource yield
+PASS Skill-up summary explains missing skills and the trainer rank cap
+PASS: 119 tests; Lua 5.1 / LuaJIT 2.0.5

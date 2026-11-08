@@ -19,22 +19,68 @@ local nexusCityMaps = {
 function N:IsGatheringCityMap(map)
  return nexusCityMaps[tonumber(map)]==true
 end
+-- Current character only: another character's gathering rank must never unlock nodes.
+function N:GatheringSkills()
+ local skills={}
+ for id,p in pairs(self.character and self.character.professions or {}) do
+  local kind=(tostring(id)=='182' or p.name=='Herbalism') and 'herb'
+   or (tostring(id)=='186' or p.name=='Mining') and 'ore'
+  if kind and self:Finite(p.skill,1,1000) and self:Finite(p.max,1,1000) then
+   skills[kind]={skill=p.skill,max=p.max,name=p.name}
+  end
+ end
+ return skills
+end
+function N:SkillupNode(kind,skills)
+ local p=skills[kind.kind]
+ if not p or p.skill>=p.max or not self:Finite(kind.skill,1,1000) or p.skill<kind.skill then return end
+ -- Estimated Classic gathering bands, matching the companion minimap legend.
+ -- Forever can change these thresholds: weights express priority, not probability.
+ local delta=p.skill-kind.skill
+ if delta>=100 then return end
+ if delta<25 then return 1,'orange' end
+ if delta<50 then return .65,'yellow' end
+ return .2,'green'
+end
+function N:GatheringSkillSummary()
+ local skills=self:GatheringSkills();local lines={}
+ for _,kind in ipairs({'herb','ore'}) do
+  if self.db.settings.kind=='all' or self.db.settings.kind==kind then
+   local p=skills[kind]
+   lines[#lines+1]=p and (p.name..' '..p.skill..'/'..p.max..(p.skill>=p.max and ' - rank cap reached; visit a trainer' or ''))
+    or ((kind=='herb' and 'Herbalism' or 'Mining')..' skill unavailable; refresh professions')
+  end
+ end
+ return table.concat(lines,'\n')..'\nOrange > yellow > green. Difficulty bands are estimates for Forever; no guaranteed gains. Regenerate after skill-ups.'
+end
+function N:SelectSkillupRoute(kind)
+ if kind~='herb' and kind~='ore' and kind~='all' then return self:Print('/vmn skillroute herb|ore|all') end
+ self:CancelPlanner()
+ local s=self.db.settings
+ s.kind,s.target,s.routeSelectionMode,s.routeResources=kind,'','skillup',nil
+ self:ScanProfessions()
+ self.dirty=true
+end
 function N:ZoneNodes(map,kindOverride,targetOverride)
  if self:IsGatheringCityMap(map) then return {} end
  local out,seen={},{}
  local s=self.db.settings
  local selectedKind=kindOverride or s.kind
  local selectedTarget=targetOverride~=nil and targetOverride or s.target
+ local skillup=s.routeSelectionMode=='skillup' and kindOverride==nil and targetOverride==nil
+ local skills=skillup and self:GatheringSkills()
  local function add(object,x,y,source,at)
   if not self:Finite(x,0,1) or not self:Finite(y,0,1) then return end
   local kind=self.nodeTypes[object]; if not kind or (selectedKind~='all' and kind.kind~=selectedKind) then return end
   if selectedTarget~='' and not kind.name:lower():find(selectedTarget:lower(),1,true) then return end
+  local priority,color
+  if skillup then priority,color=self:SkillupNode(kind,skills);if not priority then return end end
   if kindOverride==nil and targetOverride==nil and s.routeSelectionMode=='multi' then
    if type(s.routeResources)~='table' or not s.routeResources[kind.name] then return end
   end
   local key=tostring(object)..':'..math.floor(x*500+.5)..':'..math.floor(y*500+.5)
   if seen[key] then if source=='Observed' then out[seen[key]].source=source; out[seen[key]].at=at end; return end
-  out[#out+1]={object=object,x=x,y=y,source=source,at=at,map=map,name=kind.name,kind=kind.kind,skill=kind.skill}; seen[key]=#out
+  out[#out+1]={object=object,x=x,y=y,source=source,at=at,map=map,name=kind.name,kind=kind.kind,skill=kind.skill,skillPriority=priority,skillColor=color}; seen[key]=#out
  end
  if s.importedNodes then for object,maps in pairs(self.spawns or {}) do
   local points=maps[map]; if points then for i=1,#points,2 do add(object,points[i],points[i+1],'Potential spawn') end end

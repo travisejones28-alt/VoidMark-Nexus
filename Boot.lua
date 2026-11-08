@@ -62,6 +62,9 @@ function N:Slash(msg)
  elseif command=='routeexport' then
   local raw,err=self:ExportRoute(args);if raw then self:TextDialog('Route export',raw) else self:Print(err) end
  elseif command=='routeimport' then self:TextDialog('Route import',args,'route')
+ elseif command=='skillroute' then
+  if args=='herb' or args=='ore' or args=='all' then self:SelectSkillupRoute(args);self:GenerateRoute()
+  else self:Print('/vmn skillroute herb|ore|all') end
  elseif command=='route' then self:GenerateRoute(args=='fresh')
  elseif command=='skip' then self:SkipWaypoint()
  elseif command=='stop' then self.activeRoute=nil; if self.arrow then self.arrow:Hide() end; self:SyncTomTom()

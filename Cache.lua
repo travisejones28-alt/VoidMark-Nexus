@@ -73,6 +73,7 @@ function N:RouteSettings()
  local out={}
  for _,k in ipairs({'speed','travel','mountDelay','gatherDelay','routeMinutes','nodeLimit','kind','target',
   'importedNodes','observedNodes','routeSelectionMode','routeResources'}) do out[k]=self.db.settings[k] end
+ if out.routeSelectionMode=='skillup' then out.gatheringSkills=self:GatheringSkills() end
  return self:Copy(out)
 end
 function N:RoutingTerrain(map)
@@ -89,7 +90,7 @@ end
 function N:RoutingNodes(nodes)
  local out={}
  for _,p in ipairs(nodes) do
-  out[#out+1]={x=p.x,y=p.y,object=p.object,source=p.source,name=p.name,kind=p.kind,skill=p.skill}
+  out[#out+1]={x=p.x,y=p.y,object=p.object,source=p.source,name=p.name,kind=p.kind,skill=p.skill,skillPriority=p.skillPriority,skillColor=p.skillColor}
  end
  table.sort(out,function(a,b)
   if a.x~=b.x then return a.x<b.x end

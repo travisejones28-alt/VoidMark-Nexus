@@ -1,4 +1,9 @@
 local _, N = ...
+function N:RouteStopValue(points)
+ local value=0
+ for _,p in ipairs(points) do value=value+(p.skillPriority or 1) end
+ return value
+end
 N.travelModes={{'Foot',7,0},{'60% Mount',11.2,3},{'100% Mount',14,3},{'Travel Form',9.8,1.5},{'Custom',7,0}}
 function N:MapSize(map)
  if C_Map and C_Map.GetMapWorldSize then
@@ -158,8 +163,10 @@ function N:BuildRoute(nodes,start,width,height,s)
   end
   if nearby then
    nearby.spawnCount=(nearby.spawnCount or 1)+1
-   if nearby.source~='Observed' and n.source=='Observed' then
+   if (n.skillPriority or 0)>(nearby.skillPriority or 0) or
+    ((n.skillPriority or 0)==(nearby.skillPriority or 0) and nearby.source~='Observed' and n.source=='Observed') then
     nearby.x,nearby.y,nearby.name,nearby.object,nearby.source=n.x,n.y,n.name,n.object,n.source
+    nearby.skill,nearby.kind,nearby.skillPriority,nearby.skillColor=n.skill,n.kind,n.skillPriority,n.skillColor
    end
   else
    local copy=self:Copy(n)
@@ -216,7 +223,7 @@ function N:BuildRoute(nodes,start,width,height,s)
   end
   return path
  end
- local useYield=#candidates>0
+ local useYield=#candidates>0 and s.routeSelectionMode~='skillup'
  for _,p in ipairs(candidates) do
   local e=self:GatherEvidence(start.map,p)
   if not e or e.checks<5 or e.harvests<3 then useYield=false;break end
@@ -228,7 +235,7 @@ function N:BuildRoute(nodes,start,width,height,s)
   self:ScoreRouteEvidence(evidence)
   -- Penalize tiny repeat circuits; density is not treated as extra spawns.
   local coverage=math.min(1,#path/10)
-  local score=(useYield and evidence.expectedResourcesPerHour and evidence.expectedResourcesPerHour/3600 or #path/math.max(600,seconds))*coverage
+  local score=(useYield and evidence.expectedResourcesPerHour and evidence.expectedResourcesPerHour/3600 or self:RouteStopValue(path)/math.max(600,seconds))*coverage
   return score,seconds
  end
  local best,bestScore,bestSeconds={},-1,0
@@ -263,6 +270,7 @@ function N:BuildRoute(nodes,start,width,height,s)
      if added<math.huge and elapsed+added/speed+stop<=budget then
       local score=mode.insertion and added/speed or d/speed+mode.returnWeight*home/speed
       if p.source=='Observed' then score=score-(mode.observed or 6) end
+      if p.skillPriority then score=math.max(.01,score)/p.skillPriority end
       if not choiceScore or score<choiceScore then
        choice,choiceScore,choiceDistance,choiceSlot=i,score,added,slot
       end
@@ -290,6 +298,7 @@ function N:BuildRoute(nodes,start,width,height,s)
  local route={points=best,origin=self:Copy(start),seconds=bestSeconds,width=width,height=height,mode=s.travel,speed=s.speed,mountDelay=s.mountDelay,gatherDelay=s.gatherDelay,created=self:Now(),map=start.map,merged=true,optimizer='terrain-insertion-2opt-v7'}
  self:PrepareTerrainRoute(route)
  self:ScoreRouteEvidence(route)
+ route.skillup=s.routeSelectionMode=='skillup' or nil
  return route
 
 end
@@ -317,10 +326,14 @@ function N:StartRouteAtNearest(route,here)
 end
 
 function N:PlanRoute(strategy)
+ if self.db.settings.routeSelectionMode=='skillup' then self:ScanProfessions() end
  local map,x,y=self:Position()
  if not map then return self:Print('Zone position unavailable.') end
  local nodes=self:ZoneNodes(map)
- if #nodes==0 then return self:Print('No matching gathering nodes in this zone.') end
+ if #nodes==0 then
+  return self:Print(self.db.settings.routeSelectionMode=='skillup' and
+   ('No skill-up candidates in this zone.\n'..self:GatheringSkillSummary()..'\nTry Top 5 zones.') or 'No matching gathering nodes in this zone.')
+ end
  local w,h=self:MapSize(map)
  if not w then return self:Print('Map dimensions unavailable.') end
  local here={map=map,x=x,y=y}
@@ -369,7 +382,7 @@ function N:PlanRoute(strategy)
  if cached then
   best=cached
   local denominator=math.max(600,(cached.seconds or 600)+entrySeconds(cached))
-  bestScore=#cached.points*math.min(1,#cached.points/12)/denominator
+  bestScore=self:RouteStopValue(cached.points)*math.min(1,#cached.points/12)/denominator
  end
  for index,origin in ipairs(starts) do
   self:SetPlannerProgress("Comparing route starts",index-1,#starts)
@@ -384,7 +397,7 @@ function N:PlanRoute(strategy)
    -- For 'nearest', include getting to the circuit; for 'optimal', do not.
    local denominator=seconds+(strategy=='nearest' and travel or 0)
    local coverage=math.min(1,#route.points/12)
-   local score=(#route.points*coverage)/math.max(600,denominator)
+   local score=(self:RouteStopValue(route.points)*coverage)/math.max(600,denominator)
    if travel<math.huge and (not bestScore or score>bestScore) then
     best,bestScore=route,score
     best.strategy=strategy
@@ -401,11 +414,17 @@ function N:PlanRoute(strategy)
 end
 -- Cross-zone comparisons are based on accessible imported coordinates, not active spawns.
 function N:RankResourceZones(resource)
+ local skillup=self.db.settings.routeSelectionMode=='skillup' and resource=='Skill-up routes'
+ if skillup then self:ScanProfessions() end
  if not resource or resource=='' then return {} end
  local settings=self:RouteSettings()
+ local function zoneNodes(map)
+  if skillup then return self:ZoneNodes(map) end
+  return self:ZoneNodes(map,'all',resource)
+ end
  local maps={}
  for object,kind in pairs(self.nodeTypes or {}) do
-  if kind.name==resource then
+  if kind.name==resource or skillup then
    for map,points in pairs((self.spawns or {})[object] or {}) do
     if not self:IsGatheringCityMap(map) and type(points)=='table' then
      maps[map]=(maps[map] or 0)+math.floor(#points/2)
@@ -416,15 +435,18 @@ function N:RankResourceZones(resource)
  local eligible={}
  for map in pairs(self.db.nodes or {}) do
   if not maps[map] and not self:IsGatheringCityMap(map) then
-   local nodes=self:ZoneNodes(map,'all',resource);if #nodes>0 then maps[map]=#nodes end
+   local nodes=zoneNodes(map);if #nodes>0 then maps[map]=#nodes end
   end
  end
- for map,count in pairs(maps) do if count>=4 then eligible[#eligible+1]={map=map,count=count} end end
+ for map,count in pairs(maps) do
+  if skillup then count=#zoneNodes(map) end
+  if count>=4 then eligible[#eligible+1]={map=map,count=count} end
+ end
  table.sort(eligible,function(a,b) return a.count>b.count end)
  local inputs={compat=self:CacheCompatibility(),resource=resource,settings=settings,zones={}}
  for _,entry in ipairs(eligible) do
   local map=entry.map
-  inputs.zones[map]={nodes=self:RoutingNodes(self:ZoneNodes(map,'all',resource)),terrain=self:RoutingTerrain(map),
+  inputs.zones[map]={nodes=self:RoutingNodes(zoneNodes(map)),terrain=self:RoutingTerrain(map),
    blocks=(self.db.terrainBlocks or {})[map],evidence=(self.db.gatherEvidence or {})[map],dimensions={self:MapSize(map)}}
  end
  local key=self:PlannerCacheKey(inputs)
@@ -459,7 +481,7 @@ function N:RankResourceZones(resource)
     if route and not route.unreachable and #route.points>=3 then
      local seconds=math.max(600,route.seconds)
      local coverage=math.min(1,#route.points/10)
-     local score=#route.points*coverage/seconds
+     local score=self:RouteStopValue(route.points)*coverage/seconds
      alternatives[#alternatives+1]=route
      if not bestScore or score>bestScore then best,bestScore=route,score;best.strategy='optimal' end
     end
@@ -484,9 +506,10 @@ function N:RefreshZoneScores(results)
  local allObserved=#results>0
  for _,r in ipairs(results) do if not r.route.expectedResourcesPerHour then allObserved=false end end
  for _,r in ipairs(results) do
-  r.metric=allObserved and 'resources' or 'potential stops'
-  r.rankScore=allObserved and r.route.expectedResourcesPerHour or r.score
-  r.score=allObserved and r.route.expectedResourcesPerHour or r.route.potentialStopsPerHour
+  local skillup=r.route.skillup
+  r.metric=skillup and 'skill priority' or allObserved and 'resources' or 'potential stops'
+  r.rankScore=skillup and r.score or allObserved and r.route.expectedResourcesPerHour or r.score
+  r.score=skillup and r.score or allObserved and r.route.expectedResourcesPerHour or r.route.potentialStopsPerHour
  end
  table.sort(results,function(a,b)
   if a.rankScore==b.rankScore then return a.map<b.map end
@@ -1181,10 +1204,12 @@ local function navigationRoute(self,source)
  local function point(p)
   if type(p)~='table' or not self:Finite(p.x,0,1) or not self:Finite(p.y,0,1) then return end
   local copy={x=p.x,y=p.y,map=source.map}
-  for _,k in ipairs({'name','source','object','transit','validated','closing','starting'}) do
+  for _,k in ipairs({'name','source','object','kind','skill','skillPriority','skillColor','transit','validated','closing','starting'}) do
    local v=p[k]
    if v~=nil then
-    if k=='name' or k=='source' then if type(v)~='string' or #v>160 then return end
+    if k=='name' or k=='source' or k=='kind' or k=='skillColor' then if type(v)~='string' or #v>160 then return end
+    elseif k=='skill' then if not self:Finite(v,1,1000) then return end
+    elseif k=='skillPriority' then if not self:Finite(v,0,1) then return end
     elseif k=='object' then if not self:Finite(v,0,1e12) then return end
     elseif type(v)~='boolean' then return end
    end
