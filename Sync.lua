@@ -71,15 +71,37 @@ function N:SendSync(peer,msg)
   self.syncTicker=C_Timer.NewTicker(.25,function() N:Guard('sync send',function() N:FlushSync() end) end)
  end
 end
+-- Newer clients allow a short burst of addon messages, then roughly one per
+-- second, and DROP anything over that. A throttled message stays queued and is
+-- retried after a pause instead of being lost (which left sync half-finished).
+local THROTTLED={[3]=true,[8]=true} -- AddonMessageThrottle, ChannelThrottle
+function N:SendResult(ok,result)
+ if not ok then return 'failed' end
+ if result==nil or result==true or result==0 then return 'sent' end
+ if result==false or THROTTLED[result] then return 'throttled' end
+ return 'failed'
+end
 function N:FlushSync()
  local send=C_ChatInfo and C_ChatInfo.SendAddonMessage or SendAddonMessage
+ local now=GetTime and GetTime() or 0
+ local stats=self.syncStats or {sent=0,throttled=0,failed=0};self.syncStats=stats
  local any=false
  for peer,q in pairs(self.syncOut) do
-  for _=1,PER_TICK do
-   local msg=table.remove(q,1);if not msg then break end
-   self.syncProbeUntil=(GetTime and GetTime() or 0)+3
-   local target=type(self.db.sync.peers[peer])=='string' and self.db.sync.peers[peer] or peer
-   if type(send)=='function' then pcall(send,PREFIX,msg,'WHISPER',target) end
+  if (self.syncPauseUntil or 0)<=now then
+   for _=1,PER_TICK do
+    local msg=q[1];if not msg then break end
+    self.syncProbeUntil=now+3
+    local target=type(self.db.sync.peers[peer])=='string' and self.db.sync.peers[peer] or peer
+    local state='failed'
+    if type(send)=='function' then state=self:SendResult(pcall(send,PREFIX,msg,'WHISPER',target)) end
+    if state=='throttled' then
+     stats.throttled=stats.throttled+1
+     self.syncPauseUntil=now+1.2 -- keep msg at the front; retry after the client refills
+     break
+    end
+    table.remove(q,1)
+    stats[state]=stats[state]+1
+   end
   end
   if #q>0 then any=true else self.syncOut[peer]=nil end
  end
@@ -235,6 +257,11 @@ function N:SyncStatus()
   lines[#lines+1]=peer..': '..(last and ('last received '..self:Age(last)) or 'nothing received yet')
  end
  if not any then lines[#lines+1]='No paired characters. On each account type /vmn pair OTHERNAME.' end
+ local st=self.syncStats
+ if st then
+  local waiting=0;for _,q in pairs(self.syncOut or {}) do waiting=waiting+#q end
+  lines[#lines+1]=string.format('Messages sent %d, waiting %d, slowed down %d times, failed %d.',st.sent,waiting,st.throttled,st.failed)
+ end
  lines[#lines+1]='Synced characters count as your inventory when "Use synced characters" is on in Settings.'
  return table.concat(lines,'\n')
 end

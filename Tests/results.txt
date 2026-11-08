@@ -119,4 +119,5 @@ PASS Skill-up zone ranking preserves priority instead of replacing it with resou
 PASS Skill-up summary explains missing skills and the trainer rank cap
 PASS Decluttered window: merged tabs, old names still open, plain settings
 PASS Duplicate profession records merge without losing recipes or queued crafts
-PASS: 121 tests; Lua 5.1 / standard interpreter
+PASS Throttled sync messages are retried, not dropped
+PASS: 122 tests; Lua 5.1 / standard interpreter

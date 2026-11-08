@@ -868,6 +868,16 @@ test('Duplicate profession records merge without losing recipes or queued crafts
  eq(N:ProfessionKey('Alchemy','999'),'2823'); eq(N:ProfessionKey('Mining','186'),'186')
  c.professions=saved; N.db.plans=plans
 end)
+test('Throttled sync messages are retried, not dropped',function()
+ local sent,calls={},0; local savedPeers=N.db.sync.peers; N.db.sync.peers={bank='Bank'}
+ local api=C_ChatInfo; C_ChatInfo={SendAddonMessage=function(_,msg) calls=calls+1; if calls==2 then return 3 end; sent[#sent+1]=msg; return 0 end}
+ N.syncOut={bank={'m1','m2','m3'}}; N.syncPauseUntil=nil; N.syncStats=nil; N.syncTicker=nil
+ N:FlushSync(); eq(#sent,1); eq(#N.syncOut.bank,2); eq(N.syncOut.bank[1],'m2'); eq(N.syncStats.throttled,1)
+ N:FlushSync(); eq(#sent,1) -- still paused
+ now=now+2; N:FlushSync(); eq(#sent,3); eq(sent[2],'m2'); eq(sent[3],'m3'); eq(N.syncOut.bank,nil)
+ eq(N:SendResult(true,true),'sent'); eq(N:SendResult(true,false),'throttled'); eq(N:SendResult(true,2),'failed'); eq(N:SendResult(false),'failed')
+ C_ChatInfo=api; N.db.sync.peers=savedPeers; N.syncPauseUntil=nil
+end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()
