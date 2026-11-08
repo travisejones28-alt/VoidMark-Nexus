@@ -79,3 +79,9 @@ Validation: 51 Lua 5.1/LuaJIT tests passed, covering cache invalidation/copy iso
 - Artwork is transparent RGBA TGA at power-of-two sizes for the game client. The compass rotates around its medallion pivot; labels and progress remain live UI elements.
 - Keeps smooth heading updates, left-drag movement and the existing right-click Skip/Restart/Pause/Cancel menu. Pause and wrong-zone states clear unavailable distance/ETA instead of leaving stale values.
 - Validation: 57 Lua 5.1 tests pass, including live HUD values, progress, direction, next-stop action, pause and wrong-zone states. Alpha and runtime texture dimensions checked. In-game visual verification remains needed.
+
+## 0.4.3-beta: route construction and terrain-aware entry
+
+Added a cheapest-insertion construction strategy alongside the existing four strategies. It tests each unused stop against every directed circuit edge, accounts for the replaced edge and return travel, and retains incremental cancellation checkpoints. Directed 2-opt and the full closed-loop time budget remain enforced. Nearest-entry selection and nearest-route comparisons now use learned/obstacle-aware travel time. Route cache signatures include gathering evidence, and the planner compatibility key invalidates old computed geometry without deleting saved routes or trails.
+
+Validation: 111 Lua 5.1-compatible LuaJIT tests pass, including unreachable entry selection, all-unreachable preservation, directional insertion budgets and input immutability. Existing cache test now requires evidence changes to invalidate calculated routes. In-game testing remains required; unrecorded terrain is still estimated.

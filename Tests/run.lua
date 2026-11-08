@@ -44,7 +44,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.4.2-beta') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.4.3-beta') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -343,11 +343,11 @@ test('Exact-input route cache avoids rebuilding and invalidates on relevant chan
  N.db.settings.speed=N.db.settings.speed+1;N:PlanRoute('here');eq(calls,2)
  x=.401;N:PlanRoute('here');eq(calls,3)
  N.db.terrainBlocks[1411]={{x=.8,y=.8,r=30}};N:PlanRoute('here');eq(calls,4)
- N.db.gatherEvidence[1411]={sample={checks=5}};N:PlanRoute('here');eq(calls,4)
- list[1].x=.402;N:PlanRoute('here');eq(calls,5)
- N.db.terrain.zones[1411]={revision=1,points={},edges={}};N:PlanRoute('here');eq(calls,6)
- now=now+121;N:InitializeCache();N:PlanRoute('here');eq(calls,6)
- N.db.settings.arrowScale=.9;N:PlanRoute('here');eq(calls,6)
+ N.db.gatherEvidence[1411]={sample={checks=5}};N:PlanRoute('here');eq(calls,5)
+ list[1].x=.402;N:PlanRoute('here');eq(calls,6)
+ N.db.terrain.zones[1411]={revision=1,points={},edges={}};N:PlanRoute('here');eq(calls,7)
+ now=now+121;N:InitializeCache();N:PlanRoute('here');eq(calls,7)
+ N.db.settings.arrowScale=.9;N:PlanRoute('here');eq(calls,7)
  assert(#N.db.calculations.routes<=12)
  N.Position,N.ZoneNodes,N.BuildRoute=position,nodes,build
  N.db.settings.speed=N.db.settings.speed-1
@@ -813,6 +813,41 @@ test('Planner status window drags and remembers its position',function()
  N.db.settings.plannerPosition={point='BOGUS',x=1,y=1};N:RestorePlannerPosition();eq(f.anchor[1],'CENTER')
 end)
 
+test('Route entry uses reachable travel time instead of straight-line proximity',function()
+ local leg,prepare,score=N.CachedTerrainLeg,N.PrepareTerrainRoute,N.ScoreRouteEvidence
+ N.CachedTerrainLeg=function(_,a,b) return b.x==.1 and math.huge or 100,{}, {seconds=b.x==.1 and math.huge or 10} end
+ N.PrepareTerrainRoute=function(_,r) return r end
+ N.ScoreRouteEvidence=function() end
+ local route={strategy='nearest',map=1411,width=5000,height=3000,speed=7,points={{x=.1,y=.1},{x=.8,y=.8}}}
+ N:StartRouteAtNearest(route,{map=1411,x=.1,y=.1})
+ eq(route.points[1].x,.8);eq(route.origin.x,.8)
+ N.CachedTerrainLeg,N.PrepareTerrainRoute,N.ScoreRouteEvidence=leg,prepare,score
+end)
+
+test('All unreachable entry stops preserve the existing route',function()
+ local leg=N.CachedTerrainLeg
+ N.CachedTerrainLeg=function() return math.huge,{}, {seconds=math.huge} end
+ local origin={x=.4,y=.4}
+ local route={strategy='optimal',map=1411,width=5000,height=3000,speed=7,origin=origin,points={{x=.1,y=.1},{x=.8,y=.8}}}
+ N:StartRouteAtNearest(route,{map=1411,x=.1,y=.1})
+ eq(route.origin,origin);eq(route.points[1].x,.1)
+ N.CachedTerrainLeg=leg
+end)
+
+test('Insertion planner respects a directed closed-loop budget and leaves input nodes unchanged',function()
+ local leg=N.CachedTerrainLeg
+ N.CachedTerrainLeg=function(_,a,b,w,h,map,speed)
+  local d=N:Distance(a,b,w,h)*(b.x<a.x and 1.7 or 1)
+  return d,{}, {seconds=d/speed}
+ end
+ local nodes={}
+ for i=1,18 do nodes[i]={x=.1+i*.018,y=.2+(i%3)*.025,source='Imported'} end
+ local before=N:EncodeData(nodes)
+ local r=N:BuildRoute(nodes,{map=1411,x=.1,y=.2},5000,3000,{speed=14,mountDelay=3,gatherDelay=3,nodeLimit=18,routeMinutes=8,travel='100% Mount'})
+ assert(#r.points>3 and not r.unreachable);assert(r.seconds<=480+.01)
+ eq(r.optimizer,'terrain-insertion-2opt-v7');eq(N:EncodeData(nodes),before)
+ N.CachedTerrainLeg=leg
+end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()

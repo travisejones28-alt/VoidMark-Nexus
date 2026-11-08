@@ -106,4 +106,7 @@ PASS Sync ignores unpaired senders, own account and mismatched names
 PASS Trainer and recipe-vendor windows are recorded and used by the planner
 PASS Window layout follows its size and pages by visible rows
 PASS Planner status window drags and remembers its position
-PASS: 108 tests; Lua 5.1 / standard interpreter
+PASS Route entry uses reachable travel time instead of straight-line proximity
+PASS All unreachable entry stops preserve the existing route
+PASS Insertion planner respects a directed closed-loop budget and leaves input nodes unchanged
+PASS: 111 tests; Lua 5.1 / LuaJIT 2.0.5

@@ -104,7 +104,7 @@ function N:RoutingNodes(nodes)
 end
 function N:CacheCompatibility()
  local version,build,_,interface=self:Call(GetBuildInfo)
- return {planner='terrain-v6',client=version,build=build,interface=interface}
+ return {planner='terrain-v7',client=version,build=build,interface=interface}
 end
 function N:TravelContext(map,width,height,speed)
  if self.cacheReadOnly then return end

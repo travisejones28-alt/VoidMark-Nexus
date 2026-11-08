@@ -232,30 +232,47 @@ function N:BuildRoute(nodes,start,width,height,s)
   return score,seconds
  end
  local best,bestScore,bestSeconds={},-1,0
- local strategies={{distance=1,returnWeight=.05},{distance=1,returnWeight=.35},
+ local strategies={{insertion=true,returnWeight=0},{distance=1,returnWeight=.05},{distance=1,returnWeight=.35},
                    {distance=1,returnWeight=.75},{distance=1,returnWeight=.15,observed=12}}
  for modeIndex,mode in ipairs(strategies) do
   self:SetPlannerProgress("Improving circuit "..modeIndex.." / "..#strategies)
   local path,used,last,elapsed={},{},start,0
   while #path<limit do
-   local choice,choiceScore,choiceDistance
+   local choice,choiceScore,choiceDistance,choiceSlot
    for i,p in ipairs(candidates) do
     if not used[i] then
-     local d=distance(last,p,width,height)
-     local home=distance(p,start,width,height)
-     if elapsed+d/speed+stop+home/speed<=budget then
-      local score=d/speed+mode.returnWeight*home/speed
+     local d=distance(last,p)
+     local home=distance(p,start)
+     local added=d+home-distance(last,start)
+     local slot=#path+1
+     if mode.insertion then
+      -- Try every edge of the closed circuit, including the return leg.
+      added=math.huge
+      for at=1,#path+1 do
+       self:PlannerCheckpoint()
+       local before=at==1 and start or path[at-1]
+       local after=path[at] or start
+       local old=distance(before,after)
+       local incoming,outgoing=distance(before,p),distance(p,after)
+       if incoming<math.huge and outgoing<math.huge and old<math.huge then
+        local delta=incoming+outgoing-old
+        if delta<added then added,slot=delta,at end
+       end
+      end
+     end
+     if added<math.huge and elapsed+added/speed+stop<=budget then
+      local score=mode.insertion and added/speed or d/speed+mode.returnWeight*home/speed
       if p.source=='Observed' then score=score-(mode.observed or 6) end
       if not choiceScore or score<choiceScore then
-       choice,choiceScore,choiceDistance=i,score,d
+       choice,choiceScore,choiceDistance,choiceSlot=i,score,added,slot
       end
      end
     end
    end
    if not choice then break end
    local p=candidates[choice]
-   path[#path+1]=p;used[choice]=true
-   elapsed=elapsed+choiceDistance/speed+stop;last=p
+   table.insert(path,choiceSlot,p);used[choice]=true
+   elapsed=elapsed+choiceDistance/speed+stop;last=path[#path]
   end
   optimize(path)
   -- A shorter loop may be more productive than simply filling all 35 slots.
@@ -270,7 +287,7 @@ function N:BuildRoute(nodes,start,width,height,s)
    end
   end
  end
- local route={points=best,origin=self:Copy(start),seconds=bestSeconds,width=width,height=height,mode=s.travel,speed=s.speed,mountDelay=s.mountDelay,gatherDelay=s.gatherDelay,created=self:Now(),map=start.map,merged=true,optimizer='terrain-multi-seed-2opt-v5'}
+ local route={points=best,origin=self:Copy(start),seconds=bestSeconds,width=width,height=height,mode=s.travel,speed=s.speed,mountDelay=s.mountDelay,gatherDelay=s.gatherDelay,created=self:Now(),map=start.map,merged=true,optimizer='terrain-insertion-2opt-v7'}
  self:PrepareTerrainRoute(route)
  self:ScoreRouteEvidence(route)
  return route
@@ -281,9 +298,12 @@ end
 function N:StartRouteAtNearest(route,here)
  if not route or (route.strategy~='nearest' and route.strategy~='optimal') or not here or here.map~=route.map or #route.points==0 then return route end
  local nearest,best=1,math.huge
+ local speed=math.max(1,route.speed or 7)
+ local context=self:TravelContext(route.map,route.width,route.height,speed)
  for i,p in ipairs(route.points) do
   self:PlannerCheckpoint()
-  local cost=self:Distance(here,p,route.width,route.height)
+  local yards,_,info=self:CachedTerrainLeg(here,p,route.width,route.height,route.map,speed,context)
+  local cost=info and info.seconds or yards/speed
   if cost<best then nearest,best=i,cost end
  end
  if best==math.huge then return route end
@@ -308,7 +328,7 @@ function N:PlanRoute(strategy)
  strategy=strategy or self.db.settings.routeStrategy or 'optimal'
  local key=self:PlannerCacheKey({map=map,w=w,h=h,strategy=strategy,
   compat=self:CacheCompatibility(),origin=strategy~='optimal' and here or nil,settings=settings,nodes=self:RoutingNodes(nodes),
-  terrain=self:RoutingTerrain(map),blocks=(self.db.terrainBlocks or {})[map]})
+  terrain=self:RoutingTerrain(map),evidence=(self.db.gatherEvidence or {})[map],blocks=(self.db.terrainBlocks or {})[map]})
  local cached=self:GetPlannerCache(key)
  if cached then
   self:ScoreRouteEvidence(cached)
@@ -338,10 +358,17 @@ function N:PlanRoute(strategy)
   end
   if strategy=='nearest' then starts[#starts+1]=here end
  end
+ local function entrySeconds(route)
+  if strategy~='nearest' then return 0 end
+  local speed=math.max(1,settings.speed)
+  local context=self:TravelContext(map,w,h,speed)
+  local yards,_,info=self:CachedTerrainLeg(here,route.origin,w,h,map,speed,context)
+  return info and info.seconds or yards/speed
+ end
  local best,bestScore
  if cached then
   best=cached
-  local denominator=math.max(600,(cached.seconds or 600)+(strategy=='nearest' and self:Distance(here,cached.origin,w,h)/math.max(1,settings.speed) or 0))
+  local denominator=math.max(600,(cached.seconds or 600)+entrySeconds(cached))
   bestScore=#cached.points*math.min(1,#cached.points/12)/denominator
  end
  for index,origin in ipairs(starts) do
@@ -353,12 +380,12 @@ function N:PlanRoute(strategy)
   end
   if route and not route.unreachable and #route.points>0 and route.seconds<=settings.routeMinutes*60+.01 then
    local seconds=math.max(1,route.seconds or settings.routeMinutes*60)
-   local travel=self:Distance(here,route.origin,w,h)/math.max(1,settings.speed)
+   local travel=entrySeconds(route)
    -- For 'nearest', include getting to the circuit; for 'optimal', do not.
    local denominator=seconds+(strategy=='nearest' and travel or 0)
    local coverage=math.min(1,#route.points/12)
    local score=(#route.points*coverage)/math.max(600,denominator)
-   if not bestScore or score>bestScore then
+   if travel<math.huge and (not bestScore or score>bestScore) then
     best,bestScore=route,score
     best.strategy=strategy
     if self.planningJob then self.planningJob.best=self:Copy(best) end
