@@ -215,6 +215,17 @@ function N:LevelingPlan(cid,pid,target,mode)
   else plan.unknown=true end
  end
  plan.reached=plan.stoppedAt or plan.to
+ -- Recorded trainers and vendors (only from windows you have opened in game).
+ local known={}
+ for _,r in pairs(p.recipes or {}) do if type(r)=='table' and r.learned and r.name then known[r.name]=true end end
+ if self.TrainableRecipes then
+  plan.trainable=self:TrainableRecipes(p.name,known,math.max(plan.to,plan.reached))
+  plan.trainers=self:TrainersFor(p.name)
+  for _,u in ipairs(plan.unusable) do
+   local src=self:RecipeSources(p.name,u.name)[1]
+   if src then u.where=self:SourceText(src) end
+  end
+ end
  if plan.unknown then plan.cash,plan.economic=nil,nil end
  return plan
 end
@@ -250,16 +261,30 @@ function N:LevelingSummary(plan)
   if m.price then lines[#lines+1]='  '..self:PriceLabel(m.price) end
   for _,a in ipairs(m.allocations) do lines[#lines+1]='  '..a.qty..': '..a.transfer end
  end
+ if plan.trainable and #plan.trainable>0 then
+  lines[#lines+1]=''
+  lines[#lines+1]='TRAIN THESE (recorded trainers; not yet learned)'
+  for i,t in ipairs(plan.trainable) do
+   if i>15 then lines[#lines+1]='...and '..(#plan.trainable-15)..' more';break end
+   lines[#lines+1]=string.format('%s at skill %d | %s | %s, %s',t.name,t.skill,t.cost and self:Money(t.cost) or 'cost unknown',t.npc,t.where)
+  end
+ end
+ if plan.trainers and #plan.trainers>0 and (plan.requested>plan.to or plan.stoppedAt) then
+  lines[#lines+1]='Recorded trainers: '
+  for i,t in ipairs(plan.trainers) do if i>3 then break end;lines[#lines]=lines[#lines]..(i>1 and '; ' or '')..t.npc..', '..t.where end
+ elseif plan.trainers and #plan.trainers==0 then
+  lines[#lines+1]='No trainer recorded for this profession yet. Open a trainer once and Nexus remembers it.'
+ end
  if #plan.unusable>0 then
   lines[#lines+1]=''
   lines[#lines+1]='NOT USABLE NOW'
   for i,u in ipairs(plan.unusable) do
    if i>25 then lines[#lines+1]='...and '..(#plan.unusable-25)..' more';break end
-   lines[#lines+1]=u.name..' - '..u.reason..(u.source and (' | '..u.source) or '')
+   lines[#lines+1]=u.name..' - '..u.reason..(u.where and (' | '..u.where) or u.source and (' | '..u.source) or '')
   end
  end
  lines[#lines+1]=''
- lines[#lines+1]='Skill-up odds: orange 100%, then (gray - skill)/(gray - yellow). Craft counts are expected values; real results vary. Trainer and vendor locations are shown only when the client supplies source text.'
+ lines[#lines+1]='Skill-up odds: orange 100%, then (gray - skill)/(gray - yellow). Craft counts are expected values; real results vary. Trainer and vendor locations come only from trainer and merchant windows you have opened.'
  return table.concat(lines,'\n')
 end
 

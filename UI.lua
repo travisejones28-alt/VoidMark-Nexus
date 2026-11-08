@@ -367,32 +367,35 @@ function N:ShowTopGatheringZones()
 end
 function N:CreateUI()
  local f=CreateFrame('Frame','VoidMarkNexusWindow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil); skin(f)
- f:SetSize(1060,660); f:SetFrameStrata('MEDIUM'); f:SetToplevel(true); f:SetClampedToScreen(true); f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag('LeftButton')
+ local size=self.db.settings.size
+ local w,h=1060,660
+ if type(size)=='table' and self:Finite(size[1],1060,2400) and self:Finite(size[2],560,1600) then w,h=size[1],size[2] end
+ f:SetSize(w,h); f:SetFrameStrata('MEDIUM'); if f.SetResizable then f:SetResizable(true) end
+ if f.SetResizeBounds then f:SetResizeBounds(1060,560,2400,1600) elseif f.SetMinResize then f:SetMinResize(1060,560); if f.SetMaxResize then f:SetMaxResize(2400,1600) end end f:SetToplevel(true); f:SetClampedToScreen(true); f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag('LeftButton')
  local position=self.db.settings.position; if type(position)=='table' then f:SetPoint('CENTER',UIParent,'CENTER',position[1],position[2]) else f:SetPoint('CENTER') end
  f:SetScale(self.db.settings.scale)
  f:SetScript('OnDragStart',function() f:StartMoving() end)
  f:SetScript('OnDragStop',function() f:StopMovingOrSizing(); local x,y=f:GetCenter(); local ux,uy=UIParent:GetCenter(); N.db.settings.position={x-ux,y-uy} end)
- -- Use a scale grip because the panel's children have fixed pixel coordinates.
+ -- Size grip: the layout below is anchored to the window edges (see LayoutUI).
  local grip=CreateFrame('Button',nil,f)
  grip:SetSize(28,28); grip:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-2,2)
  grip:SetFrameLevel(f:GetFrameLevel()+10)
  local t=grip:CreateTexture(nil,'OVERLAY'); t:SetAllPoints(); t:SetTexture('Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up')
  grip:RegisterForDrag('LeftButton')
- grip:SetScript('OnDragStart',function(self)
-  self.startX,self.startY=GetCursorPosition(); self.startScale=f:GetScale()
-  self:SetScript('OnUpdate',function(g)
-   local x,y=GetCursorPosition(); local scale=UIParent:GetEffectiveScale()
-   if not scale or scale<=0 then return end
-   local dx=(x-g.startX)/scale; local dy=(g.startY-y)/scale
-   local nextScale=math.max(0.65,math.min(1.5,g.startScale+math.max(dx/1060,dy/660)))
-   f:SetScale(nextScale); N.db.settings.scale=nextScale
-  end)
+ grip:SetScript('OnDragStart',function() f:StartSizing('BOTTOMRIGHT') end)
+ grip:SetScript('OnDragStop',function()
+  f:StopMovingOrSizing()
+  local fw,fh=f:GetWidth(),f:GetHeight()
+  if N:Finite(fw,1060,2400) and N:Finite(fh,560,1600) then N.db.settings.size={math.floor(fw+.5),math.floor(fh+.5)} end
+  local x,y=f:GetCenter(); local ux,uy=UIParent:GetCenter()
+  if x and ux then N.db.settings.position={x-ux,y-uy} end
+  N:LayoutUI()
  end)
- grip:SetScript('OnDragStop',function(self) self:SetScript('OnUpdate',nil) end)
- grip:SetScript('OnEnter',function() GameTooltip:SetOwner(grip,'ANCHOR_RIGHT'); GameTooltip:SetText('Drag to resize Nexus'); GameTooltip:Show() end)
+ grip:SetScript('OnEnter',function() GameTooltip:SetOwner(grip,'ANCHOR_RIGHT'); GameTooltip:SetText('Drag to resize Nexus (scale is in Settings)'); GameTooltip:Show() end)
  grip:SetScript('OnLeave',function() GameTooltip:Hide() end)
  label(f,'VOIDMARK  |  NEXUS',18,-17,'GameFontNormalLarge'); label(f,self.version,280,-19,'GameFontHighlightSmall')
- button(f,'Close',956,-10,86,function() f:Hide(); if N.menu then N.menu:Hide() end end)
+ local closeButton=button(f,'Close',956,-10,86,function() f:Hide(); if N.menu then N.menu:Hide() end end)
+ closeButton:ClearAllPoints(); closeButton:SetPoint('TOPRIGHT',f,'TOPRIGHT',-18,-10)
  self.ui={frame=f,tab='Dashboard',rows={},page=1,filter='All'}; local u=self.ui
  for i,tab in ipairs(tabs) do button(f,tab,12,-56-(i-1)*40,130,function() u.tab=tab; u.page=1; u.selected=nil; N.dirty=true end) end
  u.search=edit(f,165,-55,220,''); u.search:SetScript('OnTextChanged',function() u.page=1; N.dirty=true end)
@@ -425,12 +428,12 @@ function N:CreateUI()
    end)
   else
    local choices={}
-   for _,v in ipairs({'All','Known','Unknown','Wishlist','Profit','Loss','Missing','Available','Fresh','Cost ascending','Profit descending','Margin descending'}) do choices[#choices+1]={label=v,value=v} end
+   for _,v in ipairs({'All','Known','Unknown','Wishlist','Profit','Loss','Missing','Available','Fresh','Cost ascending','Cash ascending','Fewest missing','Profit descending','Margin descending'}) do choices[#choices+1]={label=v,value=v} end
    N:Choice(u.filterButton,choices,function(v) u.filter=v; u.page=1 end)
   end
  end)
  u.heading=label(f,'',164,-95); u.heading:SetWidth(875)
- for i=1,16 do
+ for i=1,40 do
   local row=CreateFrame('Button',nil,f); row:SetSize(535,27); row:SetPoint('TOPLEFT',160,-125-(i-1)*28)
   row.bg=row:CreateTexture(nil,'BACKGROUND'); row.bg:SetAllPoints(); row.bg:SetColorTexture(.1,.07,.15,i%2==0 and .9 or .4)
   row.icon=row:CreateTexture(nil,'ARTWORK'); row.icon:SetSize(20,20); row.icon:SetPoint('LEFT',3,0)
@@ -466,11 +469,11 @@ function N:CreateUI()
   end)
   row:SetScript('OnLeave',function() GameTooltip:Hide() end); u.rows[i]=row
  end
- local scroll=CreateFrame('ScrollFrame',nil,f,'UIPanelScrollFrameTemplate'); scroll:SetPoint('TOPLEFT',715,-125); scroll:SetSize(300,440)
+ local scroll=CreateFrame('ScrollFrame',nil,f,'UIPanelScrollFrameTemplate'); scroll:SetPoint('TOPLEFT',715,-125); scroll:SetSize(300,440); u.detailScroll=scroll
  local child=CreateFrame('Frame',nil,scroll); child:SetSize(295,440); scroll:SetScrollChild(child)
  u.detail=label(child,'',0,0,'GameFontHighlightSmall'); u.detail:SetWidth(290); u.detail:SetSpacing(4); u.detail:SetWordWrap(true); u.detailChild=child
- button(f,'Previous',164,-583,100,function() u.page=math.max(1,u.page-1); u.selected=nil; N.dirty=true end)
- button(f,'Next',270,-583,100,function() u.page=u.page+1; u.selected=nil; N.dirty=true end)
+ u.prevButton=button(f,'Previous',164,-583,100,function() u.page=math.max(1,u.page-1); u.selected=nil; N.dirty=true end)
+ u.nextButton=button(f,'Next',270,-583,100,function() u.page=u.page+1; u.selected=nil; N.dirty=true end)
  u.pageLabel=label(f,'',385,-589,'GameFontHighlightSmall')
  u.value=edit(f,555,-584,140,'1'); u.actions={}
  u.previewButton=button(f,'Preview route',715,-546,140,function() N:ShowRoutePreview(N.db.settings.routeStrategy or 'optimal') end)
@@ -488,6 +491,35 @@ function N:CreateUI()
  f:EnableMouseWheel(true); f:SetScript('OnMouseWheel',function(_,delta) u.page=math.max(1,u.page-delta); u.selected=nil; N.dirty=true end)
  local elapsed=0; f:SetScript('OnUpdate',function(_,dt) elapsed=elapsed+dt; if elapsed>.3 then elapsed=0; if N.dirty then N:Guard('UI',function() N:Render() end) end end end)
  table.insert(UISpecialFrames,'VoidMarkNexusWindow')
+ f:SetScript('OnSizeChanged',function() N:LayoutUI() end)
+ self:LayoutUI()
+end
+-- Edge-anchored layout; rows and detail grow with the window.
+function N:LayoutUI()
+ local u=self.ui; if not u then return end
+ local f=u.frame
+ local W,H=f:GetWidth(),f:GetHeight()
+ if not self:Finite(W,100,5000) or not self:Finite(H,100,5000) then W,H=1060,660 end
+ local rowWidth=math.max(400,W-525)
+ u.heading:SetWidth(W-185); u.footer:SetWidth(W-185)
+ u.perPage=math.max(8,math.min(#u.rows,math.floor((H-212)/28)))
+ for i,row in ipairs(u.rows) do
+  row:SetWidth(rowWidth); row.text:SetWidth(rowWidth-35)
+  if i>u.perPage then row:Hide() end
+ end
+ u.detailScroll:ClearAllPoints()
+ u.detailScroll:SetPoint('TOPLEFT',f,'TOPLEFT',W-345,-125)
+ u.detailScroll:SetSize(300,math.max(200,H-220))
+ local function bottom(widget,x,y,fromRight)
+  widget:ClearAllPoints(); widget:SetPoint('TOPLEFT',f,fromRight and 'BOTTOMRIGHT' or 'BOTTOMLEFT',x,y)
+ end
+ bottom(u.prevButton,164,77); bottom(u.nextButton,270,77)
+ u.pageLabel:ClearAllPoints(); u.pageLabel:SetPoint('TOPLEFT',f,'BOTTOMLEFT',385,71)
+ bottom(u.value,-505,76,true)
+ for i,b in ipairs(u.actions) do bottom(b,-352+(i-1)*112,77,true) end
+ bottom(u.strategyButton,-505,114,true); bottom(u.previewButton,-345,114,true); bottom(u.zoneButton,-195,114,true)
+ u.footer:ClearAllPoints(); u.footer:SetPoint('TOPLEFT',f,'BOTTOMLEFT',164,35)
+ self.dirty=true
 end
 function N:SetActions(names,fns)
  self.ui.actionFns=fns
@@ -515,7 +547,7 @@ function N:SettingsRows()
  local rows={}; local s=self.db.settings
  local booleans={{'native','Open native profession UI'},{'learn','Learn gathering nodes'},{'importedNodes','Show potential spawns'},{'observedNodes','Show observed nodes'},
  {'nodesVisible','Map nodes'},{'routeVisible','Route guidance'},{'minimapRoute','Thin minimap route line'},{'terrainLearn','Learn movement corridors'},{'manualStops','Require manual skip at gathering stops'},{'stats','Gathering statistics'},{'includeAlts','Use alt inventory'},{'includeBanks','Use bank inventory'},
- {'includeImports','Use imported inventory'},{'includeStale','Use stale inventory'},{'market','VoidMark Market prices'},{'auctionator','Auctionator prices (age unknown)'},{'manualFirst','Prefer manual prices'},{'minimap','Minimap button'},{'mapButton','Nexus button on world map'},{'tomtom','TomTom waypoint for next stop (if installed)'},{'tomtomArrow','Also show TomTom arrow'},{'levelResale','Leveling: count output resale value'}}
+ {'includeImports','Use imported inventory'},{'includeSynced','Use synced characters (live sync)'},{'includeStale','Use stale inventory'},{'market','VoidMark Market prices'},{'auctionator','Auctionator prices (age unknown)'},{'manualFirst','Prefer manual prices'},{'minimap','Minimap button'},{'mapButton','Nexus button on world map'},{'tomtom','TomTom waypoint for next stop (if installed)'},{'tomtomArrow','Also show TomTom arrow'},{'levelResale','Leveling: count output resale value'}}
  for _,v in ipairs(booleans) do rows[#rows+1]={text=v[2]..': '..tostring(s[v[1]]),key=v[1],boolean=true,detail='Select and press Apply to toggle. Foreign realms/factions remain excluded. Item binding/transfer restrictions must be checked in game.'} end
  for _,v in ipairs({{'maxAge','Price expiration (seconds)',60,2592000},{'inventoryAge','Inventory expiration (seconds)',60,2592000},
  {'cut','Auction cut (0.05 = 5%)',0,.3},{'deposit','Deposit per craft (copper)',0,1e8},{'failedAuctions','Failed listings per craft',0,20},
@@ -548,9 +580,11 @@ function N:Render()
    local accept=u.filter~='Profit' and u.filter~='Loss' and u.filter~='Missing' and u.filter~='Available' and u.filter~='Fresh'
     or u.filter=='Profit' and e.economic and e.economic>0 or u.filter=='Loss' and e.economic and e.economic<0
     or u.filter=='Missing' and missing>0 or u.filter=='Available' and missing==0 and not e.unknown or u.filter=='Fresh' and not e.stale and not e.unknown
-   if accept then r.text=r.r.name..' | '..r.c.name..' | '..self:Money(e.economic); r.item=r.r.output; r.icon=r.r.icon; r.e=e; rows[#rows+1]=r end
+   if accept then r.text=r.r.name..' | '..r.c.name..' | '..self:Money(e.economic)..(e.margin and string.format(' | ROI %d%%',math.floor(e.margin*100+.5)) or ''); r.item=r.r.output; r.icon=r.r.icon; r.e=e; r.missing=missing; rows[#rows+1]=r end
   end
   if u.filter=='Cost ascending' then table.sort(rows,function(a,b) return (a.e.cost or math.huge)<(b.e.cost or math.huge) end)
+  elseif u.filter=='Cash ascending' then table.sort(rows,function(a,b) return (a.e.cash or math.huge)<(b.e.cash or math.huge) end)
+  elseif u.filter=='Fewest missing' then table.sort(rows,function(a,b) if a.missing==b.missing then return a.r.name<b.r.name end return a.missing<b.missing end)
   elseif u.filter=='Profit descending' or u.filter=='Margin descending' then local k=u.filter=='Profit descending' and 'economic' or 'margin'; table.sort(rows,function(a,b) return (a.e[k] or -math.huge)>(b.e[k] or -math.huge) end) end
   self:SetActions({'Queue','Craft','Wishlist'},{function() if u.selected then N:AddPlan(u.selected,u.value:GetText()) end end,function() if u.selected then N:Craft(u.selected,u.value:GetText()) end end,function() if u.selected then local k=u.selected.recipe; N.db.wish[k]=not N.db.wish[k] end end})
   if selected and selected.r then detail=self:RecipeDetail(selected) end
@@ -603,7 +637,7 @@ function N:Render()
   end end end end
   self:SetActions({'Set price','Market','Prices'},{function() if u.selected then N:SetPrice(u.selected.item,u.value:GetText()) end end,function() if u.selected then N:OpenMarket(u.selected.item) end end,function() N:TextDialog('Manual prices', 'Use /vmn price ITEM_ID GOLD\nFor example: /vmn price 2447 0.25\nEnable Prefer manual prices in Settings to override Market.') end})
  elseif tab=='Characters' then
-  for id,ch in pairs(self.db.characters) do rows[#rows+1]={text=ch.name..' | '..ch.realm..' | '..ch.faction..(ch.imported and ' [Imported]' or '')..(self.db.excluded[id] and ' [Excluded]' or ''),character=id,detail='Account: '..ch.account..'\n'..self:Age(ch.at)..'\nBags: '..self:Age(ch.bagsAt)..'\nBank: '..self:Age(ch.bankAt)..'\nImported inventories require opt-in in Settings.'} end
+  for id,ch in pairs(self.db.characters) do rows[#rows+1]={text=ch.name..' | '..ch.realm..' | '..ch.faction..(ch.synced and ' [Synced]' or ch.imported and ' [Imported]' or '')..(self.db.excluded[id] and ' [Excluded]' or ''),character=id,detail='Account: '..ch.account..'\n'..self:Age(ch.at)..'\nBags: '..self:Age(ch.bagsAt)..'\nBank: '..self:Age(ch.bankAt)..'\nImported inventories require opt-in in Settings.'} end
   self:SetActions({'Include/excl','Export','Import'},{function() if u.selected then local id=u.selected.character; N.db.excluded[id]=not N.db.excluded[id] end end,function() N:TextDialog('Cross-account export',N:Export()) end,function() N:TextDialog('Cross-account import','',true) end})
  elseif tab=='Settings' then
   rows=self:SettingsRows(); self:SetActions({'Apply','Clear sessions','Diagnostics'},{function()
@@ -647,8 +681,8 @@ function N:Render()
   self:SetActions({'Recipes','Shopping','Refresh bags'},{function() u.tab='Recipes'; u.selected=nil end,function() N:TextDialog('Shopping list',N:ShoppingText()) end,function() N:ScanStorage(false); N:ScanProfessions() end})
  end
  if selected and selected.detail then detail=selected.detail end
- local pages=math.max(1,math.ceil(#rows/16)); u.page=math.min(pages,math.max(1,u.page)); u.pageLabel:SetText(u.page..' / '..pages..'  ('..#rows..')')
- for i,b in ipairs(u.rows) do local r=rows[(u.page-1)*16+i]; b.data=r; b:SetShown(r~=nil)
+ local per=u.perPage or 16; local pages=math.max(1,math.ceil(#rows/per)); u.page=math.min(pages,math.max(1,u.page)); u.pageLabel:SetText(u.page..' / '..pages..'  ('..#rows..')')
+ for i,b in ipairs(u.rows) do local r=i<=per and rows[(u.page-1)*per+i] or nil; b.data=r; b:SetShown(r~=nil)
   if r then
    b.text:SetText(r.text)
    b.icon:SetTexture(r.icon or (r.item and self:InventoryIcon(r.item)) or 'Interface\\Icons\\INV_Misc_QuestionMark')

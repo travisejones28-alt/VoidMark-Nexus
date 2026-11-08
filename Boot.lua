@@ -76,6 +76,9 @@ function N:Slash(msg)
    self:EnsureMapControls();self:PlaceMapControls(args=='reset');self:RefreshMap()
    self:ToggleMapFilterMenu(self.mapControls)
   else self:ToggleMapFilterMenu() end
+ elseif command=='pair' then self:PairPeer(args)
+ elseif command=='unpair' then self:UnpairPeer(args)
+ elseif command=='sync' then if args=='now' then self:SyncAll();self:Print('Sync requested.') else self:TextDialog('Live sync',self:SyncStatus()) end
  elseif command=='debug' then self:TextDialog('Diagnostics',self:Diagnostics())
  else if self.ui and self.ui.frame:IsShown() then self.ui.frame:Hide() else self:Show() end end
  self.dirty=true
@@ -232,7 +235,7 @@ frame:SetScript('OnEvent',function(_,event,...)
   if ...=='VoidMarkNexus' then N:Guard('initialize',function() N:Initialize() end) end
  elseif event=='PLAYER_LOGIN' then
   if not N.ready then return end
-  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:RestoreSession(); N:MinimapButton(); N:RestoreNavigation();if N.recording then N:Print(N:RecordingStatus()) end end)
+  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:RestoreSession(); N:MinimapButton(); N:RestoreNavigation();if C_Timer and C_Timer.After then C_Timer.After(8,function() N:Guard('sync',function() N:SyncAll() end) end) end;if N.recording then N:Print(N:RecordingStatus()) end end)
   if C_Timer and C_Timer.NewTicker then
    C_Timer.NewTicker(1,function() if WorldMapFrame and WorldMapFrame:IsShown() then N:Guard('map',function() N:RefreshMap() end) end end)
    C_Timer.NewTicker(.5,function() N:Guard('terrain sampling',function() N:SampleTerrain();N:TrackRouteSession();N:SampleRecording();N:SyncTomTom() end) end)

@@ -2,7 +2,7 @@
 ## Title: VoidMark Nexus
 ## Notes: Professions, offline alts, planning, profitability and gathering navigation.
 ## Author: VoidMark
-## Version: 0.4.0-beta
+## Version: 0.4.1-beta
 ## SavedVariables: VoidMarkNexusDB
 ## OptionalDeps: VoidMarkMarket, Auctionator, ShortestPathForever
 ## IconTexture: Interface\Icons\INV_Misc_Gem_Amethyst_02
@@ -11,7 +11,9 @@ Data\Nodes.lua
 Data\Spawns.lua
 Model.lua
 Leveling.lua
+Trainers.lua
 Transfer.lua
+Sync.lua
 Professions.lua
 Inventory.lua
 Prices.lua

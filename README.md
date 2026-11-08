@@ -1,10 +1,18 @@
-# VoidMark Nexus 0.4.0 beta
+# VoidMark Nexus 0.4.1 beta
 
 Saved route reuse, shared directed travel legs, persistent farming recordings and active-session restoration for WoW Forever interface **16001**.
 
 Generate prefers compatible saved work. Routes → **Route tools** provides record/finish/replay tools, route export/import, explicit improvement, cache management and optional Shortest Path travel guidance. Named routes, learned trails, UI placement and active waypoint progress remain separate from computed caches.
 
 See [persistence guide](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/PERSISTENCE.md) for the new behavior, commands, limits and backup details; [validation notes](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/VALIDATION.md) records automated validation and remaining in-game checks. Download the installable [VoidMarkNexus.zip](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/dist/VoidMarkNexus.zip). Existing profession, inventory, crafting, price and gathering features remain available. Actual game-client visual and taint verification remains necessary.
+
+## What's new in 0.4.1
+
+**Live sync between your two accounts.** On Voidmark Soulreaver type `/vmn pair Bank` (the bank character's name), and on the bank character type `/vmn pair Soulreaver`. While both clients are online on the same realm and faction, each sends the other its bags, bank and professions through the game's addon whisper channel. Only changed sections are sent, and only paired names are accepted. Synced characters show as **[Synced]** and count toward materials (Settings: "Use synced characters"); transfer lines say "Mail from ... (other account)". `/vmn sync` shows status, `/vmn sync now` resends, `/vmn unpair NAME` stops. Nothing is sent while the other character is offline; it catches up the next time both are online. Manual export/import still works.
+
+**Trainers and recipe vendors, recorded in game.** Opening a profession trainer records its name, location, recipes, required skill and cost. Opening a vendor records any recipes it sells (Recipe/Plans/Pattern/Schematic/Formula/Manual) with price and limited stock. The Leveling plan then lists recipes you can train now and where, where to buy unlearned recipes, and which trainer to visit for the next rank. Nexus ships no trainer data; it only knows NPCs you have opened.
+
+**Resizable window.** Drag the corner grip to resize; the list shows more rows and the detail pane grows. Size and position are saved. Window scale is still in Settings. Recipes lists add ROI and two sorts: Cash ascending (most affordable) and Fewest missing.
 
 ## What's new in 0.4.0
 

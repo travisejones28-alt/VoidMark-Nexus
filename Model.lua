@@ -8,7 +8,7 @@ function N:Stock(targetID)
  for _,id in ipairs(ids) do
   local c=self.db.characters[id]; local physical=c.guid or (c.realm..'/'..c.name)
   local allowed=not self.db.excluded[id] and (id==targetID or self.db.settings.includeAlts)
-   and (not c.imported or self.db.settings.includeImports) and c.realm==target.realm and c.faction==target.faction
+   and (not c.imported or self.db.settings.includeImports or (c.synced and self.db.settings.includeSynced)) and c.realm==target.realm and c.faction==target.faction
   if allowed and not seen[physical] then
    seen[physical]=true
    for _,location in ipairs({'bags','bank'}) do
@@ -19,7 +19,7 @@ function N:Stock(targetID)
       if self:Finite(qty,1,1e9) then
        stock[item]=stock[item] or {}; table.insert(stock[item],{id=id,location=location,qty=qty,at=at,imported=c.imported,
         transfer=id==targetID and (location=='bank' and 'Withdraw from bank' or 'On crafting character') or
-         (c.imported and 'Cross-account trade/mail; verify item transferability' or 'Mail/trade from '..c.name..'; verify item transferability')})
+         (c.synced and ('Mail from '..c.name..' (other account, synced '..self:Age(c.syncedAt)..')') or c.imported and 'Cross-account trade/mail; verify item transferability' or 'Mail/trade from '..c.name..'; verify item transferability')})
       end
      end
     end

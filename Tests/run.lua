@@ -37,14 +37,14 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Data/Nodes','Data/Spawns','Model','Leveling','Transfer','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','Recording','MinimapRoute','UI','Boot'}
+local files={'Core','Data/Nodes','Data/Spawns','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','Recording','MinimapRoute','UI','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.4.0-beta') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.4.1-beta') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -803,6 +803,7 @@ end)
 
 assert(loadfile(root..'/Tests/hardening.lua'))(N,test,eq)
 assert(loadfile(root..'/Tests/v040.lua'))(N,test,eq,widget)
+assert(loadfile(root..'/Tests/v041.lua'))(N,test,eq,widget)
 
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary

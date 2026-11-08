@@ -100,4 +100,9 @@ PASS Unknown prices and rank caps are reported instead of invented
 PASS Leveling plan queues to Crafting and the Leveling tab renders
 PASS World-map controls live on UIParent and follow the map
 PASS TomTom mirrors the current stop and clears when navigation ends
-PASS: 102 tests; Lua 5.1 / standard interpreter
+PASS Sync escaping round-trips newlines, tildes and NUL bytes
+PASS Paired live sync applies a peer account character and counts its bank
+PASS Sync ignores unpaired senders, own account and mismatched names
+PASS Trainer and recipe-vendor windows are recorded and used by the planner
+PASS Window layout follows its size and pages by visible rows
+PASS: 107 tests; Lua 5.1 / standard interpreter
