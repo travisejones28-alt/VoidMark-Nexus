@@ -27,10 +27,21 @@ function N:Price(id)
  if cache and type(cache.manual)=='table' then return record(cache.manual.unit,cache.manual.at,'Manual') end
  return nil
 end
+-- Plain description of where a price came from and how far to trust it.
+-- Market confidence is 0-100; under 40 means few or unstable observations.
+function N:PriceLabel(p)
+ if type(p)~='table' then return 'Unknown price' end
+ local parts={self:Money(p.unit),p.source or 'Unknown source',p.at and self:Age(p.at) or 'age unknown'}
+ if self:Finite(p.confidence,0,100) then
+  parts[#parts+1]=string.format('confidence %d/100%s',p.confidence,p.confidence<40 and ' (low - sparse data)' or '')
+ end
+ if p.stale then parts[#parts+1]='STALE' end
+ return table.concat(parts,' / ')
+end
 function N:SetPrice(id,gold)
  id=tonumber(id); gold=tonumber(gold)
  if not self:Finite(id,1,1e9) or id%1~=0 or not self:Finite(gold,0,1e8) then return self:Print('Enter an item ID and nonnegative price in gold.') end
- self.prices[id]=type(self.prices[id])=='table' and self.prices[id] or {}; self.prices[id].manual={unit=math.floor(gold*10000+.5),at=self:Now()}; self.dirty=true
+ self.prices[id]=type(self.prices[id])=='table' and self.prices[id] or {}; self.prices[id].manual={unit=math.floor(gold*10000+.5),at=self:Now()}; self.priceStamp=(self.priceStamp or 0)+1; self.dirty=true
 end
 function N:OpenMarket(item)
  local m=VoidMarkMarket

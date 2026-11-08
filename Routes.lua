@@ -690,7 +690,29 @@ function N:ShowArrow()
  self.arrow.refreshAt=0
  self.arrow:Show()
 end
+-- Optional TomTom handoff: mirror the current gathering stop as one temporary
+-- TomTom waypoint. Uses only TomTom's public AddWaypoint/RemoveWaypoint.
+function N:SyncTomTom()
+ local tt=rawget(_G,'TomTom')
+ if type(tt)~='table' or type(tt.AddWaypoint)~='function' then return end
+ local s=self.db.settings
+ local route=self.activeRoute
+ local want,p,i
+ if route and s.tomtom and s.routeVisible and not self.routePaused then
+  i=self.waypoint or 1;p=route.points and route.points[i]
+  if p and self:Finite(p.x,0,1) and self:Finite(p.y,0,1) then want=table.concat({route.map,i,p.x,p.y,tostring(s.tomtomArrow)},':') end
+ end
+ if want==self.tomtomKey then return end
+ if self.tomtomUID and type(tt.RemoveWaypoint)=='function' then pcall(tt.RemoveWaypoint,tt,self.tomtomUID) end
+ self.tomtomUID,self.tomtomKey=nil,want
+ if want then
+  local ok,uid=pcall(tt.AddWaypoint,tt,route.map,p.x,p.y,{title='Nexus stop '..i..': '..tostring(p.name or 'Waypoint'),
+   persistent=false,minimap=true,world=true,crazy=s.tomtomArrow==true,from='VoidMark Nexus'})
+  if ok then self.tomtomUID=uid end
+ end
+end
 function N:UpdateArrow()
+ self:SyncTomTom()
  local arrow=self.arrow
  if not arrow then return end
  local route=self.activeRoute
@@ -799,88 +821,106 @@ function N:ResourceNodeIcon(node)
  if type(node)~='table' then return 'Interface\\Icons\\INV_Misc_Map_01' end
  return nexusResourceIcon(node)
 end
--- A world-frame control survives alternate canvas implementations (OpenMap)
--- and remains usable even if map pin placement is unavailable.
+-- World-map controls. The button is parented to UIParent, not to WorldMapFrame
+-- or its canvas: map replacements such as OpenMap resize, re-skin or hide parts
+-- of WorldMapFrame, which previously took child controls with them. Visibility
+-- follows the map through OnShow/OnHide hooks plus the existing 1s ticker.
+local function legacyMapFilter(s)
+ -- One-time migration from the retired four-button panel to the unified menu.
+ local old=s.mapNodeFilter
+ if old=='herb' then s.mapShowOre=false;s.mapShowHerbs=true
+ elseif old=='ore' then s.mapShowHerbs=false;s.mapShowOre=true
+ elseif old=='none' then s.nodesVisible=false end
+ s.mapNodeFilter='all'
+end
+local function onScreen(f)
+ local l,t,r,b=f:GetLeft(),f:GetTop(),f:GetRight(),f:GetBottom()
+ local w,h=UIParent:GetWidth(),UIParent:GetHeight()
+ if type(l)~='number' or type(t)~='number' or type(r)~='number' or type(b)~='number' then return nil end
+ if type(w)~='number' or type(h)~='number' or w<=0 or h<=0 then return nil end
+ return r>0 and l<w and t>0 and b<h
+end
+function N:PlaceMapControls(reset)
+ local b=self.mapControls;if not b then return end
+ local s=self.db.settings
+ if reset then s.mapButtonPos=nil end
+ b:ClearAllPoints()
+ local pos=s.mapButtonPos
+ if type(pos)=='table' and self:Finite(pos[1],-20000,20000) and self:Finite(pos[2],-20000,20000) then
+  b:SetPoint('CENTER',UIParent,'BOTTOMLEFT',pos[1],pos[2])
+ else
+  s.mapButtonPos=nil
+  local world=WorldMapFrame
+  -- The visible map viewport is the most reliable anchor across map skins.
+  local view=world and (world.ScrollContainer or world.BorderFrame) or world
+  if view then b:SetPoint('TOPRIGHT',view,'TOPRIGHT',-8,-8) else b:SetPoint('TOP',UIParent,'TOP',0,-90) end
+ end
+ -- A replacement map can move the viewport off the visible screen; never leave
+ -- the only control unreachable there.
+ if onScreen(b)==false then s.mapButtonPos=nil;b:ClearAllPoints();b:SetPoint('TOP',UIParent,'TOP',0,-90) end
+end
 function N:EnsureMapControls()
+ local s=self.db and self.db.settings;if not s then return end
+ if not self.mapControls then
+  legacyMapFilter(s)
+  local b=CreateFrame('Button','VoidMarkNexusMapButton',UIParent,'UIPanelButtonTemplate')
+  b:SetSize(150,24)
+  b:SetFrameStrata('FULLSCREEN_DIALOG')
+  b:SetFrameLevel(50)
+  b:SetClampedToScreen(true)
+  b:SetMovable(true)
+  b:EnableMouse(true)
+  b:RegisterForClicks('LeftButtonUp','RightButtonUp')
+  b:RegisterForDrag('LeftButton')
+  b:SetScript('OnDragStart',function(w) if IsShiftKeyDown and IsShiftKeyDown() then w.dragging=true;w:StartMoving() end end)
+  b:SetScript('OnDragStop',function(w)
+   if not w.dragging then return end
+   w.dragging=false;w:StopMovingOrSizing()
+   local x,y=w:GetCenter()
+   if N:Finite(x,-20000,20000) and N:Finite(y,-20000,20000) then N.db.settings.mapButtonPos={x,y} end
+   N:PlaceMapControls()
+  end)
+  b:SetScript('OnClick',function(w,key)
+   if key=='RightButton' then N:PlaceMapControls(true);return N:Print('Map button position reset.') end
+   N:ToggleMapFilterMenu(w)
+  end)
+  b:SetScript('OnEnter',function(w)
+   GameTooltip:SetOwner(w,'ANCHOR_BOTTOMLEFT');GameTooltip:SetText('VoidMark Nexus map layers')
+   GameTooltip:AddLine('Click: filters | Shift-drag: move | Right-click: reset position')
+   GameTooltip:Show()
+  end)
+  b:SetScript('OnLeave',function() GameTooltip:Hide() end)
+  b:Hide()
+  self.mapControls=b
+  self.mapControlsOpen=b
+  local world=WorldMapFrame
+  if world and world.HookScript and not self.mapHooks then
+   self.mapHooks=true
+   world:HookScript('OnShow',function() N:Guard('map show',function() N:EnsureMapControls();N:RefreshMap() end) end)
+   world:HookScript('OnHide',function() N:Guard('map hide',function() N:HideMapControls() end) end)
+  end
+  self:PlaceMapControls()
+ end
+ local b=self.mapControls
+ local parts={}
+ if not s.nodesVisible then parts[1]='Off'
+ else
+  if s.mapShowHerbs~=false then parts[#parts+1]='Herbs' end
+  if s.mapShowOre~=false then parts[#parts+1]='Ore' end
+  if #parts==0 then parts[1]='No nodes' end
+ end
+ b:SetText('Nexus: '..table.concat(parts,' + '))
  local world=WorldMapFrame
- if not world then return end
- if not self.mapControls or self.mapControls:GetParent()~=world then
-  if self.mapControls then self.mapControls:Hide() end
-  local outer=CreateFrame('Frame',nil,world)
-  outer:SetSize(156,26)
-  outer:SetPoint('TOPRIGHT',world,'TOPRIGHT',-30,-86)
-  outer:SetFrameStrata('FULLSCREEN_DIALOG')
-  outer:SetFrameLevel((world:GetFrameLevel() or 1)+250)
-  local open=CreateFrame('Button',nil,outer,'UIPanelButtonTemplate')
-  open:SetAllPoints(outer)
-  open:SetText('Nexus map filters')
-  local panel=CreateFrame('Frame',nil,world,BackdropTemplateMixin and 'BackdropTemplate' or nil)
-  panel:SetSize(190,200)
-  panel:SetPoint('TOPRIGHT',outer,'BOTTOMRIGHT',0,-3)
-  panel:SetFrameStrata('FULLSCREEN_DIALOG')
-  panel:SetFrameLevel(outer:GetFrameLevel()+2)
-  if panel.SetBackdrop then
-   panel:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1})
-   panel:SetBackdropColor(.04,.03,.08,.96)
-   panel:SetBackdropBorderColor(.56,.27,.78,1)
-  end
-  panel:Hide()
-  local title=panel:CreateFontString(nil,'OVERLAY','GameFontNormal')
-  title:SetPoint('TOPLEFT',panel,'TOPLEFT',10,-10)
-  title:SetText('Gathering map layers')
-  local function control(label,y,fn)
-   local button=CreateFrame('Button',nil,panel,'UIPanelButtonTemplate')
-   button:SetSize(172,23)
-   button:SetPoint('TOPLEFT',panel,'TOPLEFT',9,y)
-   button:SetText(label)
-   button:SetScript('OnClick',fn)
-   return button
-  end
-  local function setFilter(filter)
-   N.db.settings.mapNodeFilter=filter
-   N:RefreshMap()
-  end
-  local both=control('Herbs + Mining',-32,function() setFilter('all') end)
-  local herbs=control('Herbs only',-58,function() setFilter('herb') end)
-  local ore=control('Mining only',-84,function() setFilter('ore') end)
-  local hide=control('Hide gathering nodes',-110,function() setFilter('none') end)
-  local enabled=control('Map nodes: ON',-136,function()
-   N.db.settings.nodesVisible=not N.db.settings.nodesVisible
-   N:RefreshMap()
-  end)
-  local smaller=control('Smaller -',-162,function()
-   N.db.settings.mapIconSize=math.max(5,math.min(16,(tonumber(N.db.settings.mapIconSize) or 7)-1))
-   N:RefreshMap()
-  end)
-  smaller:SetSize(83,23)
-  local larger=CreateFrame('Button',nil,panel,'UIPanelButtonTemplate')
-  larger:SetSize(83,23)
-  larger:SetPoint('TOPLEFT',panel,'TOPLEFT',98,-162)
-  larger:SetText('Larger +')
-  larger:SetScript('OnClick',function()
-   N.db.settings.mapIconSize=math.max(5,math.min(16,(tonumber(N.db.settings.mapIconSize) or 7)+1))
-   N:RefreshMap()
-  end)
-  open:SetScript('OnClick',function()
-   if panel:IsShown() then panel:Hide() else panel:Show() end
-  end)
-  self.mapControls=outer
-  self.mapControlsPanel=panel
-  self.mapControlsEnabled=enabled
-  self.mapControlsOpen=open
- end
- local s=self.db and self.db.settings
- if s and self.mapControlsEnabled then
-  self.mapControlsEnabled:SetText('Map nodes: '..(s.nodesVisible and 'ON' or 'OFF'))
-  local names={all='Herbs + Ore',herb='Herbs',ore='Mining',none='Hidden'}
-  self.mapControlsOpen:SetText('Nexus: '..(names[s.mapNodeFilter or 'all'] or names.all))
- end
- self.mapControls:Show()
+ b:SetShown(s.mapButton~=false and world~=nil and world:IsShown())
+end
+function N:HideMapControls()
+ if self.mapControls then self.mapControls:Hide() end
+ if self.mapFilterMenu and self.mapFilterMenu.anchoredToMap then self.mapFilterMenu:Hide() end
 end
 
 function N:RefreshMap()
  local world=WorldMapFrame
- if not world or not world:IsShown() then return end
+ if not world or not world:IsShown() then self:HideMapControls();return end
  self:EnsureMapControls()
  local canvas=world.GetCanvas and world:GetCanvas()
  if not canvas then return end
@@ -888,7 +928,7 @@ function N:RefreshMap()
  if not map then return end
  local s=self.db.settings
  local filter=s.mapNodeFilter or 'all'
- -- The panel is attached to WorldMapFrame, not to OpenMap's replaceable canvas.
+ -- Controls live on UIParent (see EnsureMapControls), never on the replaceable canvas.
  -- Hide legacy canvas buttons from earlier versions to avoid duplicate controls.
  if self.mapNodeFilterButton then self.mapNodeFilterButton:Hide() end
  if self.mapIconSizeSlider then self.mapIconSizeSlider:Hide() end

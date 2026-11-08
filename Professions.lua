@@ -79,7 +79,7 @@ function N:ScanModern()
   if not current or tostring(current.professionID or current.skillLineID or current.professionName or current.name)~=pid then return end
   for i=1,30 do
    local id=ids[cursor]; if not id then p.at=N:Now(); c.at=N:Now(); N.dirty=true; return end
-   local r=N:ModernRecipe(id); if r then p.recipes[tostring(id)]=r end; cursor=cursor+1
+   local r=N:ModernRecipe(id); if r then p.recipes[tostring(id)]=r; if r.learned then N:RecordDifficulty(p.name,tostring(id),tonumber(p.skill),r.difficulty) end end; cursor=cursor+1
   end
   N.dirty=true
   if C_Timer and C_Timer.After then C_Timer.After(.01,function() N:Guard('recipe scan',batch) end) else batch() end
@@ -115,6 +115,7 @@ function N:ScanLegacy(craft)
     if not id then r.incomplete=true end
    end
    p.recipes[tostring(r.spell or rname)]=r
+   self:RecordDifficulty(name,tostring(r.spell or rname),tonumber(skill),difficulty)
   end
  end
  self.character.at=self:Now(); self.dirty=true; return true

@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.3.1 beta
+# VoidMark Nexus 0.4.0 beta
 
 Saved route reuse, shared directed travel legs, persistent farming recordings and active-session restoration for WoW Forever interface **16001**.
 
@@ -6,9 +6,21 @@ Generate prefers compatible saved work. Routes → **Route tools** provides reco
 
 See [persistence guide](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/PERSISTENCE.md) for the new behavior, commands, limits and backup details; [validation notes](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/VALIDATION.md) records automated validation and remaining in-game checks. Download the installable [VoidMarkNexus.zip](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/dist/VoidMarkNexus.zip). Existing profession, inventory, crafting, price and gathering features remain available. Actual game-client visual and taint verification remains necessary.
 
+## What's new in 0.4.0
+
+**Leveling planner (new Leveling tab).** Pick a profession, type a target skill in the bottom field (leave `1` to plan to your current rank cap) and choose the route type with the top-right button: **Cheapest**, **Fastest**, **Self-found** (uses what you and your alts already hold first) or **Balanced** (cost plus a per-craft time value set in Settings). The plan lists each step (skill range, recipe, crafts, colour), total materials with have/missing per character and transfer instructions, cash to buy what is missing, recipes you cannot use yet with the client's source text, and when a trainer rank is needed. **Queue plan** sends the steps to Crafting.
+
+How it works: the game only reports a recipe's current colour, not its thresholds. Nexus now records the colour every time a profession is scanned and derives where yellow, green and gray start. Unseen boundaries are estimated conservatively and the plan says so; it gets sharper as you level, because each skill-up rescans the open profession. Skill-up odds use the standard Classic rule (orange 100%, then falling linearly to 0 at gray). Craft counts are expected values. Nexus has no trainer/vendor database; it shows only source text the client supplies.
+
+**World-map controls fixed for OpenMap.** The Nexus map button and filter panel are now parented to the screen instead of the world map, so map replacements that resize or re-skin the map can no longer hide them. The button follows the map open/close, can be Shift-dragged (position saved), right-click resets it, and `/vmn mapcontrols reset` restores it if it is ever lost. The world-map button and minimap right-click now open the same filter panel (nodes on/off, herbs, ore, other, routes, icon size). `/vmn debug` lists detected map addons.
+
+**TomTom.** When TomTom is installed, the current gathering stop is mirrored as one temporary TomTom waypoint and updated as you advance (Settings: on by default; TomTom's own arrow is off by default so it does not compete with the Nexus arrow).
+
+**Market confidence.** Price lines now show VoidMark Market's confidence score and flag low-confidence (sparse) prices.
+
 ## Install
 
-Install the repository root as **VoidMarkNexus** (it directly contains `VoidMarkNexus.toc`) into `World of Warcraft/_forever_/Interface/AddOns/`. Enable it and use `/vmn`. Log into each character, open every profession, and visit the bank to populate records. Keybinding: Open VoidMark Nexus. The minimap gem opens the window; right-click opens Settings.
+Install the repository root as **VoidMarkNexus** (it directly contains `VoidMarkNexus.toc`). The AddOns folder name must match the TOC name exactly: a junction named `VoidMark-Nexus` will not load. Use `Install-WoWLinks.ps1`, or `mklink /J "C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\VoidMarkNexus" "C:\WoW Forever Addons\VoidMark-Nexus"`. Enable it and use `/vmn`. Log into each character, open every profession, and visit the bank to populate records. Keybinding: Open VoidMark Nexus. The minimap gem opens the window; right-click opens Settings.
 
 ## Implemented
 
@@ -135,6 +147,6 @@ The navigation HUD now saves its screen anchor after dragging and restores it wh
 - Add per-character saved recording drafts, exact-path playback, validated preview/confirm route exports/imports, deletion confirmation and saved-session comparisons. Current gathering totals resume after logout/reload with offline time excluded.
 - Fix observed-only cross-zone ranking and keep generated-loop comparison identities stable when the start rotates.
 - Add optional Shortest Path Forever travel handoff via its public API. It is never required for Nexus planning.
-- Add Lua 5.1 CI and a reproducible source-verified installable ZIP. Full profession-target planning and a collision mesh are outside this release.
+- Add Lua 5.1 CI and a reproducible source-verified installable ZIP. A collision mesh is outside this release. (Profession-target planning was added in 0.4.0.)
 
 0.3.1 hardening: see https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/HARDENING.md .

@@ -1,5 +1,5 @@
 local _, N = ...
-local tabs={'Dashboard','Professions','Recipes','Crafting','Profitability','Gathering','Routes','Inventory','Characters','Settings'}
+local tabs={'Dashboard','Professions','Leveling','Recipes','Crafting','Profitability','Gathering','Routes','Inventory','Characters','Settings'}
 local function label(parent,text,x,y,size)
  local f=parent:CreateFontString(nil,'OVERLAY',size or 'GameFontNormal'); f:SetPoint('TOPLEFT',x,y); f:SetText(text); f:SetJustifyH('LEFT'); return f
 end
@@ -407,7 +407,11 @@ function N:CreateUI()
   N:Choice(u.professionButton,choices,function(v) u.profession=v or nil; u.page=1 end)
  end)
  u.filterButton=button(f,'All nodes',830,-55,210,function()
-  if u.tab=='Routes' then
+  if u.tab=='Leveling' then
+   local choices={}
+   for _,m in ipairs(N.levelModes) do choices[#choices+1]={label=m..' route',value=m} end
+   N:Choice(u.filterButton,choices,function(v) N.db.settings.levelMode=v; u.selected=nil; u.page=1; N.dirty=true end)
+  elseif u.tab=='Routes' then
    N:Choice(u.filterButton,{
     {label='All gathering',value='all'},
     {label='Herbs only',value='herb'},
@@ -502,7 +506,7 @@ function N:RecipeDetail(row)
   'Listed prices are estimates; sale volume is not predicted.','', 'Materials:'}
  for _,g in ipairs(e.rows) do
   lines[#lines+1]=self:ItemName(g.id)..' x'..g.need..' | Missing '..g.missing
-  lines[#lines+1]='  '..(g.price and (self:Money(g.price.unit)..' / '..g.price.source..' / '..self:Age(g.price.at)) or 'Unknown price')
+  lines[#lines+1]='  '..self:PriceLabel(g.price)
   for _,a in ipairs(g.allocations) do lines[#lines+1]='  '..a.qty..': '..a.transfer..' ('..self:Age(a.at)..')' end
  end
  return table.concat(lines,'\n')
@@ -511,13 +515,13 @@ function N:SettingsRows()
  local rows={}; local s=self.db.settings
  local booleans={{'native','Open native profession UI'},{'learn','Learn gathering nodes'},{'importedNodes','Show potential spawns'},{'observedNodes','Show observed nodes'},
  {'nodesVisible','Map nodes'},{'routeVisible','Route guidance'},{'minimapRoute','Thin minimap route line'},{'terrainLearn','Learn movement corridors'},{'manualStops','Require manual skip at gathering stops'},{'stats','Gathering statistics'},{'includeAlts','Use alt inventory'},{'includeBanks','Use bank inventory'},
- {'includeImports','Use imported inventory'},{'includeStale','Use stale inventory'},{'market','VoidMark Market prices'},{'auctionator','Auctionator prices (age unknown)'},{'manualFirst','Prefer manual prices'},{'minimap','Minimap button'}}
+ {'includeImports','Use imported inventory'},{'includeStale','Use stale inventory'},{'market','VoidMark Market prices'},{'auctionator','Auctionator prices (age unknown)'},{'manualFirst','Prefer manual prices'},{'minimap','Minimap button'},{'mapButton','Nexus button on world map'},{'tomtom','TomTom waypoint for next stop (if installed)'},{'tomtomArrow','Also show TomTom arrow'},{'levelResale','Leveling: count output resale value'}}
  for _,v in ipairs(booleans) do rows[#rows+1]={text=v[2]..': '..tostring(s[v[1]]),key=v[1],boolean=true,detail='Select and press Apply to toggle. Foreign realms/factions remain excluded. Item binding/transfer restrictions must be checked in game.'} end
  for _,v in ipairs({{'maxAge','Price expiration (seconds)',60,2592000},{'inventoryAge','Inventory expiration (seconds)',60,2592000},
  {'cut','Auction cut (0.05 = 5%)',0,.3},{'deposit','Deposit per craft (copper)',0,1e8},{'failedAuctions','Failed listings per craft',0,20},
  {'saleFraction','Expected sold fraction',0,1},{'waste','Additional material cost fraction',0,1},{'speed','Travel speed (yards/sec)',1,50},
  {'mountDelay','Remount/form delay per node (seconds)',0,30},{'gatherDelay','Gathering delay per node (seconds)',0,60},
- {'routeMinutes','Route time budget (minutes)',1,120},{'nodeLimit','Maximum route waypoints',2,150},{'mapIconSize','Map gathering icon size (pixels)',5,16},{'scale','Window scale',.6,1.5},{'arrowScale','Navigation display scale (0.5-2.0)',.5,2}}) do
+ {'routeMinutes','Route time budget (minutes)',1,120},{'levelCraftValue','Leveling Balanced: value of one craft (copper)',0,1e7},{'nodeLimit','Maximum route waypoints',2,150},{'mapIconSize','Map gathering icon size (pixels)',5,16},{'scale','Window scale',.6,1.5},{'arrowScale','Navigation display scale (0.5-2.0)',.5,2}}) do
   rows[#rows+1]={text=v[2]..': '..s[v[1]],key=v[1],min=v[3],max=v[4],detail='Enter a value in the bottom field and press Apply. These are user assumptions, not measured predictions.'}
  end
  return rows
@@ -534,8 +538,8 @@ function N:Render()
  self.renderStocks={}
  local rows,detail={},''; local selected=u.selected; local tab=u.tab
  local c=u.character and self.db.characters[u.character]
- u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Routes' and (self.db.settings.routeSelectionMode=='multi' and 'Multi-select' or ({all='All gathering',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All gathering') or u.filter)
- u.heading:SetText(tab..'  |  '..(tab=='Settings' and 'Select setting; Apply uses the bottom value field' or 'Search above; quantity or action value below'))
+ u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Leveling' and (self.db.settings.levelMode..' route') or tab=='Routes' and (self.db.settings.routeSelectionMode=='multi' and 'Multi-select' or ({all='All gathering',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All gathering') or u.filter)
+ u.heading:SetText(tab..'  |  '..(tab=='Settings' and 'Select setting; Apply uses the bottom value field' or tab=='Leveling' and 'Bottom field: target skill (1 = current rank cap). Top-right button: route type.' or 'Search above; quantity or action value below'))
  self:SetActions({},{}); u.footer:SetText('Offline data is cached. Open each profession and bank once to record it. /vmn native restores Blizzard access.')
  if tab=='Recipes' or tab=='Profitability' then
   local filter=({'All','Known','Unknown','Wishlist'})[1]; if u.filter=='Known' or u.filter=='Unknown' or u.filter=='Wishlist' then filter=u.filter end
@@ -552,10 +556,41 @@ function N:Render()
   if selected and selected.r then detail=self:RecipeDetail(selected) end
  elseif tab=='Professions' then
   for id,ch in pairs(self.db.characters) do if not u.character or id==u.character then for pid,p in pairs(ch.professions) do
-   rows[#rows+1]={text=ch.name..' | '..p.name..' '..(p.skill or 0)..'/'..(p.max or 0),character=id,profession=pid,detail='Last observed: '..self:Age(p.at)..'\nOpen Recipes to browse. Leveling recommends a short batch using current difficulty; rescan after gains. Probability assumptions: orange 1, yellow 0.5, green 0.25. Exact thresholds are not available.'}
+   rows[#rows+1]={text=ch.name..' | '..p.name..' '..(p.skill or 0)..'/'..(p.max or 0),character=id,profession=pid,detail='Last observed: '..self:Age(p.at)..'\nRecipes browses this profession. Level plan opens the leveling planner for it.'}
   end end end
-  self:SetActions({'Recipes','Level cheap','Use stock'},{function() if u.selected then u.character=u.selected.character; u.profession=u.selected.profession; u.tab='Recipes'; u.selected=nil end end,
-   function() N:ShowLeveling('Gold') end,function() N:ShowLeveling('Inventory') end})
+  self:SetActions({'Recipes','Level plan'},{function() if u.selected then u.character=u.selected.character; u.profession=u.selected.profession; u.tab='Recipes'; u.selected=nil end end,
+   function() N:ShowLeveling() end})
+ elseif tab=='Leveling' then
+  local cid=u.character or self.characterID
+  local ch=self.db.characters[cid]
+  local pid=u.profession
+  if selected and selected.levelPick then u.character=selected.levelCharacter; u.profession=selected.levelPick; u.selected=nil; selected=nil; cid=u.character; ch=self.db.characters[cid]; pid=u.profession end
+  if not (ch and pid and ch.professions[pid]) then
+   for id,pp in pairs(ch and ch.professions or {}) do
+    rows[#rows+1]={text=pp.name..'  '..(pp.skill or 0)..' / '..(pp.max or 0),levelPick=id,levelCharacter=cid}
+   end
+   table.sort(rows,function(a,b) return a.text<b.text end)
+   detail='Pick a profession to plan.\n\nUse the character button to plan an alt from its last scan. Open a profession in game once so its recipes are recorded.'
+  else
+   local p=ch.professions[pid]
+   local plan=self:CachedLevelingPlan(cid,pid,tonumber(u.value:GetText()),self.db.settings.levelMode,u.levelForce)
+   u.levelForce=nil; u.levelPlan=plan; u.levelRef={cid,pid}
+   for _,seg in ipairs(plan.segments) do
+    local cand=seg.cand
+    local per={}
+    for _,rg in ipairs(cand.r.reagents) do per[#per+1]=rg.qty..'x '..self:ItemName(rg.id) end
+    rows[#rows+1]={text=string.format('%d-%d  %s x%d  (%s > %s) | %s',seg.from,seg.to,seg.name,seg.crafts,seg.startColor,seg.endColor,seg.unknown and 'price unknown' or self:Money(seg.cost)),
+     icon=cand.r.icon,item=cand.r.output,
+     detail=seg.name..'\nSkill '..seg.from..' to '..seg.to..'\nExpected crafts: '..string.format('%.1f',seg.expected)..' (plan '..seg.crafts..')\n'..
+      string.format('Yellow from %d, green from %d, gray from %d%s',cand.Y,cand.G,cand.X,seg.estimated and ' (estimated)' or ' (observed)')..
+      '\nPer craft: '..table.concat(per,', ')..'\nMaterial cost: '..(seg.unknown and 'unknown' or self:Money(seg.cost))..
+      (seg.recover>0 and ('\nPossible output resale: '..self:Money(seg.recover)) or '')..
+      (cand.r.source and ('\nSource: '..cand.r.source) or '')}
+   end
+   detail=ch.name..' | '..p.name..' '..(p.skill or 0)..'/'..(p.max or 0)..' | '..self:Age(p.at)..'\n\n'..self:LevelingSummary(plan)
+   self:SetActions({'Queue plan','Change prof','Recalculate'},{function() N:QueueLevelingPlan(u.levelPlan,u.levelRef[1],u.levelRef[2]) end,
+    function() u.profession=nil; u.selected=nil end,function() u.levelForce=true end})
+  end
  elseif tab=='Crafting' then
   for i,p in ipairs(self.db.plans) do local r=self:Recipe(p); rows[#rows+1]={text=(r and r.name or 'Missing recipe')..' x'..p.qty,index=i,detail='Planned work only. Materials are allocated once across the complete queue. Edit quantity below or export the shopping list.'} end
   self:SetActions({'Set qty','Remove','Shopping'},{function() if u.selected then local p=N.db.plans[u.selected.index]; if p then p.qty=math.max(1,math.min(9999,math.floor(tonumber(u.value:GetText()) or 1))) end end end,
@@ -631,13 +666,11 @@ function N:ShoppingText()
  end
  return table.concat(lines,'\n')
 end
-function N:ShowLeveling(mode)
- local r=self.ui.selected; if not r or not r.profession then return end
- local result=self:Leveling(r.character,r.profession,tonumber(self.ui.value:GetText()),mode)
- local lines={'Short-horizon recommendations (maximum 10 points). Difficulty probabilities are assumptions. Rescan after each skill gain. Training/specialization requirements remain enforced by the client.'}
- for i=1,math.min(10,#result) do local a=result[i]; lines[#lines+1]=a.name..': ~'..a.qty..' crafts | '..self:Money(a.cash)..' cash | '..a.missing..' missing reagents' end
- if #result==0 then lines[#lines+1]='No priced, known, non-gray recipes with readable materials. Open the profession or supply manual prices.' end
- self:TextDialog('Leveling: '..mode,table.concat(lines,'\n'))
+-- Opens the Leveling tab for the selected profession row (Professions tab).
+function N:ShowLeveling()
+ local u=self.ui; local r=u and u.selected
+ if r and r.profession then u.character=r.character; u.profession=r.profession end
+ if u then u.tab='Leveling'; u.selected=nil; u.page=1; self.dirty=true end
 end
 
 

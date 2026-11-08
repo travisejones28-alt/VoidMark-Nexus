@@ -91,4 +91,13 @@ PASS Repeated trail sample counts alone do not discard reusable routing work
 PASS Restricted API returns become unknown without losing later public values
 PASS Malformed schematic slots and output ranges remain incomplete estimates
 PASS A recording draft tolerates unavailable map data while reloading
-PASS: 93 tests; Lua 5.1 / standard interpreter
+PASS Observed colours bound recipe thresholds without guessing
+PASS Unobserved boundaries are conservative estimates and are flagged
+PASS Skill-up chance follows orange-certain then linear-to-gray
+PASS Cheapest plan follows cheap recipe through its colours and totals materials
+PASS Fastest plan prefers certain skill-ups; Self-found uses owned materials
+PASS Unknown prices and rank caps are reported instead of invented
+PASS Leveling plan queues to Crafting and the Leveling tab renders
+PASS World-map controls live on UIParent and follow the map
+PASS TomTom mirrors the current stop and clears when navigation ends
+PASS: 102 tests; Lua 5.1 / standard interpreter
