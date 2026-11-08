@@ -167,7 +167,7 @@ function N:ScanRecipes(craft)
  local found=not craft and self:ScanModern()
  if not found then found=self:ScanLegacy(craft) end
  if found and not self.db.settings.native and not self:Call(InCombatLockdown) and (not self.ui or not self.ui.frame:IsShown()) then
-  self:Show('Recipes'); self.ui.character=self.characterID; self.ui.profession=self.activeProfession
+  self:Show('Professions'); self.ui.character=self.characterID; self.ui.profession=self.activeProfession
   -- Keep Blizzard's window alive: hiding it can close its data source on Forever.
  end
 end

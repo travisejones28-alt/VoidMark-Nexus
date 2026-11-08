@@ -114,7 +114,10 @@ function N:SessionStats(session)
  for id,qty in pairs(session.items) do local p=self:Price(id); if p then value=value+p.unit*qty else unknown=true end end
  return seconds,session.total/seconds*3600,not unknown and value/seconds*3600 or nil
 end
-local spells={[2575]='ore',[2366]='herb',[8613]='leather',[7620]='fish'}
+-- Gathering casts use a different spell ID for each profession rank.
+local spells={[2575]='ore',[2576]='ore',[3564]='ore',[10248]='ore',
+ [2366]='herb',[2368]='herb',[3570]='herb',[11993]='herb',[8613]='leather',[7620]='fish'}
+N.gatherSpells=spells
 N:On('UNIT_SPELLCAST_SENT',function(unit,target,cast,spell)
  if N:Text(unit)~='player' then return end
  N.gatherCast=nil

@@ -83,6 +83,14 @@ function N:UpdateMinimapRoute()
  local geometry=route.travelPoints or route.points or {}
  local current=route.travelPoints and (self.terrainIndex or 1) or (self.waypoint or 1)
  local previous=geometry[current-1] or route.origin
+ -- Zone loops: the ring continues past the last stop back to the first.
+ local ringN=#(route.points or {})
+ local ring=route.loop and not route.travelPoints and ringN>1
+ local w0=math.max(1,math.min(ringN,self.waypoint or 1))
+ if ring then
+  geometry={}; for k=0,ringN-1 do geometry[#geometry+1]=route.points[(w0+k-1)%ringN+1] end
+  current=1; previous=route.points[(w0-2)%ringN+1]
+ end
  local used,dots=0,0
  local scale=Minimap:GetEffectiveScale() or 1
  local thickness=1.5/math.max(.25,scale)
@@ -133,7 +141,10 @@ function N:UpdateMinimapRoute()
  -- Number actual gathering stops, not intermediate terrain detours.
  self.minimapRoutePins=self.minimapRoutePins or {}
  local shown=0
- for index=self.waypoint or 1,math.min(#(route.points or {}),150) do
+ local order={}
+ if ring then for k=0,math.min(ringN,150)-1 do order[#order+1]=(w0+k-1)%ringN+1 end
+ else for index=self.waypoint or 1,math.min(#(route.points or {}),150) do order[#order+1]=index end end
+ for _,index in ipairs(order) do
   local px,py=project(route.points[index])
   local margin=10/math.max(.25,scale)
   local inside=px and (square and math.abs(px*width)<=width-margin and math.abs(py*height)<=height-margin

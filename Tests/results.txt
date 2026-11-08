@@ -23,7 +23,7 @@ PASS Offline crafting never calls a game action
 PASS Import rejects invalid quantity and sanitizes unknown fields
 PASS Malformed saved settings are repaired without losing characters
 PASS Missing storage data preserves the previous snapshot
-PASS All three primary UI actions are bound to their own handler
+PASS Every page renders and the tab buttons switch pages
 PASS Arrow update and map pin creation
 PASS Market navigation opens its existing view without hiding it
 PASS Newer database schema remains untouched
@@ -104,7 +104,7 @@ PASS Sync escaping round-trips newlines, tildes and NUL bytes
 PASS Paired live sync applies a peer account character and counts its bank
 PASS Sync ignores unpaired senders, own account and mismatched names
 PASS Trainer and recipe-vendor windows are recorded and used by the planner
-PASS Window layout follows its size and pages by visible rows
+PASS List scrolls with the mouse wheel and never past the end
 PASS Planner status window drags and remembers its position
 PASS Route entry uses reachable travel time instead of straight-line proximity
 PASS All unreachable entry stops preserve the existing route
@@ -114,10 +114,17 @@ PASS Skill-up eligibility excludes locked nodes, estimated gray nodes and rank c
 PASS Skill-up route filtering never hides nodes from independent map filters
 PASS Skill changes and rank-cap training invalidate skill-up planning settings
 PASS Skill-up route construction favors useful difficulty without exceeding the circuit budget
-PASS Routes dropdown exposes skill-up modes and selecting one clears old resource restrictions
+PASS Gather picker offers skill-up modes and selecting one clears old resource restrictions
 PASS Skill-up zone ranking preserves priority instead of replacing it with resource yield
 PASS Skill-up summary explains missing skills and the trainer rank cap
-PASS Decluttered window: merged tabs, old names still open, plain settings
+PASS Zone loop: spawns close together become one stop; far ones stay separate
+PASS Zone loop: a lonely far-away stop is dropped
+PASS Zone loop on real Durotar herbs: instant, no crossing paths, starts next to you
+PASS Zone loop: Start route is immediate and the loop wraps into a new lap
+PASS Zone loop: the arrow advances within 25 yards, and gathering near a stop advances too
+PASS Zone loop: whole ring is drawn on the world map and the loop survives /reload
+PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
 PASS Throttled sync messages are retried, not dropped
-PASS: 122 tests; Lua 5.1 / standard interpreter
+PASS Item tooltips list counts per character and skip other realms and excluded characters
+PASS: 129 tests; Lua 5.1 / standard interpreter

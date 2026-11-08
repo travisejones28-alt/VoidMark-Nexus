@@ -10,8 +10,6 @@ function N:Diagnostics()
  'Exploration artwork: '..tostring(C_MapExplorationInfo and type(C_MapExplorationInfo.GetExploredMapTextures)=='function'),
  'Movement speed: '..tostring(type(GetUnitSpeed)=='function'),
  'Taxi / flight / swimming: '..tostring(type(UnitOnTaxi)=='function')..' / '..tostring(type(IsFlying)=='function')..' / '..tostring(type(IsSwimming)=='function'),
- 'Terrain: observed directional trails only; no collision/elevation API used. Limits: 50 zones / 600 samples / 2400 edges each.',
- self:CacheSummary(),self:RecordingStatus(),
  'Market adapter: schema 1, integration v'..self.integrationVersion,
  'World map: '..tostring(WorldMapFrame~=nil)..' | viewport '..tostring(WorldMapFrame and WorldMapFrame.ScrollContainer~=nil)..' | map button '..tostring(self.mapControls~=nil and self.mapControls:IsShown()),
  'Map addons loaded: '..self:LoadedAddons({'OpenMap','Leatrix_Maps','Mapster','Magnify','TomTom'}),
@@ -36,42 +34,20 @@ function N:Slash(msg)
   local f=ProfessionsFrame or TradeSkillFrame or CraftFrame
   if f and not self:Call(InCombatLockdown) then f:Show() end
   self:Print('Native profession UI enabled. Open your profession normally.')
- elseif command=='block' then self:MarkRouteObstacle(args)
- elseif command=='clearblocks' then self:ClearRouteObstacles()
- elseif command=='terrain' then
-  if args=='clear' then self:ClearTerrain()
-  elseif args=='on' or args=='off' then self.db.settings.terrainLearn=args=='on';self.trailPrevious=nil
-  else local map=self:Position();local z=map and self:TerrainZone(map);self:Print('Learned samples: '..(z and #z.points or 0)..'; directed connections: '..(z and z.edgeCount or 0)..'. /vmn terrain on|off|clear') end
- elseif command=='check' then
-  if args=='empty' or args=='available' then self:CheckGatherStop(args=='available') else self:Print('/vmn check empty|available') end
  elseif command=='pause' then self.routePaused=not self.routePaused
  elseif command=='rejoin' then self:RejoinRoute()
  elseif command=='restart' then self.waypoint=1;self.terrainIndex=1;self.routePaused=false
  elseif command=='arrowscale' then self:SetArrowScale(args)
- elseif command=='cancelplan' then self:CancelPlanner('Route calculation cancelled.')
- elseif command=='cache' then
-  if args=='clear' then self:ClearCalculations() else self:Print(self:CacheSummary()) end
- elseif command=='record' then
-  if args=='finish' then self:FinishRecording()
-  elseif args=='discard' then self:DiscardRecording()
-  elseif args=='status' then self:Print(self:RecordingStatus())
-  else self:StartRecording(args) end
- elseif command=='recordname' then
-  if self.recording and args~='' then self.recording.name=args:sub(1,80);self.dirty=true end
- elseif command=='replay' then self:ReplayRoute(args)
- elseif command=='routeexport' then
-  local raw,err=self:ExportRoute(args);if raw then self:TextDialog('Route export',raw) else self:Print(err) end
- elseif command=='routeimport' then self:TextDialog('Route import',args,'route')
  elseif command=='skillroute' then
-  if args=='herb' or args=='ore' or args=='all' then self:SelectSkillupRoute(args);self:GenerateRoute()
-  else self:Print('/vmn skillroute herb|ore|all') end
- elseif command=='route' then self:GenerateRoute(args=='fresh')
- elseif command=='skip' then self:SkipWaypoint()
- elseif command=='stop' then self.activeRoute=nil; if self.arrow then self.arrow:Hide() end; self:SyncTomTom()
- elseif command=='save' then self:SaveRoute(args)
- elseif command=='waypoint' then self:AddWaypoint()
- elseif command=='target' then self.db.settings.target=args; self:Print('Node filter: '..(args=='' and 'All' or args))
- elseif command=='kind' then if args=='herb' or args=='ore' or args=='all' then self.db.settings.kind=args end
+  if args=='herb' or args=='ore' then self:SelectResource('skill:'..args);self:GenerateRoute()
+  else self:Print('/vmn skillroute herb|ore') end
+ elseif command=='route' or command=='start' then self:GenerateRoute()
+ elseif command=='skip' or command=='next' then self:SkipWaypoint()
+ elseif command=='stop' then self:StopRoute()
+ elseif command=='target' then if args=='' then self:SelectResource('kind:all') else self:SelectResource('name:'..args) end; self:Print('Gathering: '..self:ResourceLabel())
+ elseif command=='kind' then if args=='herb' or args=='ore' or args=='all' then self:SelectResource('kind:'..args) end
+ elseif command=='help' then
+  self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn pair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
  elseif command=='mapcontrols' or command=='mapfilters' then
   self.db.settings.mapButton=true
   if args=='reset' then self.db.settings.mapButtonPos=nil end
@@ -238,10 +214,15 @@ frame:SetScript('OnEvent',function(_,event,...)
   if ...=='VoidMarkNexus' then N:Guard('initialize',function() N:Initialize() end) end
  elseif event=='PLAYER_LOGIN' then
   if not N.ready then return end
-  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:RestoreSession(); N:MinimapButton(); N:RestoreNavigation();if C_Timer and C_Timer.After then C_Timer.After(8,function() N:Guard('sync',function() N:SyncAll() end) end) end;if N.recording then N:Print(N:RecordingStatus()) end end)
+  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:RestoreSession(); N:MinimapButton(); N:RestoreNavigation(); N:HookTooltips();if C_Timer and C_Timer.After then C_Timer.After(8,function() N:Guard('sync',function() N:SyncAll() end) end) end;if N.recording then N:Print(N:RecordingStatus()) end end)
   if C_Timer and C_Timer.NewTicker then
    C_Timer.NewTicker(1,function() if WorldMapFrame and WorldMapFrame:IsShown() then N:Guard('map',function() N:RefreshMap() end) end end)
-   C_Timer.NewTicker(.5,function() N:Guard('terrain sampling',function() N:SampleTerrain();N:TrackRouteSession();N:SampleRecording();N:SyncTomTom() end) end)
+   -- Background work only for features that are switched on.
+   C_Timer.NewTicker(.5,function() N:Guard('tick',function()
+    if N.db.settings.terrainLearn then N:SampleTerrain() end
+    if N.recording then N:SampleRecording() end
+    if N.activeRoute or N.tomtomUID then N:SyncTomTom() end
+   end) end)
   end
  elseif N.ready then for _,fn in ipairs(N.handlers[event] or {}) do N:Guard(event,fn,...) end end
 end)

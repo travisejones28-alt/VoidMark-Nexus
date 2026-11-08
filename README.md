@@ -1,12 +1,51 @@
-# VoidMark Nexus 0.4.1 beta
+# VoidMark Nexus 0.5.0 beta
 
-Saved route reuse, shared directed travel legs, persistent farming recordings and active-session restoration for WoW Forever interface **16001**.
+Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
-Generate prefers compatible saved work. Routes → **Route tools** provides record/finish/replay tools, route export/import, explicit improvement, cache management and optional Shortest Path travel guidance. Named routes, learned trails, UI placement and active waypoint progress remain separate from computed caches.
+## What it does
 
-See [persistence guide](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/PERSISTENCE.md) for the new behavior, commands, limits and backup details; [validation notes](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/VALIDATION.md) records automated validation and remaining in-game checks. Download the installable [VoidMarkNexus.zip](https://github.com/travisejones28-alt/VoidMark-Nexus/blob/main/dist/VoidMarkNexus.zip). Existing profession, inventory, crafting, price and gathering features remain available. Actual game-client visual and taint verification remains necessary.
+**Gather.** Pick Herbs, Ore, one specific herb or ore, or *Herbalism / Mining skill-ups*, then press **Start route**. Nexus draws one smooth loop through the zone right away: spawns close together become one stop, lonely outliers are dropped, and the stops are ordered so the path never crosses itself. The arrow takes you stop to stop and moves on by itself when you get close or gather a node. The loop keeps going lap after lap. **Best zones** lists the zones with the most matching spawns for you.
 
-## What's new in 0.4.1
+**Professions.** Pick a profession (any of your characters). *Level up* shows the cheapest (or fastest) steps to your target skill, what to buy, and which recipes to train. *Recipes* lists every recipe with its profit, most profitable first; hover for materials and prices.
+
+**Characters.** Your characters with how fresh their bag and bank data is. Pair with the bank character on the other account to sync live while both are online. Item tooltips show how many of that item each character holds.
+
+**Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.5.0
+
+- New compact window with four pages instead of eleven tabs.
+- New route builder: instant zone loop instead of the 30-second planner and its progress window.
+- Item tooltips show counts per character, including the synced bank character.
+- Removed from the window: crafting queue, session stats, route recording, learned trails and obstacle marks. Their saved data is kept. Learning trails in the background is now off, which saves CPU.
+
+## Commands
+
+| Command | Action |
+|---|---|
+| `/vmn` | Open or close the window |
+| `/vmn start`, `/vmn stop`, `/vmn next` | Start the route, stop it, skip to the next stop |
+| `/vmn kind herb\|ore\|all`, `/vmn target NAME` | What to gather |
+| `/vmn skillroute herb\|ore` | Skill-up loop for the current zone |
+| `/vmn pair NAME`, `/vmn sync` | Pair with the other account, sync status |
+| `/vmn price ITEM_ID GOLD` | Set your own price for an item |
+| `/vmn help`, `/vmn debug` | Command list, diagnostics |
+
+## Install
+
+Install the repository root as **VoidMarkNexus** (it directly contains `VoidMarkNexus.toc`). The AddOns folder name must match the TOC name exactly: a junction named `VoidMark-Nexus` will not load. Use `Install-WoWLinks.ps1`, or `mklink /J "C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\VoidMarkNexus" "C:\WoW Forever Addons\VoidMark-Nexus"`. Enable it and use `/vmn`. Log into each character, open every profession, and visit the bank to populate records. Keybinding: Open VoidMark Nexus. The minimap gem opens the window; right-click opens Settings.
+
+## Integration contract v1
+
+Nexus reads `VoidMarkMarketDB.schemaVersion == 1`, `economies[normalizedRealm .. '|' .. faction].market[itemID]`, unsuffixed records only, `fairValue`/`latest.median`, and `lastSeen`/`latest.at`. It does not mutate Market records or infer ages for missing timestamps. Unknown schemas fail closed. `VoidMarkNexus.integrationVersion == 1`; `:Price(itemID)` returns `unit`, `source`, `at`, `stale`, optional `confidence`. `:Shopping()` returns per-plan materials with allocations and missing quantities. This is a Nexus API, not an undocumented promise that Market implements a new API. Market source remains unchanged.
+
+## Licensing
+
+Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and data: Copyright (c) 2019 Wuild, MIT; full license in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. Other reference addons and TomTom artwork are not redistributed.
+
+## Older versions
+
+### What's new in 0.4.1
 
 **Live sync between your two accounts.** On Voidmark Soulreaver type `/vmn pair Bank` (the bank character's name), and on the bank character type `/vmn pair Soulreaver`. While both clients are online on the same realm and faction, each sends the other its bags, bank and professions through the game's addon whisper channel. Only changed sections are sent, and only paired names are accepted. Synced characters show as **[Synced]** and count toward materials (Settings: "Use synced characters"); transfer lines say "Mail from ... (other account)". `/vmn sync` shows status, `/vmn sync now` resends, `/vmn unpair NAME` stops. Nothing is sent while the other character is offline; it catches up the next time both are online. Manual export/import still works.
 
@@ -14,7 +53,7 @@ See [persistence guide](https://github.com/travisejones28-alt/VoidMark-Nexus/blo
 
 **Resizable window.** Drag the corner grip to resize; the list shows more rows and the detail pane grows. Size and position are saved. Window scale is still in Settings. Recipes lists add ROI and two sorts: Cash ascending (most affordable) and Fewest missing.
 
-## What's new in 0.4.0
+### What's new in 0.4.0
 
 **Leveling planner (new Leveling tab).** Pick a profession, type a target skill in the bottom field (leave `1` to plan to your current rank cap) and choose the route type with the top-right button: **Cheapest**, **Fastest**, **Self-found** (uses what you and your alts already hold first) or **Balanced** (cost plus a per-craft time value set in Settings). The plan lists each step (skill range, recipe, crafts, colour), total materials with have/missing per character and transfer instructions, cash to buy what is missing, recipes you cannot use yet with the client's source text, and when a trainer rank is needed. **Queue plan** sends the steps to Crafting.
 
@@ -26,11 +65,11 @@ How it works: the game only reports a recipe's current colour, not its threshold
 
 **Market confidence.** Price lines now show VoidMark Market's confidence score and flag low-confidence (sparse) prices.
 
-## Install
+### Install
 
 Install the repository root as **VoidMarkNexus** (it directly contains `VoidMarkNexus.toc`). The AddOns folder name must match the TOC name exactly: a junction named `VoidMark-Nexus` will not load. Use `Install-WoWLinks.ps1`, or `mklink /J "C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\VoidMarkNexus" "C:\WoW Forever Addons\VoidMark-Nexus"`. Enable it and use `/vmn`. Log into each character, open every profession, and visit the bank to populate records. Keybinding: Open VoidMark Nexus. The minimap gem opens the window; right-click opens Settings.
 
-## Implemented
+### Implemented
 
 - Shared account database; character-specific recipes and timestamped bag/bank snapshots. Optional imported-character inventory, exclusions, and stale-data controls. Cross-realm and cross-faction inventories are excluded from calculations. Binding and mail restrictions must be checked in game.
 - Modern schematic API with legacy trade skill and craft fallbacks; offline and account-wide recipe search, known/unknown/wishlist filters, price and margin sorting, recipe details, source text where provided by the client. Linked/guild/NPC professions do not overwrite your character.
@@ -43,7 +82,7 @@ Install the repository root as **VoidMarkNexus** (it directly contains `VoidMark
 - Short-horizon leveling ranking by purchase cost or fewest missing materials, using explicit approximate difficulty probabilities. Rescan after each skill gain.
 - Ten-page dark interface, item tooltips, character/profession dropdowns, search, paging, movable window, saved position, scale, settings and diagnostics.
 
-## Commands
+### Commands
 
 | Command | Action |
 |---|---|
@@ -61,7 +100,7 @@ Install the repository root as **VoidMarkNexus** (it directly contains `VoidMark
 
 Settings contain speed, time budget, remount and gathering delays. Selecting a travel preset resets speed and delay to its assumptions. Custom settings can be edited afterward. Travel geometry uses observed directional trails and manually marked obstacle detours; unverified connectors remain estimates. There is no collision mesh. Routes do not know live spawns or unseen player competition. Map rendering caps potential-node pins at 250; routes cap at 150 waypoints and improve only a nearby candidate subset.
 
-## Incomplete / needs follow-up
+### Incomplete / needs follow-up
 
 - Full native-window replacement is deliberately not claimed. Selecting Nexus opens its browser while preserving Blizzard's data source and crafting access. No suppression of protected native UI.
 - No bundled complete Forever recipe/source catalog. The browser records the catalog exposed by an opened profession; legacy APIs expose learned recipes only. Specialization and prerequisite modeling, full leveling threshold tables and full trainer shopping are not implemented.
@@ -71,20 +110,20 @@ Settings contain speed, time budget, remount and gathering delays. Selecting a t
 - UI is fixed-size with adjustable scale. Import preview is displayed in the transfer window before confirmation. Full visual QA in the game, localization, secret-value coverage and every Forever-specific profession require client testing.
 - Gather tracking uses confirmed known gathering spells and matching node names; unknown/localized resources and rank-specific spells may need extensions. Recorded loot includes byproducts. No claim of complete fishing/skinning support.
 
-## Validation
+### Validation
 
 Run `lua Tests/run.lua` from the repository root using Lua 5.1, or `pwsh -File Tests/Run.ps1 -LuaDll PATH` with a Lua 5.1 compatible DLL on Windows. Tests cover pure logic, mock API scanning, persistence, imports, inventory allocation, prices, routes and UI construction. See `VALIDATION.md` for actual results and in-game checks. Keep a copy of `WTF/Account/.../SavedVariables/VoidMarkNexus.lua` before testing upgrades.
 
-## Integration contract v1
+### Integration contract v1
 
 Nexus reads `VoidMarkMarketDB.schemaVersion == 1`, `economies[normalizedRealm .. '|' .. faction].market[itemID]`, unsuffixed records only, `fairValue`/`latest.median`, and `lastSeen`/`latest.at`. It does not mutate Market records or infer ages for missing timestamps. Unknown schemas fail closed. `VoidMarkNexus.integrationVersion == 1`; `:Price(itemID)` returns `unit`, `source`, `at`, `stale`, optional `confidence`. `:Shopping()` returns per-plan materials with allocations and missing quantities. This is a Nexus API, not an undocumented promise that Market implements a new API. Market source remains unchanged.
 
-## Licensing
+### Licensing
 
 Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and data: Copyright (c) 2019 Wuild, MIT; full license in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. Other reference addons and TomTom artwork are not redistributed.
 
 
-## 0.2.1-alpha: faster planning and minimap routes
+### 0.2.1-alpha: faster planning and minimap routes
 
 - Faster directed 2-opt checks use prefix sums instead of rebuilding and measuring an entire trial route for every candidate. Directional learned paths and closed-loop budgets remain part of scoring.
 - A planning window shows the current stage, completed starts/zones, elapsed time, an approximate time remaining once measurable, and Cancel. `/vmn cancelplan` also cancels. Work yields after about 3 ms or 2,500 checkpoints, and resumes on a later frame.
@@ -95,14 +134,14 @@ Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and
 
 Validation: 51 Lua 5.1/LuaJIT tests passed, covering cache invalidation/copy isolation, queued cancellation, the time limit, clock/progress reporting, minimap clipping, rotation, zoom and fallback rendering. A local imported-zone Start Here benchmark decreased from 0.179 to about 0.027 CPU seconds for 35 stops (roughly 6x); in-game timings vary. Live Forever rendering still needs an in-game check.
 
-## 0.2.2-alpha: numbered stops and reload persistence
+### 0.2.2-alpha: numbered stops and reload persistence
 
 - Small numbered minimap dots mark actual gathering stops in route order; terrain detours are not numbered. The next stop is highlighted, and completed/offscreen stops are hidden.
 - Active navigation is saved per character on logout or `/reload`, including the route, waypoint, terrain-path position and pause state. Login restores it without running the planner. Stopping/completing a route clears its saved navigation at logout. Named saved routes remain separate.
 - Restoration checks route geometry and bounds, rejects malformed snapshots and resets invalid indices.
 - Validation: 54 Lua 5.1 tests pass, including route restoration, character isolation, cancellation persistence, malformed saved data, numbered stops and hiding completed markers.
 
-## 0.2.3-alpha
+### 0.2.3-alpha
 
 - Closest/Nearest loops rotate the stop order so the nearest reachable gathering stop is number 1. Circuit direction is preserved and terrain detours are rebuilt; previews and saved nearest loops recheck the entry stop when activated.
 - The next leg is warm gold and brighter; later route segments are faded. Hover numbered stops to see resource, stop number and distance.
@@ -110,45 +149,45 @@ Validation: 51 Lua 5.1/LuaJIT tests passed, covering cache invalidation/copy iso
 - Route overlays follow the minimap's own UI layer. VoidMark Mini Map 0.1.9 moves the map into the background so quest objectives and normal panels can appear above it.
 - Validation: 55 Lua 5.1 tests pass, including nearest-stop rotation, preserved circuit order, rebuilt detours and waypoint tooltip contents.
 
-## 0.2.4-alpha
+### 0.2.4-alpha
 
 - Optimal loops now also renumber the nearest reachable gathering stop as waypoint 1, keeping circuit direction. Preview activation and loading a saved Optimal route recheck your current position.
 - Cached Optimal loops are reused, then renumbered for the current player position. Reload restoration continues to preserve in-progress navigation rather than restarting it. Start Here retains its existing player-origin behavior.
 - Kept zone-ranking timeout results separate from single-route results.
 - Validation: 56 Lua 5.1 tests pass, including Optimal route rotation after movement and cache reuse.
 
-## 0.2.5-alpha: purple navigation HUD
+### 0.2.5-alpha: purple navigation HUD
 
 - Restyled the live waypoint display to match the supplied reference: violet compass arrow, Route title with a diamond rule, an ornate two-tier panel, progress bar, stop count, yards, estimated seconds and a next-stop button.
 - Artwork is transparent RGBA TGA at power-of-two sizes for the game client. The compass rotates around its medallion pivot; labels and progress remain live UI elements.
 - Keeps smooth heading updates, left-drag movement and the existing right-click Skip/Restart/Pause/Cancel menu. Pause and wrong-zone states clear unavailable distance/ETA instead of leaving stale values.
 - Validation: 57 Lua 5.1 tests pass, including live HUD values, progress, direction, next-stop action, pause and wrong-zone states. Alpha and runtime texture dimensions checked. In-game visual verification remains needed.
 
-## 0.2.6-alpha
+### 0.2.6-alpha
 
 Removed the Route title and decorative line above the compass arrow. Live guidance and the lower progress panel remain.
 
-## 0.2.7-alpha
+### 0.2.7-alpha
 
 Removed the navigation HUD hover-help tooltip. Dragging and the right-click action menu still work.
 
-## 0.2.8-alpha
+### 0.2.8-alpha
 
 Resize the entire navigation HUD through its right-click menu: Smaller display, Larger display, or Reset display size. Nexus Settings also has Navigation display scale (0.5-2.0); `/vmn arrowscale 0.8` sets an exact size. This saved setting scales the arrow, panel, text, progress and button together. The navigation hover-help tooltip is removed.
 
-## 0.2.9-alpha
+### 0.2.9-alpha
 
 The complete navigation HUD now uses the LOW UI layer, so the world map and normal application windows cover its arrow, panel, labels and controls. Showing or resizing it preserves this layer.
 
-## 0.2.10-alpha
+### 0.2.10-alpha
 
 Replaced the three navigation sizing menu entries with one Display row containing minus and plus buttons. Repeated clicks resize the entire HUD without closing the menu; limits remain 50%-200%.
 
-## 0.2.11-alpha
+### 0.2.11-alpha
 
 The navigation HUD now saves its screen anchor after dragging and restores it when recreated after login or `/reload`, applying its saved scale first. Repeated route activation does not reset placement. Invalid saved anchors fall back to the default, and the display stays clamped to screen.
 
-## 0.3.0-beta
+### 0.3.0-beta
 
 - Retain up to 12 compatible completed route results for seven days across normal reloads/logins. Share bounded directed travel-leg results across candidate starts and sessions. Cosmetic settings and harvest timestamps no longer discard geometry; current evidence is rescored.
 - Preserve time-cap results, and add explicit improvement seeded with the compatible saved circuit. New Optimal/Nearest runs number the closest stop as 1; active-run restoration retains progress.

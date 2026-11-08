@@ -90,10 +90,9 @@ test('Leveling plan queues to Crafting and the Leveling tab renders',function()
  N:QueueLevelingPlan(plan,N.characterID,'Plancraft')
  eq(#N.db.plans,plans+#plan.segments)
  for i=#N.db.plans,plans+1,-1 do table.remove(N.db.plans,i) end
- N:Show('Leveling');N.ui.character=N.characterID;N.ui.profession=nil;N:Render()
- assert(#N.ui.rows>0)
- N.ui.profession='Plancraft';N.ui.value:SetText('120');N:Render()
- assert(N.ui.detail.text:find('MATERIALS',1,true),'summary should include materials')
+ N:Show('Leveling');N.ui.character=N.characterID;N.ui.profession='Plancraft';N.ui.target:SetText('120');N:Render()
+ assert(N.ui.rowCount>0,'plan steps listed')
+ assert(N.ui.profInfo.text:find('crafts',1,true),'plan summary shown')
  assert(N:LevelingSummary(plan):find('Cash to buy missing',1,true))
  N.ui.profession=nil;N.character.professions.Plancraft=nil
 end)

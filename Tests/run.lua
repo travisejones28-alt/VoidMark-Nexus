@@ -37,14 +37,14 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Data/Nodes','Data/Spawns','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','Recording','MinimapRoute','UI','Boot'}
+local files={'Core','Data/Nodes','Data/Spawns','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','Recording','MinimapRoute','UI','Tooltip','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.4.6-beta') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.5.0-beta') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -174,10 +174,12 @@ test('Missing storage data preserves the previous snapshot',function()
  local old=N.character.bank; C_Container.GetContainerNumSlots=function() return nil end
  N.bankOpen=true; N:ScanStorage(true); eq(N.character.bank,old)
 end)
-test('All three primary UI actions are bound to their own handler',function()
- N:Show('Dashboard'); local called={}; N:SetActions({'A','B','C'},{function() called[1]=true end,function() called[2]=true end,function() called[3]=true end})
- for _,b in ipairs(N.ui.actions) do b.scripts.OnClick() end
- assert(called[1] and called[2] and called[3])
+test('Every page renders and the tab buttons switch pages',function()
+ N:Show('Gather')
+ for _,name in ipairs({'Professions','Characters','Settings','Gather'}) do
+  N.ui.tabs[name].scripts.OnClick(); N:Render(); eq(N.ui.tab,name)
+  for other,page in pairs(N.ui.pages) do eq(page:IsShown(),other==name) end
+ end
 end)
 test('Arrow update and map pin creation',function()
  N.activeRoute={map=1411,width=5000,height=3000,points={{x=.5,y=.5,name='Node'}}}; N.waypoint=1; N:ShowArrow(); N:UpdateArrow()
@@ -198,6 +200,7 @@ test('Terrain migration sanitizes corrupt graphs and preserves newer versions',f
  N.db.terrain=nil;N:InitializeTerrain()
 end)
 test('Only actual directed movement creates trail edges; discontinuities rejected',function()
+ N.db.settings.terrainLearn=true
  N.db.terrain.zones={};N.trailPrevious=nil
  N:RecordTraversal(1411,.1,.1,100,'ground',14)
  N:RecordTraversal(1411,.102,.1,101,'ground',14)
@@ -294,8 +297,6 @@ test('World-map layering retains high-strata pins and exact detour geometry',fun
  N:PrepareTerrainRoute(r);N.activeRoute=r;N.waypoint=1;N.terrainIndex=1;N:RefreshMap()
  eq(N.mapPinOverlay.strata,'HIGH');assert(N.mapPinOverlay.level>=121)
  eq(N.mapPins[1].parent,N.mapPinOverlay);assert(N.mapPins[1].level>N.mapPinOverlay.level)
- N:ShowRoutePreview('here','diagram',r);assert(N.previewWindow)
- N:ShowRoutePreview('here','map',r);assert(N.previewWindow)
 end)
 test('Empty readable containers clear stale stock; unavailable API preserves it',function()
  C_Container.GetContainerNumSlots=function() return 0 end;N.character.bags={[1]=99};N:ScanStorage(false);eq(next(N.character.bags),nil)
@@ -850,11 +851,16 @@ test('Insertion planner respects a directed closed-loop budget and leaves input 
  N.CachedTerrainLeg=leg
 end)
 assert(loadfile(root..'/Tests/skillroutes.lua'))(N,test,eq)
-test('Decluttered window: merged tabs, old names still open, plain settings',function()
- N:Show('Routes');eq(N.ui.tab,'Gathering');N:Show('Profitability');eq(N.ui.tab,'Recipes');N:Show('Dashboard');eq(N.ui.tab,'Home')
- for _,r in ipairs(N:SettingsRows()) do assert(not r.text:find(': true',1,true) and not r.text:find(': false',1,true),r.text) end
- N:Show('Gathering');N:Render();assert(N.ui.detail.text:find('What:',1,true),'gathering summary shown')
- assert(not N.ui.detail.text:find('2-opt',1,true),'no jargon in gathering panel')
+assert(loadfile(root..'/Tests/zoneloop.lua'))(N,test,eq)
+test('Compact window: old tab names open the page that replaced them; settings are checkboxes',function()
+ N:Show('Routes');eq(N.ui.tab,'Gather');N:Show('Dashboard');eq(N.ui.tab,'Gather')
+ N:Show('Profitability');eq(N.ui.tab,'Professions');eq(N.ui.profView,'recipes')
+ N:Show('Leveling');eq(N.ui.tab,'Professions');eq(N.ui.profView,'level')
+ N:Show('Inventory');eq(N.ui.tab,'Characters')
+ N:Show('Settings');N:Render();assert(#N.ui.checks>=10)
+ local cb=N.ui.checks[1]; local before=N.db.settings.tooltipCounts
+ cb.GetChecked=function() return not before end; cb.scripts.OnClick(cb); eq(N.db.settings.tooltipCounts,not before)
+ N.db.settings.tooltipCounts=before
 end)
 test('Duplicate profession records merge without losing recipes or queued crafts',function()
  local c=N.character; local saved=N:Copy(c.professions); local plans=N.db.plans
@@ -877,6 +883,22 @@ test('Throttled sync messages are retried, not dropped',function()
  now=now+2; N:FlushSync(); eq(#sent,3); eq(sent[2],'m2'); eq(sent[3],'m3'); eq(N.syncOut.bank,nil)
  eq(N:SendResult(true,true),'sent'); eq(N:SendResult(true,false),'throttled'); eq(N:SendResult(true,2),'failed'); eq(N:SendResult(false),'failed')
  C_ChatInfo=api; N.db.sync.peers=savedPeers; N.syncPauseUntil=nil
+end)
+test('Item tooltips list counts per character and skip other realms and excluded characters',function()
+ local saved=N.db.characters; local ex=N.db.excluded
+ local me=N.character
+ N.db.characters={[N.characterID]=me,
+  ['x/bank']={name='Voidmark Bank',realm=me.realm,faction=me.faction,imported=true,synced=true,bags={[2447]=4},bank={[2447]=16},professions={}},
+  ['x/far']={name='Elsewhere',realm='Other',faction=me.faction,bags={[2447]=99},bank={},professions={}},
+  ['x/off']={name='Hidden',realm=me.realm,faction=me.faction,bags={[2447]=7},bank={},professions={}}}
+ N.db.excluded={['x/off']=true}
+ local mine=me.bags[2447]; me.bags[2447]=3
+ local total,list=N:ItemCounts(2447); eq(total,23); eq(#list,2); eq(list[1].own,true)
+ local lines={}; local tt={AddLine=function(_,s) lines[#lines+1]=s end,AddDoubleLine=function(_,a,b) lines[#lines+1]=a..'='..b end,Show=function() end}
+ N:AddItemCounts(tt,2447); assert(lines[2]:find('Voidmark Bank=bags 4, bank 16',1,true),lines[2]); assert(lines[3]:find('Total=23',1,true))
+ local n=#lines; N:AddItemCounts(tt,2447); eq(#lines,n) -- no duplicate lines on repeated calls
+ N.db.settings.tooltipCounts=false; tt.vmnItem=nil; N:AddItemCounts(tt,2447); eq(#lines,n); N.db.settings.tooltipCounts=true
+ me.bags[2447]=mine; N.db.characters=saved; N.db.excluded=ex
 end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary

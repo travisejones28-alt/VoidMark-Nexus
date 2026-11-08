@@ -54,16 +54,16 @@ test('Skill-up route construction favors useful difficulty without exceeding the
  local clean=N:CleanNavigationRoute(r);assert(clean and clean.skillup);eq(clean.points[1].skillPriority,1)
 end)
 
-test('Routes dropdown exposes skill-up modes and selecting one clears old resource restrictions',function()
+test('Gather picker offers skill-up modes and selecting one clears old resource restrictions',function()
  local settings,professions=N:Copy(N.db.settings),N:Copy(N.character.professions)
  local choice=N.Choice;local tab=N.ui.tab;local options,select
  N.Choice=function(_,_,list,fn) options,select=list,fn end
- N.ui.tab='Gathering';N.ui.filterButton.scripts.OnClick()
+ N:Show('Gather');N.ui.what.scripts.OnClick()
  local found={};for _,option in ipairs(options) do found[option.value]=true end
- assert(found.skillherb and found.skillore and found.skillall)
+ assert(found['skill:herb'] and found['skill:ore'] and found['kind:herb'])
  N.db.settings.target='Silverleaf';N.db.settings.routeResources={Silverleaf=true}
- select('skillore');eq(N.db.settings.kind,'ore');eq(N.db.settings.target,'');eq(N.db.settings.routeSelectionMode,'skillup');eq(N.db.settings.routeResources,nil)
- N:Render();assert(N.ui.filterButton.text:find('Mining skill-ups',1,true))
+ select('skill:ore');eq(N.db.settings.kind,'ore');eq(N.db.settings.target,'');eq(N.db.settings.routeSelectionMode,'skillup');eq(N.db.settings.routeResources,nil)
+ N:Render();assert(N.ui.what.text:find('Mining skill-ups',1,true))
  N.Choice,N.ui.tab=choice,tab;N.db.settings,N.character.professions=settings,professions
 end)
 

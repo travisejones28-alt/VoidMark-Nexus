@@ -114,10 +114,10 @@ test('Trainer and recipe-vendor windows are recorded and used by the planner',fu
  UnitName=oldUnit;IsTradeskillTrainer=nil;GetNumTrainerServices=nil;GetMerchantNumItems=nil
 end)
 
-test('Window layout follows its size and pages by visible rows',function()
- N:Show('Recipes');N:LayoutUI()
- eq(N.ui.perPage,math.floor((600-212)/28))
- assert(not N.ui.rows[N.ui.perPage+1]:IsShown())
- N:Render()
- assert(N.ui.pageLabel.text:find('/',1,true))
+test('List scrolls with the mouse wheel and never past the end',function()
+ N:Show('Recipes');N:Render()
+ eq(#N.ui.rows,N.ui.perPage)
+ N.ui.list.scripts.OnMouseWheel(N.ui.list,-50);N:Render()
+ assert(N.ui.offset<=math.max(0,N.ui.rowCount-N.ui.perPage))
+ N.ui.list.scripts.OnMouseWheel(N.ui.list,50);N:Render();eq(N.ui.offset,0)
 end)

@@ -565,6 +565,13 @@ function N:GenerateRoute(refresh)
 end
 function N:SkipWaypoint()
  if not self.activeRoute then return end
+ if self.activeRoute.loop then
+  -- Zone loops never end: after the last stop, start the next lap.
+  local n=#self.activeRoute.points
+  self.waypoint=(self.waypoint or 1)+1
+  if self.waypoint>n then self.waypoint=1;self.lap=(self.lap or 1)+1;self:Print('Lap '..(self.lap-1)..' done.') end
+  self.dirty=true;return
+ end
  if self.activeRoute.travelStopIndices then
   local route=self.activeRoute
   if (self.waypoint or 1)>#route.points then self.activeRoute=nil;if self.arrow then self.arrow:Hide() end;self.dirty=true;return end
@@ -770,7 +777,7 @@ function N:UpdateArrow()
  if route then
   local count=#route.points
   local current=math.min(self.waypoint or 1,count)
-  arrow.count:SetText(current..' / '..count)
+  arrow.count:SetText(current..' / '..count..(route.loop and (self.lap or 1)>1 and ('  lap '..self.lap) or ''))
   arrow.progress:SetValue(count>0 and math.min(count,math.max(0,(self.waypoint or 1)-1))/count or 0)
  end
  if self.routePaused and route then
@@ -797,7 +804,7 @@ function N:UpdateArrow()
  arrow.status:SetText(point.transit and (point.closing and 'Return to start' or 'Following route') or (point.name or 'Gathering stop'))
  arrow.label:SetText(string.format('%.0f yd',distance))
  arrow.eta:SetText(string.format('~%.0f sec',distance/math.max(1,route.speed or self.db.settings.speed)))
- if distance<8 or (point.transit and self:PassedTransit(route,self.terrainIndex or 1,{x=x,y=y})) then
+ if distance<(route.arriveRadius or 8) or (point.transit and self:PassedTransit(route,self.terrainIndex or 1,{x=x,y=y})) then
   if point.transit then
    self.terrainIndex=(self.terrainIndex or 1)+1
    if route.recorded then
@@ -1018,17 +1025,25 @@ function N:RefreshMap()
  if s.routeVisible and route and route.map==map then
   local geometry=route.travelPoints or route.points
   local current=route.travelPoints and (self.terrainIndex or 1) or math.max(1,self.waypoint or 1)
-  local last=math.min(#geometry,current+100)
-  local prev=geometry[current-1] or route.origin
+  -- Zone loops: draw the whole ring, starting at the next stop.
+  local loop=route.loop and not route.travelPoints and #route.points>1
+  local n=#route.points
+  local w0=math.max(1,math.min(n,self.waypoint or 1))
+  local prev
+  if loop then
+   geometry={}; for k=0,n-1 do geometry[#geometry+1]=route.points[(w0+k-1)%n+1] end
+   current=1; prev=route.points[(w0-2)%n+1]
+  else prev=geometry[current-1] or route.origin end
+  local last=math.min(#geometry,current+(loop and 150 or 100))
   local stop=self.waypoint or 1
   for i=current,last do
    local node=geometry[i]
    if node then
-    points[#points+1]={n=node,label=node.transit and ((node.closing or node.starting) and 'S' or '�') or tostring(stop),route=true}
+    points[#points+1]={n=node,label=node.transit and ((node.closing or node.starting) and 'S' or '�') or tostring(loop and ((w0+i-2)%n+1) or stop),route=true}
     if prev then segments[#segments+1]={a=prev,b=node,validated=node.validated==true} end
     prev=node
     if not node.transit then stop=stop+1 end
-    if stop>(self.waypoint or 1)+4 then break end
+    if not loop and stop>(self.waypoint or 1)+4 then break end
    end
   end
  end
@@ -1204,13 +1219,13 @@ local function navigationRoute(self,source)
  local function point(p)
   if type(p)~='table' or not self:Finite(p.x,0,1) or not self:Finite(p.y,0,1) then return end
   local copy={x=p.x,y=p.y,map=source.map}
-  for _,k in ipairs({'name','source','object','kind','skill','skillPriority','skillColor','transit','validated','closing','starting'}) do
+  for _,k in ipairs({'name','source','object','kind','skill','skillPriority','skillColor','transit','validated','closing','starting','spawns'}) do
    local v=p[k]
    if v~=nil then
     if k=='name' or k=='source' or k=='kind' or k=='skillColor' then if type(v)~='string' or #v>160 then return end
     elseif k=='skill' then if not self:Finite(v,1,1000) then return end
     elseif k=='skillPriority' then if not self:Finite(v,0,1) then return end
-    elseif k=='object' then if not self:Finite(v,0,1e12) then return end
+    elseif k=='object' or k=='spawns' then if not self:Finite(v,0,1e12) then return end
     elseif type(v)~='boolean' then return end
    end
    if type(v)=='boolean' or type(v)=='string' and #v<=160 or type(v)=='number' and self:Finite(v,0,1e12) then copy[k]=v end
