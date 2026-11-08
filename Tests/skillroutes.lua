@@ -58,7 +58,7 @@ test('Routes dropdown exposes skill-up modes and selecting one clears old resour
  local settings,professions=N:Copy(N.db.settings),N:Copy(N.character.professions)
  local choice=N.Choice;local tab=N.ui.tab;local options,select
  N.Choice=function(_,_,list,fn) options,select=list,fn end
- N.ui.tab='Routes';N.ui.filterButton.scripts.OnClick()
+ N.ui.tab='Gathering';N.ui.filterButton.scripts.OnClick()
  local found={};for _,option in ipairs(options) do found[option.value]=true end
  assert(found.skillherb and found.skillore and found.skillall)
  N.db.settings.target='Silverleaf';N.db.settings.routeResources={Silverleaf=true}

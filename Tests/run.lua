@@ -44,7 +44,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.4.4-beta') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.4.5-beta') end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -849,6 +849,12 @@ test('Insertion planner respects a directed closed-loop budget and leaves input 
  N.CachedTerrainLeg=leg
 end)
 assert(loadfile(root..'/Tests/skillroutes.lua'))(N,test,eq)
+test('Decluttered window: merged tabs, old names still open, plain settings',function()
+ N:Show('Routes');eq(N.ui.tab,'Gathering');N:Show('Profitability');eq(N.ui.tab,'Recipes');N:Show('Dashboard');eq(N.ui.tab,'Home')
+ for _,r in ipairs(N:SettingsRows()) do assert(not r.text:find(': true',1,true) and not r.text:find(': false',1,true),r.text) end
+ N:Show('Gathering');N:Render();assert(N.ui.detail.text:find('What:',1,true),'gathering summary shown')
+ assert(not N.ui.detail.text:find('2-opt',1,true),'no jargon in gathering panel')
+end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()

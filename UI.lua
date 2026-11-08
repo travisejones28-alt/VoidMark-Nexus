@@ -1,5 +1,7 @@
 local _, N = ...
-local tabs={'Dashboard','Professions','Leveling','Recipes','Crafting','Profitability','Gathering','Routes','Inventory','Characters','Settings'}
+local tabs={'Home','Professions','Leveling','Recipes','Crafting','Gathering','Inventory','Characters','Settings'}
+-- Older tab names still open the merged tab.
+local tabAlias={Dashboard='Home',Profitability='Recipes',Routes='Gathering'}
 local function label(parent,text,x,y,size)
  local f=parent:CreateFontString(nil,'OVERLAY',size or 'GameFontNormal'); f:SetPoint('TOPLEFT',x,y); f:SetText(text); f:SetJustifyH('LEFT'); return f
 end
@@ -63,7 +65,7 @@ function N:TextDialog(title,text,import)
 end
 function N:Show(tab)
  if not self.ui then self:CreateUI() end
- self.ui.tab=tab or self.ui.tab or 'Dashboard'; self.ui.frame:Show(); self.dirty=true; self:Render()
+ self.ui.tab=tabAlias[tab] or tab or self.ui.tab or 'Home'; self.ui.frame:Show(); self.dirty=true; self:Render()
 end
 -- Prefer the client's direct item-icon APIs, which work before item cache is populated.
 function N:InventoryIcon(id)
@@ -397,7 +399,7 @@ function N:CreateUI()
  label(f,'VOIDMARK  |  NEXUS',18,-17,'GameFontNormalLarge'); label(f,self.version,280,-19,'GameFontHighlightSmall')
  local closeButton=button(f,'Close',956,-10,86,function() f:Hide(); if N.menu then N.menu:Hide() end end)
  closeButton:ClearAllPoints(); closeButton:SetPoint('TOPRIGHT',f,'TOPRIGHT',-18,-10)
- self.ui={frame=f,tab='Dashboard',rows={},page=1,filter='All'}; local u=self.ui
+ self.ui={frame=f,tab='Home',rows={},page=1,filter='All'}; local u=self.ui
  for i,tab in ipairs(tabs) do button(f,tab,12,-56-(i-1)*40,130,function() u.tab=tab; u.page=1; u.selected=nil; N.dirty=true end) end
  u.search=edit(f,165,-55,220,''); u.search:SetScript('OnTextChanged',function() u.page=1; N.dirty=true end)
  u.characterButton=button(f,'All characters',404,-55,205,function()
@@ -415,7 +417,7 @@ function N:CreateUI()
    local choices={}
    for _,m in ipairs(N.levelModes) do choices[#choices+1]={label=m..' route',value=m} end
    N:Choice(u.filterButton,choices,function(v) N.db.settings.levelMode=v; u.selected=nil; u.page=1; N.dirty=true end)
-  elseif u.tab=='Routes' then
+  elseif u.tab=='Gathering' then
    N:Choice(u.filterButton,{
     {label='All gathering',value='all'},
     {label='Herbs only',value='herb'},
@@ -442,7 +444,7 @@ function N:CreateUI()
   local row=CreateFrame('Button',nil,f); row:SetSize(535,27); row:SetPoint('TOPLEFT',160,-125-(i-1)*28)
   row.bg=row:CreateTexture(nil,'BACKGROUND'); row.bg:SetAllPoints(); row.bg:SetColorTexture(.1,.07,.15,i%2==0 and .9 or .4)
   row.icon=row:CreateTexture(nil,'ARTWORK'); row.icon:SetSize(20,20); row.icon:SetPoint('LEFT',3,0)
-  row.text=label(row,'',28,-6,'GameFontHighlightSmall'); row.text:SetWidth(500); row.text:SetWordWrap(false)
+  row.text=label(row,'',28,-6,'GameFontHighlight'); row.text:SetWidth(500); row.text:SetWordWrap(false)
   row:SetScript('OnClick',function() if row.data then u.selected=row.data; N.dirty=true end end)
   row:SetScript('OnEnter',function(self)
    local data=self.data
@@ -476,7 +478,7 @@ function N:CreateUI()
  end
  local scroll=CreateFrame('ScrollFrame',nil,f,'UIPanelScrollFrameTemplate'); scroll:SetPoint('TOPLEFT',715,-125); scroll:SetSize(300,440); u.detailScroll=scroll
  local child=CreateFrame('Frame',nil,scroll); child:SetSize(295,440); scroll:SetScrollChild(child)
- u.detail=label(child,'',0,0,'GameFontHighlightSmall'); u.detail:SetWidth(290); u.detail:SetSpacing(4); u.detail:SetWordWrap(true); u.detailChild=child
+ u.detail=label(child,'',0,0,'GameFontHighlight'); u.detail:SetWidth(290); u.detail:SetSpacing(4); u.detail:SetWordWrap(true); u.detailChild=child
  u.prevButton=button(f,'Previous',164,-583,100,function() u.page=math.max(1,u.page-1); u.selected=nil; N.dirty=true end)
  u.nextButton=button(f,'Next',270,-583,100,function() u.page=u.page+1; u.selected=nil; N.dirty=true end)
  u.pageLabel=label(f,'',385,-589,'GameFontHighlightSmall')
@@ -485,8 +487,8 @@ function N:CreateUI()
  u.zoneButton=button(f,'Top 5 zones',865,-546,140,function() N:ShowTopGatheringZones() end)
  u.zoneButton:Hide()
  u.previewButton:Hide()
- u.strategyButton=button(f,'Optimal Loop',555,-546,140,function()
-  local options={{label='Optimal Loop',value='optimal'},{label='Nearest Efficient Loop',value='nearest'},{label='Start Here',value='here'}}
+ u.strategyButton=button(f,'Best loop',555,-546,140,function()
+  local options={{label='Best loop',value='optimal'},{label='Nearest loop',value='nearest'},{label='Start here',value='here'}}
   N:Choice(u.strategyButton,options,function(v) N.db.settings.routeStrategy=v; N.dirty=true; N:ShowRoutePreview(v) end)
  end)
  u.strategyButton:Hide()
@@ -550,35 +552,40 @@ function N:RecipeDetail(row)
 end
 function N:SettingsRows()
  local rows={}; local s=self.db.settings
- local booleans={{'native','Open native profession UI'},{'learn','Learn gathering nodes'},{'importedNodes','Show potential spawns'},{'observedNodes','Show observed nodes'},
- {'nodesVisible','Map nodes'},{'routeVisible','Route guidance'},{'minimapRoute','Thin minimap route line'},{'terrainLearn','Learn movement corridors'},{'manualStops','Require manual skip at gathering stops'},{'stats','Gathering statistics'},{'includeAlts','Use alt inventory'},{'includeBanks','Use bank inventory'},
- {'includeImports','Use imported inventory'},{'includeSynced','Use synced characters (live sync)'},{'includeStale','Use stale inventory'},{'market','VoidMark Market prices'},{'auctionator','Auctionator prices (age unknown)'},{'manualFirst','Prefer manual prices'},{'minimap','Minimap button'},{'mapButton','Nexus button on world map'},{'tomtom','TomTom waypoint for next stop (if installed)'},{'tomtomArrow','Also show TomTom arrow'},{'levelResale','Leveling: count output resale value'}}
- for _,v in ipairs(booleans) do rows[#rows+1]={text=v[2]..': '..tostring(s[v[1]]),key=v[1],boolean=true,detail='Select and press Apply to toggle. Foreign realms/factions remain excluded. Item binding/transfer restrictions must be checked in game.'} end
- for _,v in ipairs({{'maxAge','Price expiration (seconds)',60,2592000},{'inventoryAge','Inventory expiration (seconds)',60,2592000},
+ local booleans={{'native','Use the normal profession window'},{'learn','Remember herbs and ore I find'},{'importedNodes','Show possible spawn spots'},{'observedNodes','Show spots I have gathered'},
+ {'nodesVisible','Show spots on the map'},{'routeVisible','Show the route arrow'},{'minimapRoute','Route line on minimap'},{'terrainLearn','Learn paths I walk'},{'manualStops','Wait for me to skip each stop'},{'stats','Track gathering totals'},{'includeAlts','Count items on alts'},{'includeBanks','Count items in banks'},
+ {'includeImports','Count imported characters'},{'includeSynced','Count the other account (sync)'},{'includeStale','Count old bag/bank data'},{'market','VoidMark Market prices'},{'auctionator','Auctionator prices'},{'manualFirst','Use my prices first'},{'minimap','Minimap button'},{'mapButton','Nexus button on world map'},{'tomtom','TomTom waypoint for next stop'},{'tomtomArrow','Also show TomTom arrow'},{'levelResale','Leveling: count selling what I craft'}}
+ for _,v in ipairs(booleans) do rows[#rows+1]={text=v[2]..': '..(s[v[1]] and 'On' or 'Off'),key=v[1],boolean=true,detail='Select it, then press Apply to switch it on or off.'} end
+ for _,v in ipairs({{'maxAge','Prices are old after (seconds)',60,2592000},{'inventoryAge','Bag data is old after (seconds)',60,2592000},
  {'cut','Auction cut (0.05 = 5%)',0,.3},{'deposit','Deposit per craft (copper)',0,1e8},{'failedAuctions','Failed listings per craft',0,20},
- {'saleFraction','Expected sold fraction',0,1},{'waste','Additional material cost fraction',0,1},{'speed','Travel speed (yards/sec)',1,50},
- {'mountDelay','Remount/form delay per node (seconds)',0,30},{'gatherDelay','Gathering delay per node (seconds)',0,60},
- {'routeMinutes','Route time budget (minutes)',1,120},{'levelCraftValue','Leveling Balanced: value of one craft (copper)',0,1e7},{'nodeLimit','Maximum route waypoints',2,150},{'mapIconSize','Map gathering icon size (pixels)',5,16},{'scale','Window scale',.6,1.5},{'arrowScale','Navigation display scale (0.5-2.0)',.5,2}}) do
-  rows[#rows+1]={text=v[2]..': '..s[v[1]],key=v[1],min=v[3],max=v[4],detail='Enter a value in the bottom field and press Apply. These are user assumptions, not measured predictions.'}
+ {'saleFraction','Share of crafts that sell (0-1)',0,1},{'waste','Extra material waste (0-1)',0,1},{'speed','Travel speed (yards/sec)',1,50},
+ {'mountDelay','Remount time per stop (seconds)',0,30},{'gatherDelay','Gather time per stop (seconds)',0,60},
+ {'routeMinutes','Route time limit (minutes)',1,120},{'levelCraftValue','Balanced plan: my time per craft (copper)',0,1e7},{'nodeLimit','Most stops in a route',2,150},{'mapIconSize','Map icon size',5,16},{'scale','Window scale',.6,1.5},{'arrowScale','Arrow size (0.5-2)',.5,2}}) do
+  rows[#rows+1]={text=v[2]..': '..s[v[1]],key=v[1],min=v[3],max=v[4],detail='Type a number in the bottom box, then press Apply.'}
  end
  return rows
 end
 function N:Render()
  local u=self.ui; if not u or not u.frame:IsShown() then return end; self.dirty=false
  if u.strategyButton then
-  u.strategyButton:SetShown(u.tab=='Routes')
-  if u.previewButton then u.previewButton:SetShown(u.tab=='Routes') end
-  if u.zoneButton then u.zoneButton:SetShown(u.tab=='Routes') end
-  local titles={optimal='Optimal Loop',nearest='Nearest Loop',here='Start Here'}
-  u.strategyButton:SetText(titles[self.db.settings.routeStrategy or 'optimal'] or 'Optimal Loop')
+  u.strategyButton:SetShown(u.tab=='Gathering')
+  if u.previewButton then u.previewButton:SetShown(u.tab=='Gathering') end
+  if u.zoneButton then u.zoneButton:SetShown(u.tab=='Gathering') end
+  local titles={optimal='Best loop',nearest='Nearest loop',here='Start here'}
+  u.strategyButton:SetText(titles[self.db.settings.routeStrategy or 'optimal'] or 'Best loop')
  end
  self.renderStocks={}
  local rows,detail={},''; local selected=u.selected; local tab=u.tab
  local c=u.character and self.db.characters[u.character]
- u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Leveling' and (self.db.settings.levelMode..' route') or tab=='Routes' and (self.db.settings.routeSelectionMode=='skillup' and (({herb='Herbalism',ore='Mining',all='Both'})[self.db.settings.kind]..' skill-ups') or self.db.settings.routeSelectionMode=='multi' and 'Multi-select' or ({all='All gathering',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All gathering') or u.filter)
- u.heading:SetText(tab..'  |  '..(tab=='Settings' and 'Select setting; Apply uses the bottom value field' or tab=='Leveling' and 'Bottom field: target skill (1 = current rank cap). Top-right button: route type.' or 'Search above; quantity or action value below'))
- self:SetActions({},{}); u.footer:SetText('Offline data is cached. Open each profession and bank once to record it. /vmn native restores Blizzard access.')
- if tab=='Recipes' or tab=='Profitability' then
+ u.characterButton:SetText(c and c.name or 'All characters'); u.professionButton:SetText(u.profession or 'All professions'); u.filterButton:SetText(tab=='Leveling' and (self.db.settings.levelMode..' route') or tab=='Gathering' and (self.db.settings.routeSelectionMode=='skillup' and (({herb='Herbalism',ore='Mining',all='Both'})[self.db.settings.kind]..' skill-ups') or self.db.settings.routeSelectionMode=='multi' and 'Multi-select' or ({all='All gathering',herb='Herbs only',ore='Mining only'})[self.db.settings.kind] or 'All gathering') or u.filter)
+ local hints={Home='Your characters at a glance.',Professions='Pick a profession, then Recipes or Level plan.',
+  Leveling='Type a target skill in the bottom box (1 = current cap). Top-right picks cheapest/fastest.',
+  Recipes='Search above. Top-right sorts and filters. Bottom box is the quantity.',Crafting='Your queued crafts and what to buy.',
+  Gathering='Top-right picks what to gather, then press Generate.',Inventory='Bags and banks for all your characters.',
+  Characters='Your characters and the bank account.',Settings='Select a setting, then press Apply.'}
+ u.heading:SetText(tab..'  |  '..(hints[tab] or ''))
+ self:SetActions({},{}); u.footer:SetText('')
+ if tab=='Recipes' then
   local filter=({'All','Known','Unknown','Wishlist'})[1]; if u.filter=='Known' or u.filter=='Unknown' or u.filter=='Wishlist' then filter=u.filter end
   for _,r in ipairs(self:Search(u.search:GetText(),u.character,u.profession,filter)) do
    local e=self:Evaluate(r.r,1,r.character); local missing=0; for _,g in ipairs(e.rows) do missing=missing+g.missing end
@@ -653,16 +660,10 @@ function N:Render()
    if N.activeRoute and N.db.settings.routeVisible then N:ShowArrow() end
   end,function() N.db.sessions={}; N:Print('Saved gathering sessions cleared.') end,function() N:TextDialog('Compatibility diagnostics',N:Diagnostics()) end})
  elseif tab=='Gathering' then
-  local seconds,rate,gph=self:SessionStats(); detail=string.format('Current session\n%.1f minutes\n%.1f materials/hour\nEstimated value/hour: %s\nOnly confirmed gathering loot is counted. Prices are estimates; unpriced items make total value unknown.',seconds/60,rate,self:Money(gph))
-  if self.session then
-   detail=detail..'\n\n'..self:RouteSessionText(self.session)
-   for id,qty in pairs(self.session.items) do rows[#rows+1]={text=self:ItemName(id)..' x'..qty,item=id} end
-  end
-  for i,s in ipairs(self.db.sessions) do local secs,r,g=self:SessionStats(s); rows[#rows+1]={text='Saved session '..i..': '..s.total..' items / '..math.floor(secs/60)..' min',detail='Measured rate: '..math.floor(r)..'/hour\nEstimated value/hour: '..self:Money(g)..'\nCharacter: '..s.character..'\n'..self:RouteSessionText(s)} end
-  self:SetActions({'Save/reset','Discard/reset','Routes'},{function() N:SaveSession() end,function() N:StartSession() end,function() u.tab='Routes'; u.selected=nil end})
- elseif tab=='Routes' then
   local map=self:Position(); local nodes=map and self:ZoneNodes(map) or {}; local s=self.db.settings
-  detail='Strategy: '..({optimal='Optimal Loop',nearest='Nearest Efficient Loop',here='Start Here'})[s.routeStrategy or 'optimal']..'\nResource: '..(s.target~='' and s.target or ({all='All nodes',herb='Herbs',ore='Mining'})[s.kind] or 'All nodes')..'\nTravel: '..s.travel..' ('..s.speed..' yd/s)\nTime budget: '..s.routeMinutes..' minutes\nRemount/form delay: '..s.mountDelay..'s per node\n'..#nodes..' candidate locations\n\nRoutes use learned directional corridors, marked obstacle detours and bounded 2-opt. Cyan segments are observed trails; purple segments are unverified. Cliffs and live availability cannot be read from artwork. Waypoints remain potential spawns.\n\n/vmn kind herb|ore|all\n/vmn target Silverleaf\n/vmn save NAME\n/vmn waypoint (add your position)\n/vmn terrain on|off|clear\n/vmn pause\n/vmn restart\n/vmn check empty|available\n/vmn skip\n/vmn stop\nCustom speed and route limits: Settings.'
+  detail='What: '..(s.target~='' and s.target or ({all='Herbs and ore',herb='Herbs',ore='Ore'})[s.kind] or 'Herbs and ore')..
+   '\nRoute style: '..({optimal='Best loop',nearest='Nearest loop',here='Start here'})[s.routeStrategy or 'optimal']..
+   '\nTravel: '..s.travel..'\nTime limit: '..s.routeMinutes..' min\n'..#nodes..' spots in this zone\n\nBlue lines are paths you have walked; purple are guesses.\nRoute tools: record a run, travel to a route, export or import.'
   if s.routeSelectionMode=='skillup' then detail='SKILL-UP ROUTE\n'..self:GatheringSkillSummary()..'\n\n'..detail end
   for name,r in pairs(self.db.routes) do
    local valid=self:CleanNavigationRoute(r)
@@ -670,20 +671,23 @@ function N:Render()
     routeName=name,detail=valid and (self:SavedRunSummary(valid)..'\nUse Load selected to navigate this saved route.') or 'Invalid saved geometry was retained. Delete this route through Route tools if no longer needed.'}
   end
   if self.activeRoute then for i,p in ipairs(self.activeRoute.points) do rows[#rows+1]={text=i..'. '..(p.name or 'Waypoint')..string.format(' (%.1f, %.1f)',p.x*100,p.y*100),icon=self:ResourceNodeIcon(p),detail=p.source or 'Custom waypoint'} end end
-  detail=self:CacheSummary()..'\n'..self:RecordingStatus()..'\n\n'..detail
+  local secs,rate,gph=self:SessionStats()
+  if secs and secs>0 then detail=string.format('This session: %d min, %d items/hour, %s/hour',math.floor(secs/60),math.floor(rate),self:Money(gph))..'\n\n'..detail end
+  for i,ss in ipairs(self.db.sessions) do local sec2,r2,g2=self:SessionStats(ss); rows[#rows+1]={text='Session '..i..': '..ss.total..' items in '..math.floor(sec2/60)..' min',detail=math.floor(r2)..' items/hour\n'..self:Money(g2)..'/hour\n'..ss.character..'\n'..self:RouteSessionText(ss)} end
+  local rec=self.recording and self:RecordingStatus()
+  if rec then detail=rec..'\n\n'..detail end
   self:SetActions({'Route tools','Generate','Load selected'},{function()
    N:RouteTools(u.actions[1])
   end,function() N:GenerateRoute() end,function() if u.selected and u.selected.routeName then N:ReplayRoute(u.selected.routeName) end end})
  else
   local n=0; for _ in pairs(self.db.characters) do n=n+1 end
-  rows={{text=self.character.name..' - '..self.character.realm..' / '..self.character.faction},
-   {text=n..' recorded characters; '..#self.db.plans..' planned crafts'},
-   {text='Market: '..(VoidMarkMarketDB and 'Detected; compatible realm/faction prices enabled by setting' or 'Not loaded; Nexus works independently')},
-   {text='Open each profession to record its recipes; visit the bank to refresh inventory.'},
-   {text='Gathering routes: choose travel mode, resource filter and Generate.'},
-   {text='Cross-account export/import: Characters tab.'}}
+  rows={{text=self.character.name..' - '..self.character.realm}}
   for _,p in pairs(self.character.professions) do rows[#rows+1]={text=p.name..' '..(p.skill or 0)..'/'..(p.max or 0)} end
-  detail='VoidMark Nexus '..self.version..'\n\nStandalone profession and gathering workspace.\n\nUse Recipes for account-wide search. Select a character to browse offline professions.\n\nCrafting plans do not execute automatically.\n\nPrice an item: /vmn price ITEM_ID GOLD\n\nThis alpha requires in-game validation on your Forever build.'
+  rows[#rows+1]={text=n..' characters recorded'}
+  if #self.db.plans>0 then rows[#rows+1]={text=#self.db.plans..' crafts queued'} end
+  if self.activeRoute then rows[#rows+1]={text='Gathering route active: '..#self.activeRoute.points..' stops'} end
+  rows[#rows+1]={text='Prices: '..(VoidMarkMarketDB and 'VoidMark Market' or 'manual only (Market not loaded)')}
+  detail='VoidMark Nexus '..self.version..'\n\nOpen each profession once and visit your bank so Nexus knows what you have.'
   self:SetActions({'Recipes','Shopping','Refresh bags'},{function() u.tab='Recipes'; u.selected=nil end,function() N:TextDialog('Shopping list',N:ShoppingText()) end,function() N:ScanStorage(false); N:ScanProfessions() end})
  end
  if selected and selected.detail then detail=selected.detail end
@@ -723,8 +727,10 @@ function N:RouteTools(anchor)
   {label='Export selected route',value='export'},
   {label='Import route',value='import'},
   {label='Delete selected route',value='delete'},
-  {label='Improve route using saved work',value='improve'},
-  {label='Saved calculation status',value='status'},
+  {label='Save gathering session',value='savesession'},
+  {label='Reset gathering session',value='resetsession'},
+  {label='Improve current route',value='improve'},
+  {label='Route details',value='status'},
   {label='Clear computed cache',value='clear'}
  },function(value)
   local selected=self.ui and self.ui.selected;local name=selected and selected.routeName
@@ -745,6 +751,8 @@ function N:RouteTools(anchor)
    if name then self:Choice(anchor,{{label='Delete '..name,value=true},{label='Keep route',value=false}},function(yes)
     if yes then self.db.routes[name]=nil;self.ui.selected=nil;self.dirty=true end
    end) else self:Print('Select a saved route first.') end
+  elseif value=='savesession' then self:SaveSession()
+  elseif value=='resetsession' then self:StartSession()
   elseif value=='improve' then self:GenerateRoute(true)
   elseif value=='clear' then self:ClearCalculations()
   elseif value=='status' then self:TextDialog('Saved calculations',self:CacheSummary()..'\n'..self:RecordingStatus()) end

@@ -117,4 +117,5 @@ PASS Skill-up route construction favors useful difficulty without exceeding the 
 PASS Routes dropdown exposes skill-up modes and selecting one clears old resource restrictions
 PASS Skill-up zone ranking preserves priority instead of replacing it with resource yield
 PASS Skill-up summary explains missing skills and the trainer rank cap
-PASS: 119 tests; Lua 5.1 / LuaJIT 2.0.5
+PASS Decluttered window: merged tabs, old names still open, plain settings
+PASS: 120 tests; Lua 5.1 / standard interpreter
