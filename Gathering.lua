@@ -61,6 +61,7 @@ function N:SelectSkillupRoute(kind)
  self:ScanProfessions()
  self.dirty=true
 end
+local DUP_YARDS=8
 function N:ZoneNodes(map,kindOverride,targetOverride)
  if self:IsGatheringCityMap(map) then return {} end
  local out,seen={},{}
@@ -69,6 +70,7 @@ function N:ZoneNodes(map,kindOverride,targetOverride)
  local selectedTarget=targetOverride~=nil and targetOverride or s.target
  local skillup=s.routeSelectionMode=='skillup' and kindOverride==nil and targetOverride==nil
  local skills=skillup and self:GatheringSkills()
+ local w,h=self:MapSize(map)
  local function add(object,x,y,source,at)
   if not self:Finite(x,0,1) or not self:Finite(y,0,1) then return end
   local kind=self.nodeTypes[object]; if not kind or (selectedKind~='all' and kind.kind~=selectedKind) then return end
@@ -78,9 +80,24 @@ function N:ZoneNodes(map,kindOverride,targetOverride)
   if kindOverride==nil and targetOverride==nil and s.routeSelectionMode=='multi' then
    if type(s.routeResources)~='table' or not s.routeResources[kind.name] then return end
   end
-  local key=tostring(object)..':'..math.floor(x*500+.5)..':'..math.floor(y*500+.5)
-  if seen[key] then if source=='Observed' then out[seen[key]].source=source; out[seen[key]].at=at end; return end
-  out[#out+1]={object=object,x=x,y=y,source=source,at=at,map=map,name=kind.name,kind=kind.kind,skill=kind.skill,skillPriority=priority,skillColor=color}; seen[key]=#out
+  -- The spawn database lists many spawns twice a few yards apart (same spot,
+  -- recorded twice or under a second object ID). Same herb within DUP_YARDS = one spot.
+  local dup
+  if w then
+   local gx,gy=math.floor(x*w/DUP_YARDS),math.floor(y*h/DUP_YARDS)
+   for dx=-1,1 do for dy=-1,1 do
+    local list=seen[kind.name..':'..(gx+dx)..':'..(gy+dy)]
+    if list and not dup then for _,i in ipairs(list) do
+     local o=out[i]; if ((o.x-x)*w)^2+((o.y-y)*h)^2<=DUP_YARDS*DUP_YARDS then dup=i; break end
+    end end
+   end end
+   if not dup then local key=kind.name..':'..gx..':'..gy; seen[key]=seen[key] or {}; table.insert(seen[key],#out+1) end
+  else
+   local key=kind.name..':'..math.floor(x*500+.5)..':'..math.floor(y*500+.5)
+   dup=seen[key]; if not dup then seen[key]=#out+1 end
+  end
+  if dup then if source=='Observed' then out[dup].source=source; out[dup].at=at end; return end
+  out[#out+1]={object=object,x=x,y=y,source=source,at=at,map=map,name=kind.name,kind=kind.kind,skill=kind.skill,skillPriority=priority,skillColor=color}
  end
  if s.importedNodes then for object,maps in pairs(self.spawns or {}) do
   local points=maps[map]; if points then for i=1,#points,2 do add(object,points[i],points[i+1],'Potential spawn') end end

@@ -125,8 +125,9 @@ PASS Zone loop: the arrow advances within 25 yards, and gathering near a stop ad
 PASS Zone loop: whole ring is drawn on the world map and the loop survives /reload
 PASS Secret event arguments reach handlers as nil instead of erroring
 PASS Zone loop: reached stops leave the minimap and the next stop hides when close
+PASS Zone nodes: the same herb listed twice a few yards apart counts once
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
 PASS Throttled sync messages are retried, not dropped
 PASS Item tooltips list counts per character and skip other realms and excluded characters
-PASS: 131 tests; Lua 5.1 / standard interpreter
+PASS: 132 tests; Lua 5.1 / standard interpreter

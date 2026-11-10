@@ -117,3 +117,15 @@ test('Zone loop: reached stops leave the minimap and the next stop hides when cl
  N:UpdateMinimapRoute();eq(labels(),'1,2,3,4,5,6')
  N.Position,Minimap,C_Minimap=oldPosition,oldMinimap,oldC;N.activeRoute=nil;N.minimapRouteOverlay=nil
 end)
+
+test('Zone nodes: the same herb listed twice a few yards apart counts once',function()
+ local s=N.db.settings;local saved={s.kind,s.target,s.routeSelectionMode,s.importedNodes,s.observedNodes}
+ s.kind,s.target,s.routeSelectionMode,s.importedNodes,s.observedNodes='herb','','herb',true,false
+ local old=N.spawns
+ -- 5000x3000 yd test map: .001 = 5 yd in x. Two IDs for the same herb merge; a different herb does not.
+ N.spawns={[1622]={[1411]={.500,.500,.501,.500,.520,.500}},[3730]={[1411]={.500,.501}},[1618]={[1411]={.500,.500}}}
+ local nodes=N:ZoneNodes(1411)
+ local c={};for _,n in ipairs(nodes) do c[n.name]=(c[n.name] or 0)+1 end
+ eq(c.Bruiseweed,2);eq(c.Peacebloom,1)
+ N.spawns=old;s.kind,s.target,s.routeSelectionMode,s.importedNodes,s.observedNodes=saved[1],saved[2],saved[3],saved[4],saved[5]
+end)
