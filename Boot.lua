@@ -44,10 +44,22 @@ function N:Slash(msg)
  elseif command=='route' or command=='start' then self:GenerateRoute()
  elseif command=='skip' or command=='next' then self:SkipWaypoint()
  elseif command=='stop' then self:StopRoute()
+ elseif command=='spots' then
+  local map=self:Position()
+  if args=='forget' and map then self:ForgetSpots(map);self:Print('Forgot found/empty spots for this zone.')
+  elseif args=='forget all' then self:ForgetSpots();self:Print('Forgot found/empty spots for every zone.')
+  else
+   local n,dead=0,0; for _,e in pairs(map and self.db.spots[map] or {}) do n=n+1; if self:SpotFactor(e)==0 then dead=dead+1 end end
+   self:Print(n..' spots learned in this zone, '..dead..' skipped as always empty. /vmn spots forget | forget all')
+  end
+ elseif command=='laps' then
+  if self.lastLap then self:Print(self:LapLine(self.lastLap,'Last lap: ')) end
+  if self.lapStats then self:Print(self:LapLine(self.lapStats,'This lap: ')) end
+  if not self.lastLap and not self.lapStats then self:Print('No laps yet.') end
  elseif command=='target' then if args=='' then self:SelectResource('kind:all') else self:SelectResource('name:'..args) end; self:Print('Gathering: '..self:ResourceLabel())
  elseif command=='kind' then if args=='herb' or args=='ore' or args=='all' then self:SelectResource('kind:'..args) end
  elseif command=='help' then
-  self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn pair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
+  self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn laps, /vmn spots, /vmn pair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
  elseif command=='mapcontrols' or command=='mapfilters' then
   self.db.settings.mapButton=true
   if args=='reset' then self.db.settings.mapButtonPos=nil end

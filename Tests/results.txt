@@ -126,8 +126,16 @@ PASS Zone loop: whole ring is drawn on the world map and the loop survives /relo
 PASS Secret event arguments reach handlers as nil instead of erroring
 PASS Zone loop: reached stops leave the minimap and the next stop hides when close
 PASS Zone nodes: the same herb listed twice a few yards apart counts once
+PASS Spot learning: picked spots count up, empty ones down, five empties drop a spot
+PASS Visits: arrive and gather = picked; arrive and leave = empty; a manual skip records nothing
+PASS Rebuilt loops drop always-empty spots and favour picked ones
+PASS Measured speed: real movement replaces the fixed speed in the arrow
+PASS Gold routes weight by price and skip what you cannot gather yet
+PASS Skill-up loops rebuild when a herb turns grey or a new one unlocks
+PASS The arrow fades out in combat and comes back after
+PASS /vmn spots and /vmn laps report and forget
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
 PASS Throttled sync messages are retried, not dropped
 PASS Item tooltips list counts per character and skip other realms and excluded characters
-PASS: 132 tests; Lua 5.1 / standard interpreter
+PASS: 140 tests; Lua 5.1 / standard interpreter

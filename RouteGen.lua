@@ -171,8 +171,17 @@ function N:BuildZoneLoop(map,nodes,here,settings)
  if not w then return nil,'Map size unavailable here.' end
  local stops=self:DropOutliers(self:ClusterStops(nodes,w,h))
  if #stops==0 then return nil,'No spawn points match in this zone.' end
+ -- What you have found at each spot: favour picked spots, drop ones always empty.
+ if self.SpotFactor and settings.learnSpots~=false and type(self.db.spots)=='table' and type(self.db.spots[map])=='table' then
+  local kept,dropped={},0
+  for _,s in ipairs(stops) do
+   local e=self:SpotEvidence(map,s.x/w,s.y/h); local f=self:SpotFactor(e)
+   if f>0 then s.weight=s.weight*f;s.picked=e and e.picked;s.empty=e and e.empty;kept[#kept+1]=s else dropped=dropped+1 end
+  end
+  if #kept>=3 then stops=kept;self.lastDroppedSpots=dropped else self.lastDroppedSpots=0 end
+ end
  local start=here and {x=here.x*w,y=here.y*h} or stops[1]
- local speed=math.max(1,settings.speed or 7)
+ local speed=self.TravelSpeed and self:TravelSpeed() or math.max(1,settings.speed or 7)
  local perStop=math.max(0,settings.gatherDelay or 3)+math.max(0,settings.mountDelay or 0)
  local maxStops=math.max(3,math.min(150,settings.nodeLimit or 100))
  local budget=math.max(60,(settings.routeMinutes or 20)*60)
@@ -194,12 +203,12 @@ function N:BuildZoneLoop(map,nodes,here,settings)
  local points={}
  for i,s in ipairs(ordered) do
   points[i]={x=s.x/w,y=s.y/h,map=map,name=s.name,kind=s.kind,object=s.object,spawns=s.count,
-   source=s.observed and 'Observed' or 'Potential spawn',skillPriority=s.skillPriority,skillColor=s.skillColor}
+   source=s.observed and 'Observed' or 'Potential spawn',skillPriority=s.skillPriority,skillColor=s.skillColor,picked=s.picked,empty=s.empty}
  end
  local route={points=points,map=map,width=w,height=h,loop=true,strategy='zoneloop',optimizer='zoneloop-v1',
   speed=speed,mountDelay=settings.mountDelay,gatherDelay=settings.gatherDelay,mode=settings.travel,created=self:Now(),
   length=length,seconds=length/speed+perStop*#points,arriveRadius=ARRIVE_RADIUS,origin=self:Copy(points[1]),
-  skillup=settings.routeSelectionMode=='skillup' or nil}
+  skillup=settings.routeSelectionMode=='skillup' or nil,gold=settings.routeSelectionMode=='gold' or nil}
  return route
 end
 
@@ -214,17 +223,23 @@ end
 function N:GenerateRoute()
  local map,x,y=self:Position()
  if not map then return self:Print('Your position is not available here.') end
- if self.db.settings.routeSelectionMode=='skillup' then self:ScanProfessions() end
+ if self.db.settings.routeSelectionMode=='skillup' or self.db.settings.routeSelectionMode=='gold' then
+  self.generating=true; self:Guard('scan',function() self:ScanProfessions() end); self.generating=nil
+ end
  local nodes=self:ZoneNodes(map)
  if #nodes==0 then
-  return self:Print(self.db.settings.routeSelectionMode=='skillup' and 'Nothing in this zone gives you skill-ups. Try a zone from "Best zones".' or 'Nothing matching in this zone.')
+  local mode=self.db.settings.routeSelectionMode
+  return self:Print(mode=='skillup' and 'Nothing in this zone gives you skill-ups. Try a zone from "Best zones".'
+   or mode=='gold' and 'Nothing here you can gather. Try a zone from "Best zones".' or 'Nothing matching in this zone.')
  end
  local route,err=self:BuildZoneLoop(map,nodes,{x=x,y=y})
  if not route then return self:Print(err) end
+ if self.ResourceSetKey then route.resourceKey=self:ResourceSetKey(nodes) end
+ if self.ResetLoopTracking then self:ResetLoopTracking() end
  self.activeRoute=route; self.waypoint=1; self.terrainIndex=1; self.routePaused=false; self.lap=1
  self.dirty=true; self:ShowArrow()
  if WorldMapFrame and WorldMapFrame.IsShown and WorldMapFrame:IsShown() and self.RefreshMap then self:RefreshMap() end
- self:Print('Route ready: '..self:RouteSummary(route)..'.')
+ self:Print('Route ready: '..self:RouteSummary(route)..'.'..((self.lastDroppedSpots or 0)>0 and (' Skipped '..self.lastDroppedSpots..' spots that were always empty.') or ''))
  return route
 end
 
@@ -253,9 +268,10 @@ N:On('UNIT_SPELLCAST_SUCCEEDED',function(unit,_,spell)
  local kind=N.gatherSpells and N.gatherSpells[spell]
  if unit~='player' or (kind~='herb' and kind~='ore') then return end
  local route=N.activeRoute; if not route or not route.loop or N.routePaused then return end
+ if N.ClaimGather and N:ClaimGather() then return end -- it was the stop you just reached
  local p=route.points[N.waypoint or 1]; local map,x,y=N:Position()
  if p and map==route.map and x then
   local dx,dy=(p.x-x)*route.width,(p.y-y)*route.height
-  if dx*dx+dy*dy<=(STOP_RADIUS+15)^2 then N:SkipWaypoint() end
+  if dx*dx+dy*dy<=(STOP_RADIUS+15)^2 then N:SkipWaypoint('picked') end
  end
 end)

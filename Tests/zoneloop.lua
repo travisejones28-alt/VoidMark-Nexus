@@ -54,6 +54,9 @@ test('Zone loop: the arrow advances within 25 yards, and gathering near a stop a
  -- Player is at (0.4,0.4) in the test position stub: within 25 yd of stop A.
  N:UpdateArrow(); eq(N.waypoint,2)
  route.points[2]={x=.402,y=.401,name='B near'}
+ -- First gather right after arriving at A is A's herb: A counts as picked, B stays next.
+ for _,fn in ipairs(N.handlers.UNIT_SPELLCAST_SUCCEEDED) do fn('player','cast',2366) end
+ eq(N.waypoint,2); eq(N.lapStats.picked,1)
  for _,fn in ipairs(N.handlers.UNIT_SPELLCAST_SUCCEEDED) do fn('player','cast',2366) end
  eq(N.waypoint,3)
  route.points[3]={x=.401,y=.402,name='C near'}

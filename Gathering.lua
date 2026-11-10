@@ -69,7 +69,8 @@ function N:ZoneNodes(map,kindOverride,targetOverride)
  local selectedKind=kindOverride or s.kind
  local selectedTarget=targetOverride~=nil and targetOverride or s.target
  local skillup=s.routeSelectionMode=='skillup' and kindOverride==nil and targetOverride==nil
- local skills=skillup and self:GatheringSkills()
+ local gold=s.routeSelectionMode=='gold' and kindOverride==nil and targetOverride==nil
+ local skills=(skillup or gold) and self:GatheringSkills()
  local w,h=self:MapSize(map)
  local function add(object,x,y,source,at)
   if not self:Finite(x,0,1) or not self:Finite(y,0,1) then return end
@@ -77,6 +78,14 @@ function N:ZoneNodes(map,kindOverride,targetOverride)
   if selectedTarget~='' and not kind.name:lower():find(selectedTarget:lower(),1,true) then return end
   local priority,color
   if skillup then priority,color=self:SkillupNode(kind,skills);if not priority then return end end
+  if gold then
+   -- Gold routes: anything you can gather, weighted by its price (normalised below).
+   local p=skills[kind.kind]
+   if p and self:Finite(kind.skill,1,1000) and p.skill<kind.skill then return end
+   local id=self.nodeItemIDs and self.nodeItemIDs[kind.name]
+   local price=id and self:Price(id)
+   priority=price and price.unit or 0
+  end
   if kindOverride==nil and targetOverride==nil and s.routeSelectionMode=='multi' then
    if type(s.routeResources)~='table' or not s.routeResources[kind.name] then return end
   end
@@ -103,6 +112,12 @@ function N:ZoneNodes(map,kindOverride,targetOverride)
   local points=maps[map]; if points then for i=1,#points,2 do add(object,points[i],points[i+1],'Potential spawn') end end
  end end
  if s.observedNodes then for _,p in pairs(type(self.db.nodes[map])=='table' and self.db.nodes[map] or {}) do if type(p)=='table' then add(p.object,p.x,p.y,'Observed',p.at) end end end
+ if gold then
+  -- Most valuable resource = 1. Unpriced resources still count a little so
+  -- the loop isn't empty before you have prices.
+  local top=0; for _,n in ipairs(out) do if n.skillPriority>top then top=n.skillPriority end end
+  for _,n in ipairs(out) do n.skillPriority=top>0 and math.max(.05,n.skillPriority/top) or 1 end
+ end
  return out
 end
 function N:LearnNode(object,map,x,y)

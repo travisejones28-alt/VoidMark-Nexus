@@ -154,17 +154,18 @@ function N:CreateUI()
   {'tooltipCounts','Show my item counts in tooltips'},{'includeBanks','Count items in banks'},{'includeAlts','Count items on my other characters'},
   {'includeSynced','Count the other account (sync)'},{'market','Use VoidMark Market prices'},{'manualFirst','Use my own prices first'},
   {'routeVisible','Show the route arrow'},{'manualStops','Wait for me at each stop'},{'nodesVisible','Show spawn spots on the world map'},
-  {'minimapRoute','Show the route on the minimap'},{'minimap','Minimap button'},{'native','Keep the normal profession window'}}
+  {'minimapRoute','Show the route on the minimap'},{'minimap','Minimap button'},{'native','Keep the normal profession window'},
+  {'learnSpots','Learn which spots are often empty'},{'hideArrowInCombat','Hide the arrow in combat'}}
  u.checks={}
  for i,e in ipairs(entries) do
   local key=e[1]
-  u.checks[#u.checks+1]=check(st,e[2],14,-4-(i-1)*28,function() return s()[key]~=false end,function(v)
+  u.checks[#u.checks+1]=check(st,e[2],14,-4-(i-1)*25,function() return s()[key]~=false end,function(v)
    s()[key]=v
    if key=='minimap' and N.minimap then N.minimap:SetShown(v) end
    if key=='routeVisible' and N.activeRoute and v then N:ShowArrow() end
   end)
  end
- local y=-4-#entries*28-8
+ local y=-4-#entries*25-8
  local function adjuster(text,key,step,lo,hi,fmt,apply)
   local l=label(st,'',20,y-5,'GameFontHighlight')
   button(st,'-',300,y,36,function() s()[key]=math.max(lo,(s()[key] or lo)-step); if apply then apply() end end)
@@ -219,7 +220,8 @@ end
 -- Resource picker: kinds, skill-ups, then the names found in this zone.
 function N:ChooseResource(anchor)
  local options={{label='Herbs',value='kind:herb'},{label='Ore',value='kind:ore'},{label='Herbs and ore',value='kind:all'},
-  {label='Herbalism skill-ups',value='skill:herb'},{label='Mining skill-ups',value='skill:ore'}}
+  {label='Herbalism skill-ups',value='skill:herb'},{label='Mining skill-ups',value='skill:ore'},
+  {label='Herbs for gold',value='gold:herb'},{label='Ore for gold',value='gold:ore'}}
  local map=self:Position()
  if map then
   local names,seen={},{}
@@ -235,6 +237,7 @@ function N:SelectResource(v)
  s.routeResources=nil
  if how=='kind' then s.kind,s.target,s.routeSelectionMode=arg,'',arg
  elseif how=='skill' then s.kind,s.target,s.routeSelectionMode=arg,'','skillup'; self:ScanProfessions()
+ elseif how=='gold' then s.kind,s.target,s.routeSelectionMode=arg,'','gold'; self:ScanProfessions()
  elseif how=='name' then s.kind,s.target,s.routeSelectionMode='all',arg,'name' end
  if self.ui then self.ui.bestZones=nil end
  self.dirty=true
@@ -242,6 +245,7 @@ end
 function N:ResourceLabel()
  local s=self.db.settings
  if s.routeSelectionMode=='skillup' then return s.kind=='ore' and 'Mining skill-ups' or 'Herbalism skill-ups' end
+ if s.routeSelectionMode=='gold' then return s.kind=='ore' and 'Ore for gold' or 'Herbs for gold' end
  if s.target and s.target~='' then return 'Only '..s.target end
  return ({herb='Herbs',ore='Ore',all='Herbs and ore'})[s.kind] or 'Herbs'
 end
@@ -263,10 +267,12 @@ function N:RenderGather(u)
  if route then
   info[#info+1]=self:RouteSummary(route) or ''
   local p=route.points[self.waypoint or 1]
-  info[#info+1]='Next: '..(p and p.name or '?')..'   lap '..(self.lap or 1)
+  info[#info+1]='Next: '..(p and p.name or '?')..'   lap '..(self.lap or 1)..(self.lapStats and ('  ('..self.lapStats.picked..' picked, '..self.lapStats.empty..' empty)') or '')
+  if self.lastLap then info[#info+1]=self:LapLine(self.lastLap,'Last lap: ') end
   for i,pt in ipairs(route.points) do
    local here=i==(self.waypoint or 1)
-   rows[#rows+1]=colorRow({text=(here and '> ' or '')..i..'. '..(pt.name or 'Stop')..((pt.spawns or 1)>1 and ('  ('..pt.spawns..' spots)') or ''),
+   local seen=(pt.picked or 0)>0 and ('  found '..pt.picked..'x') or ''
+   rows[#rows+1]=colorRow({text=(here and '> ' or '')..i..'. '..(pt.name or 'Stop')..((pt.spawns or 1)>1 and ('  ('..pt.spawns..' spots)') or '')..seen,
     icon=self:ResourceNodeIcon(pt),click=function() self.waypoint=i end,
     title=pt.name,tip=function(tt) tt:AddLine(string.format('%.1f, %.1f',pt.x*100,pt.y*100),1,1,1); tt:AddLine('Click to go here next.',.7,.7,.7) end},
     here and COLORS.accent or (pt.skillColor and COLORS[pt.skillColor=='gray' and 'gray' or pt.skillColor]) or nil)
