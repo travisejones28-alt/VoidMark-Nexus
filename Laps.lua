@@ -126,7 +126,7 @@ function N:ClaimGather()
  self:MarkVisitPicked(); return true
 end
 function N:ResetLoopTracking()
- self.visit=nil; self.lapStats=nil
+ self.visit=nil; self.lapStats=nil; self.lingerAt=nil
 end
 
 -- Measured movement speed (yards/second), sampled once a second while a route is active.

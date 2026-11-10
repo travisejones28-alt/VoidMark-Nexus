@@ -268,7 +268,11 @@ N:On('UNIT_SPELLCAST_SUCCEEDED',function(unit,_,spell)
  local kind=N.gatherSpells and N.gatherSpells[spell]
  if unit~='player' or (kind~='herb' and kind~='ore') then return end
  local route=N.activeRoute; if not route or not route.loop or N.routePaused then return end
- if N.ClaimGather and N:ClaimGather() then return end -- it was the stop you just reached
+ if N.ClaimGather and N:ClaimGather() then
+  -- It was the stop you're standing at: move on now.
+  if N.lingerAt==(N.waypoint or 1) then N:SkipWaypoint('picked') end
+  return
+ end
  local p=route.points[N.waypoint or 1]; local map,x,y=N:Position()
  if p and map==route.map and x then
   local dx,dy=(p.x-x)*route.width,(p.y-y)*route.height

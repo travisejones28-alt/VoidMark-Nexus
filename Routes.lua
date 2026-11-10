@@ -563,13 +563,18 @@ function N:GenerateRoute(refresh)
   self:Print(string.format('%s: %d stops, %.1f minute loop; %.0f%% learned corridor distance. Unverified connectors remain estimates.',best.strategy,#best.points,(best.seconds or 0)/60,(best.traversalConfidence or 0)*100))
  end)
 end
+local LEAVE_YARDS=20 -- walk this far past the arrival circle and the loop moves on
 function N:SkipWaypoint(reason)
  if not self.activeRoute then return end
  if self.activeRoute.loop then
   -- Zone loops never end: after the last stop, start the next lap.
   -- reason 'arrived' or 'picked' records a visit for spot learning; a manual skip does not.
   local n=#self.activeRoute.points
-  if (reason=='arrived' or reason=='picked') and self.BeginVisit then self:BeginVisit(self.activeRoute,self.waypoint or 1,reason=='picked') end
+  local idx=self.waypoint or 1
+  if self.lingerAt==idx then
+   if reason=='picked' and self.MarkVisitPicked then self:MarkVisitPicked() end
+  elseif (reason=='arrived' or reason=='picked') and self.BeginVisit then self:BeginVisit(self.activeRoute,idx,reason=='picked') end
+  self.lingerAt=nil
   self.waypoint=(self.waypoint or 1)+1
   if self.waypoint>n then
    self.waypoint=1;self.lap=(self.lap or 1)+1
@@ -779,10 +784,8 @@ function N:UpdateArrow()
  if not arrow then return end
  local route=self.activeRoute
  if not route or not self.db.settings.routeVisible then arrow.bearing=nil;arrow:Hide();return end
- -- In combat the panel fades out and lets clicks through; it comes back after.
- local fight=self.db.settings.hideArrowInCombat~=false and UnitAffectingCombat and self:Call(UnitAffectingCombat,'player')
- if fight then arrow:SetAlpha(0);arrow:EnableMouse(false);arrow.hiddenForCombat=true
- elseif arrow.hiddenForCombat then arrow:SetAlpha(1);arrow:EnableMouse(true);arrow.hiddenForCombat=nil end
+ -- 0.6.0 faded the arrow in combat; that is removed. Undo it if a fight was in progress at reload.
+ if arrow.hiddenForCombat then arrow:SetAlpha(1);arrow:EnableMouse(true);arrow.hiddenForCombat=nil end
  if route then
   local count=#route.points
   local current=math.min(self.waypoint or 1,count)
@@ -820,9 +823,22 @@ function N:UpdateArrow()
     while (self.waypoint or 1)<#route.points and route.travelStopIndices[self.waypoint or 1]<self.terrainIndex do self.waypoint=(self.waypoint or 1)+1 end
    end
    if self.terrainIndex>#route.travelPoints then self.activeRoute=nil;arrow:Hide();self:Print('Route loop complete.') end
-  elseif not self.db.settings.manualStops then self:SkipWaypoint('arrived') end
+  elseif not self.db.settings.manualStops then
+   if route.loop then
+    -- Zone loops stay on the stop while you look: they move on when you
+    -- gather there or walk away from it, so the stop never vanishes early.
+    if self.lingerAt~=(self.waypoint or 1) then
+     self.lingerAt=self.waypoint or 1
+     if self.BeginVisit then self:BeginVisit(route,self.lingerAt) end
+    end
+    arrow.status:SetText((point.name or 'Gathering stop')..' - look around')
+   else self:SkipWaypoint('arrived') end
+  end
   self.dirty=true
   arrow.refreshAt=0
+ elseif route.loop and self.lingerAt==(self.waypoint or 1) and not point.transit then
+  arrow.status:SetText((point.name or 'Gathering stop')..' - look around')
+  if distance>(route.arriveRadius or 8)+LEAVE_YARDS then self:SkipWaypoint('left');self.dirty=true;arrow.refreshAt=0 end
  end
 end
 -- Item IDs are the gathered resources, not world object/spawn IDs.

@@ -462,7 +462,7 @@ test('Minimap dots number gathering stops and hide completed/offscreen stops',fu
  Minimap=widget();Minimap.GetWidth=function() return 200 end;Minimap.GetHeight=function() return 200 end
  Minimap.GetEffectiveScale=function() return 1 end
  N.Position=function() return 1411,.4,.4 end
- N.db.settings.routeVisible=true;N.db.settings.minimapRoute=true;N.db.settings.minimapHideNear=0
+ N.db.settings.routeVisible=true;N.db.settings.minimapRoute=true
  N.activeRoute={map=1411,origin={x=.4,y=.4},points={{x=.402,y=.4},{x=.404,y=.4},{x=.9,y=.9}},
   travelPoints={{x=.401,y=.4,transit=true},{x=.402,y=.4},{x=.404,y=.4},{x=.9,y=.9}}}
  N.waypoint=1;N.terrainIndex=1
@@ -471,7 +471,7 @@ test('Minimap dots number gathering stops and hide completed/offscreen stops',fu
  GameTooltip=widget();GameTooltip.SetOwner=function(self,pin) self.owner=pin end
  GameTooltip.AddLine=function(self,text) entries[#entries+1]=text end
  N.activeRoute.points[1].name='Silverleaf'
- N.minimapRoutePins[1].scripts.OnEnter(N.minimapRoutePins[1])
+ N.minimapRoutePins[1].tag.scripts.OnEnter(N.minimapRoutePins[1].tag)
  eq(GameTooltip.text,'Stop 1 / 3');eq(entries[1],'Silverleaf')
  assert(entries[2]:find('yards away',1,true))
  GameTooltip=tooltip
@@ -479,7 +479,7 @@ test('Minimap dots number gathering stops and hide completed/offscreen stops',fu
  N.waypoint=2;N:UpdateMinimapRoute();eq(N.minimapRoutePins[1].label.text,'2')
  assert(not N.minimapRoutePins[2]:IsShown())
  N.activeRoute=nil;N:UpdateMinimapRoute();assert(not N.minimapRouteOverlay:IsShown())
- N.Position,Minimap=position,oldMinimap;C_Minimap,GetMinimapShape=oldC,oldShape;N.db.settings.minimapHideNear=40
+ N.Position,Minimap=position,oldMinimap;C_Minimap,GetMinimapShape=oldC,oldShape
 end)
 
 

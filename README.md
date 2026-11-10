@@ -12,13 +12,17 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.6.1
+- Minimap stops are hollow rings with the number beside them, and route lines stop at the ring, so the herb/ore blip under a stop always shows.
+- Zone loops stay on a stop when you reach it ("look around") and move on when you gather there or walk 20 yd past it, so a stop never disappears before you've looked.
+- The arrow no longer hides in combat (the 0.6.0 setting is removed).
+
 ## What changed in 0.6.0
 - **Loops learn.** Reach a stop and gather there: the spot counts as found. Reach it and leave empty-handed: it counts as empty. Rebuilt loops favour spots where you found things and skip spots that were empty 5 times and never found. Setting: "Learn which spots are often empty". `/vmn spots forget` clears this zone.
 - **Lap stats.** Each lap prints picked, empty, minutes and skill gained; the Gather tab shows this lap and the last one, and each stop shows how often you found something there.
 - **Real speed.** The arrow's seconds and the lap minutes use how fast you actually move.
 - **Auto re-plan.** On a skill-up loop, when a herb or ore turns grey or a new one unlocks, the loop rebuilds from where you stand.
 - **Gold routes.** "Herbs for gold" / "Ore for gold" weight stops by VoidMark Market price, and leave out anything above your skill.
-- **Combat.** The arrow fades out in combat and comes back after (setting "Hide the arrow in combat").
 - Reached stops leave the map; the next stop's number hides within 40 yd so the node blip shows; duplicate spawn entries count once.
 
 ## What changed in 0.5.0

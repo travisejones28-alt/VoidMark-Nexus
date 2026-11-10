@@ -27,12 +27,13 @@ test('Visits: arrive and gather = picked; arrive and leave = empty; a manual ski
  local old=N.Position; N.db.spots={}
  local P={{x=.4,y=.4,name='A'},{x=.5,y=.4,name='B'},{x=.6,y=.4,name='C'},{x=.7,y=.4,name='D'}}
  loop(P); N:ShowArrow()
- at(.4,.4); N:UpdateArrow(); eq(N.waypoint,2)          -- reached A
- gather(); eq(N:SpotEvidence(1411,.4,.4).picked,1)      -- picked A
- at(.5,.4); N:UpdateArrow(); eq(N.waypoint,3)          -- reached B, nothing gathered
- at(.6,.4); N:UpdateArrow(); eq(N.waypoint,4)          -- reached C: B closes as empty
+ at(.4,.4); N:UpdateArrow(); eq(N.waypoint,1)          -- reached A (stays while you look)
+ gather(); eq(N:SpotEvidence(1411,.4,.4).picked,1); eq(N.waypoint,2) -- picked A, on to B
+ at(.5,.4); N:UpdateArrow(); eq(N.waypoint,2)          -- reached B, nothing gathered
+ at(.6,.4); N:UpdateArrow(); eq(N.waypoint,3)          -- walked off B
+ N:UpdateArrow(); eq(N.waypoint,3)                     -- reached C: B closes as empty
  eq(N:SpotEvidence(1411,.5,.4).empty,1)
- N:SkipWaypoint()                                       -- manual skip past D
+ N:SkipWaypoint('left'); N:SkipWaypoint()               -- leave C, manual skip past D
  eq(N:SpotEvidence(1411,.7,.4),nil)
  eq(N.lapStats,nil); eq(N.lastLap.picked,1); eq(N.lastLap.visited,3)
  assert(#N.db.laps>=1 and N.db.laps[#N.db.laps].picked==1)
@@ -99,16 +100,6 @@ test('Skill-up loops rebuild when a herb turns grey or a new one unlocks',functi
  s.kind,s.target,s.routeSelectionMode=saved[1],saved[2],saved[3]
 end)
 
-test('The arrow fades out in combat and comes back after',function()
- local old=UnitAffectingCombat; local fighting=true
- UnitAffectingCombat=function() return fighting end
- loop({{x=.9,y=.4,name='Far'}}); N:ShowArrow()
- local alpha,mouse; N.arrow.SetAlpha=function(_,a) alpha=a end; N.arrow.EnableMouse=function(_,m) mouse=m end
- N:UpdateArrow(); eq(alpha,0); eq(mouse,false)
- fighting=false; N:UpdateArrow(); eq(alpha,1); eq(mouse,true)
- N.db.settings.hideArrowInCombat=false; fighting=true; alpha=nil; N:UpdateArrow(); eq(alpha,nil)
- N.db.settings.hideArrowInCombat=true; UnitAffectingCombat=old; N:StopRoute()
-end)
 
 test('/vmn spots and /vmn laps report and forget',function()
  N.db.spots={}; N:RecordSpot(1411,.5,.5,'picked'); for _=1,5 do N:RecordSpot(1411,.6,.6,'empty') end
@@ -117,4 +108,18 @@ test('/vmn spots and /vmn laps report and forget',function()
  SlashCmdList.VOIDMARKNEXUS('spots forget'); eq(N.db.spots[1411],nil)
  N.lastLap,N.lapStats=nil,nil; SlashCmdList.VOIDMARKNEXUS('laps'); eq(said,'No laps yet.')
  N.Print=p
+end)
+
+test('Zone loops stay on a stop while you look, then move on when you gather or walk away',function()
+ local old=N.Position; N.db.spots={}
+ loop({{x=.4,y=.4,name='A'},{x=.5,y=.4,name='B'},{x=.6,y=.4,name='C'}}); N:ShowArrow()
+ at(.4,.4); N:UpdateArrow(); eq(N.waypoint,1); eq(N.lingerAt,1)        -- arrived at A: still A
+ assert(N.arrow.status.text:find('look around',1,true))
+ at(.403,.4); N:UpdateArrow(); eq(N.waypoint,1)                      -- 15 yd off, looking: still A
+ gather(); eq(N.waypoint,2); eq(N:SpotEvidence(1411,.4,.4).picked,1) -- gathered: on to B
+ at(.5,.4); N:UpdateArrow(); eq(N.waypoint,2); eq(N.lingerAt,2)
+ at(.51,.4); N:UpdateArrow(); eq(N.waypoint,3)                       -- 50 yd away: B left empty
+ at(.6,.4); N:UpdateArrow(); eq(N:SpotEvidence(1411,.5,.4).empty,1)
+ eq(N.lapStats.picked,1)
+ N.Position=old; N:StopRoute(); eq(N.lingerAt,nil); N.db.spots={}
 end)

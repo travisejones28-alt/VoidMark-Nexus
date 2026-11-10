@@ -1,4 +1,5 @@
 local _, N = ...
+local RING_RADIUS,RING_DOTS=7,12 -- minimap stop ring: radius in pixels, dots around it
 
 -- Clip in normalized minimap space before drawing: children are not clipped
 -- by a Minimap mask, and outside-to-outside legs can still cross the viewport.
@@ -100,10 +101,20 @@ function N:UpdateMinimapRoute()
   local p=geometry[i]
   local ax,ay=project(previous);local bx,by=project(p)
   if ax and bx and used<256 then
+   local oax,oay,obx,oby=ax,ay,bx,by
    ax,ay,bx,by=self:ClipMinimapLeg(ax,ay,bx,by,square)
    if ax and math.abs(ax-bx)+math.abs(ay-by)>1e-8 then
     used=used+1
+    local keepA,keepB=ax==oax and ay==oay and previous and previous.name,bx==obx and by==oby and p.name
     ax,ay,bx,by=ax*width,ay*height,bx*width,by*height
+    -- Stop the line at the edge of each stop's ring so it never crosses a blip.
+    local gap=(RING_RADIUS+2)/math.max(.25,scale)
+    local lx,ly=bx-ax,by-ay;local len=math.sqrt(lx*lx+ly*ly)
+    if len>gap*2.5 then
+     lx,ly=lx/len,ly/len
+     if keepA then ax,ay=ax+lx*gap,ay+ly*gap end
+     if keepB then bx,by=bx-lx*gap,by-ly*gap end
+    end
     local line=self.minimapRouteLines[used]
     if not line and not self.minimapLineUnavailable and type(overlay.CreateLine)=='function' then
      local ok,value=pcall(overlay.CreateLine,overlay,nil,'ARTWORK')
@@ -146,15 +157,9 @@ function N:UpdateMinimapRoute()
  local order={}
  if ring then for k=w0,math.min(ringN,150) do order[#order+1]=k end
  else for index=self.waypoint or 1,math.min(#(route.points or {}),150) do order[#order+1]=index end end
- local nearRadius=self.db.settings.minimapHideNear or 40
  for _,index in ipairs(order) do
   local stop=route.points[index]
   local px,py=project(stop)
-  -- Close to the next stop, hide its number so the herb/ore blip underneath shows.
-  if px and index==(self.waypoint or 1) and nearRadius>0 then
-   local dx,dy=(stop.x-x)*w,(stop.y-y)*h
-   if dx*dx+dy*dy<=nearRadius*nearRadius then px=nil end
-  end
   local margin=10/math.max(.25,scale)
   local inside=px and (square and math.abs(px*width)<=width-margin and math.abs(py*height)<=height-margin
    or not square and px*px+py*py<=(1-margin/math.min(width,height))^2)
@@ -162,27 +167,38 @@ function N:UpdateMinimapRoute()
    shown=shown+1
    local pin=self.minimapRoutePins[shown]
    if not pin then
-    pin=CreateFrame('Frame',nil,overlay);pin:EnableMouse(true)
-    pin:SetScript('OnEnter',function(self) N:MinimapStopTooltip(self) end)
-    pin:SetScript('OnLeave',function(self) if GameTooltip and GameTooltip:IsOwned(self) then GameTooltip:Hide() end end)
-    pin.background=pin:CreateTexture(nil,'ARTWORK');pin.background:SetAllPoints(pin)
-    if type(pin.CreateMaskTexture)=='function' then
-     local mask=pin:CreateMaskTexture()
-     if mask then
-      mask:SetTexture('Interface\\CHARACTERFRAME\\TempPortraitAlphaMask')
-      mask:SetAllPoints(pin.background);pin.background:AddMaskTexture(mask);pin.mask=mask
-     end
-    end
-    pin.label=pin:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
+    -- A hollow ring of small dots with the number beside it: the centre is
+    -- empty, so the herb/ore blip under the stop always shows through.
+    -- The frame takes no mouse input, so hovering reaches the game's blip;
+    -- only the number shows the stop tooltip.
+    pin=CreateFrame('Frame',nil,overlay);pin:EnableMouse(false)
+    pin.ring={}
+    for k=1,RING_DOTS do pin.ring[k]=pin:CreateTexture(nil,'OVERLAY') end
+    pin.tag=CreateFrame('Frame',nil,pin);pin.tag:EnableMouse(true)
+    pin.tag:SetScript('OnEnter',function(self) N:MinimapStopTooltip(self:GetParent()) end)
+    pin.tag:SetScript('OnLeave',function(self) if GameTooltip and GameTooltip:IsOwned(self:GetParent()) then GameTooltip:Hide() end end)
+    pin.label=pin.tag:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
     pin.label:SetPoint('CENTER');pin.label:SetShadowColor(0,0,0,1);pin.label:SetShadowOffset(1,-1)
     self.minimapRoutePins[shown]=pin
    end
-   pin:SetSize(12/math.max(.25,scale),12/math.max(.25,scale))
+   local current=index==(self.waypoint or 1)
+   local r=RING_RADIUS/math.max(.25,scale)
+   pin:SetSize(r*2+4,r*2+4)
    pin:SetFrameLevel(overlay:GetFrameLevel()+2)
    pin:ClearAllPoints();pin:SetPoint('CENTER',Minimap,'CENTER',px*width,py*height)
-   pin.background:SetColorTexture(.12,.06,.2,index==(self.waypoint or 1) and .8 or .5)
-   pin.stopIndex=index;pin.route=route
-   pin.label:SetText(tostring(index));pin:Show()
+   local cr,cg,cb,ca=.75,.45,1,.75
+   if current then cr,cg,cb,ca=1,.85,.35,1 end
+   local dot=(current and 2.5 or 2)/math.max(.25,scale)
+   for k,t in ipairs(pin.ring) do
+    local a=(k-1)/RING_DOTS*2*math.pi
+    t:SetSize(dot,dot);t:ClearAllPoints();t:SetPoint('CENTER',pin,'CENTER',math.cos(a)*r,math.sin(a)*r)
+    t:SetColorTexture(cr,cg,cb,ca);t:Show()
+   end
+   pin.tag:SetSize(14/math.max(.25,scale),12/math.max(.25,scale))
+   pin.tag:ClearAllPoints();pin.tag:SetPoint('BOTTOMLEFT',pin,'CENTER',r*.6,r*.6)
+   pin.label:SetText(tostring(index))
+   if pin.label.SetTextColor then pin.label:SetTextColor(current and 1 or .9,current and .85 or .8,current and .35 or 1) end
+   pin.stopIndex=index;pin.route=route;pin:Show()
   end
  end
  for i=shown+1,#self.minimapRoutePins do self.minimapRoutePins[i]:Hide() end

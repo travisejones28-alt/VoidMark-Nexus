@@ -155,7 +155,7 @@ function N:CreateUI()
   {'includeSynced','Count the other account (sync)'},{'market','Use VoidMark Market prices'},{'manualFirst','Use my own prices first'},
   {'routeVisible','Show the route arrow'},{'manualStops','Wait for me at each stop'},{'nodesVisible','Show spawn spots on the world map'},
   {'minimapRoute','Show the route on the minimap'},{'minimap','Minimap button'},{'native','Keep the normal profession window'},
-  {'learnSpots','Learn which spots are often empty'},{'hideArrowInCombat','Hide the arrow in combat'}}
+  {'learnSpots','Learn which spots are often empty'}}
  u.checks={}
  for i,e in ipairs(entries) do
   local key=e[1]
@@ -250,7 +250,7 @@ function N:ResourceLabel()
  return ({herb='Herbs',ore='Ore',all='Herbs and ore'})[s.kind] or 'Herbs'
 end
 function N:StopRoute()
- self.activeRoute=nil; self.waypoint=nil
+ self.activeRoute=nil; self.waypoint=nil; self.lingerAt=nil
  if self.arrow then self.arrow:Hide() end
  if self.SyncTomTom then self:SyncTomTom() end
  self.dirty=true

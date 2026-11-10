@@ -47,14 +47,14 @@ test('Zone loop: Start route is immediate and the loop wraps into a new lap',fun
  N:SkipWaypoint(); eq(N.waypoint,1); eq(N.lap,2); assert(N.activeRoute,'loop keeps going')
  s.kind,s.routeSelectionMode=saved[1],saved[2]
 end)
-test('Zone loop: the arrow advances within 25 yards, and gathering near a stop advances too',function()
+test('Zone loop: the arrow holds a stop within 25 yards, and gathering near a stop advances',function()
  local route={map=1411,width=5000,height=3000,loop=true,arriveRadius=25,points={{x=.4,y=.4,name='A'},{x=.6,y=.6,name='B'},{x=.4,y=.6,name='C'}}}
  N.activeRoute=route;N.waypoint=1;N.terrainIndex=1;N.routePaused=false;N.db.settings.routeVisible=true;N.db.settings.manualStops=false
  N:ShowArrow()
  -- Player is at (0.4,0.4) in the test position stub: within 25 yd of stop A.
- N:UpdateArrow(); eq(N.waypoint,2)
+ N:UpdateArrow(); eq(N.waypoint,1); eq(N.lingerAt,1)   -- arrived: stays on A while you look
  route.points[2]={x=.402,y=.401,name='B near'}
- -- First gather right after arriving at A is A's herb: A counts as picked, B stays next.
+ -- Gathering at A counts for A and moves on to B.
  for _,fn in ipairs(N.handlers.UNIT_SPELLCAST_SUCCEEDED) do fn('player','cast',2366) end
  eq(N.waypoint,2); eq(N.lapStats.picked,1)
  for _,fn in ipairs(N.handlers.UNIT_SPELLCAST_SUCCEEDED) do fn('player','cast',2366) end
@@ -97,12 +97,12 @@ test('Secret event arguments reach handlers as nil instead of erroring',function
  issecretvalue=oldFn; N:StopRoute()
 end)
 
-test('Zone loop: reached stops leave the minimap and the next stop hides when close',function()
+test('Zone loop: reached stops leave the minimap; the next stop is a hollow ring that stays',function()
  local oldPosition,oldMinimap,oldC=N.Position,Minimap,C_Minimap
  C_Minimap={GetViewRadius=function() return 10000 end}
  Minimap=widget();Minimap.GetWidth=function() return 200 end;Minimap.GetHeight=function() return 200 end
  Minimap.GetEffectiveScale=function() return 1 end
- local s=N.db.settings;s.routeVisible=true;s.minimapRoute=true;s.minimapHideNear=40
+ local s=N.db.settings;s.routeVisible=true;s.minimapRoute=true
  local pts={};for i=1,6 do pts[i]={x=.3+i*.02,y=.5,name='P'..i} end
  N.activeRoute={map=1411,width=5000,height=3000,loop=true,points=pts}
  N.minimapRouteOverlay=nil;N.minimapRoutePins=nil
@@ -112,11 +112,11 @@ test('Zone loop: reached stops leave the minimap and the next stop hides when cl
  end
  N.Position=function() return 1411,.1,.1 end
  N.waypoint=3;N:UpdateMinimapRoute();eq(labels(),'3,4,5,6')
- -- Standing on stop 3 (0 yd away): its number hides so the node blip is visible.
+ -- Standing on stop 3: its ring stays, and the ring is hollow (dots only, no filled disc).
  N.Position=function() return 1411,pts[3].x,pts[3].y end
- N:UpdateMinimapRoute();eq(labels(),'4,5,6')
- s.minimapHideNear=0;N:UpdateMinimapRoute();eq(labels(),'3,4,5,6')
- N.waypoint=1;s.minimapHideNear=40;N.Position=function() return 1411,.1,.1 end
+ N:UpdateMinimapRoute();eq(labels(),'3,4,5,6')
+ local pin=N.minimapRoutePins[1]; eq(#pin.ring,12); eq(pin.background,nil)
+ N.waypoint=1;N.Position=function() return 1411,.1,.1 end
  N:UpdateMinimapRoute();eq(labels(),'1,2,3,4,5,6')
  N.Position,Minimap,C_Minimap=oldPosition,oldMinimap,oldC;N.activeRoute=nil;N.minimapRouteOverlay=nil
 end)
