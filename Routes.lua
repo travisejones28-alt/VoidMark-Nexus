@@ -1031,15 +1031,17 @@ function N:RefreshMap()
   local w0=math.max(1,math.min(n,self.waypoint or 1))
   local prev
   if loop then
-   geometry={}; for k=0,n-1 do geometry[#geometry+1]=route.points[(w0+k-1)%n+1] end
-   current=1; prev=route.points[(w0-2)%n+1]
+   -- Stops already reached this lap disappear; the ring closes back to stop 1.
+   geometry={}; for k=w0,n do geometry[#geometry+1]=route.points[k] end
+   if w0>1 then geometry[#geometry+1]=route.points[1] end
+   current=1; prev=nil
   else prev=geometry[current-1] or route.origin end
   local last=math.min(#geometry,current+(loop and 150 or 100))
   local stop=self.waypoint or 1
   for i=current,last do
    local node=geometry[i]
    if node then
-    points[#points+1]={n=node,label=node.transit and ((node.closing or node.starting) and 'S' or '�') or tostring(loop and ((w0+i-2)%n+1) or stop),route=true}
+    points[#points+1]={n=node,label=node.transit and ((node.closing or node.starting) and 'S' or '�') or (loop and (w0+i-1<=n and tostring(w0+i-1) or 'S') or tostring(stop)),route=true}
     if prev then segments[#segments+1]={a=prev,b=node,validated=node.validated==true} end
     prev=node
     if not node.transit then stop=stop+1 end

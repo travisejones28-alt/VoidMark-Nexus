@@ -1,4 +1,4 @@
-local N,test,eq,setNow=...
+local N,test,eq,setNow,widget=...
 local function crossings(route)
  local P,n,w,h=route.points,#route.points,route.width,route.height;local c=0
  local function ccw(ax,ay,bx,by,cx,cy) return (cy-ay)*(bx-ax)>(by-ay)*(cx-ax) end
@@ -72,7 +72,7 @@ test('Zone loop: whole ring is drawn on the world map and the loop survives /rel
  N.mapRouteLines={}
  N:RefreshMap()
  local shown=0;for _,line in ipairs(N.mapRouteLines or {}) do if line:IsShown() then shown=shown+1 end end
- eq(shown,#route.points)
+ eq(shown,#route.points-2) -- stops 1-2 reached: legs 3..n plus closing leg to 1
  N:SaveNavigation();N.activeRoute=nil;N:RestoreNavigation()
  assert(N.activeRoute and N.activeRoute.loop,'loop flag kept');eq(N.waypoint,3)
  eq(N.activeRoute.arriveRadius,25);assert(N.activeRoute.points[1].spawns)
@@ -92,4 +92,28 @@ test('Secret event arguments reach handlers as nil instead of erroring',function
  table.remove(list)
  assert(got.seen); eq(got.unit,'player'); eq(got.cast,'cast'); eq(got.spell,nil)
  issecretvalue=oldFn; N:StopRoute()
+end)
+
+test('Zone loop: reached stops leave the minimap and the next stop hides when close',function()
+ local oldPosition,oldMinimap,oldC=N.Position,Minimap,C_Minimap
+ C_Minimap={GetViewRadius=function() return 10000 end}
+ Minimap=widget();Minimap.GetWidth=function() return 200 end;Minimap.GetHeight=function() return 200 end
+ Minimap.GetEffectiveScale=function() return 1 end
+ local s=N.db.settings;s.routeVisible=true;s.minimapRoute=true;s.minimapHideNear=40
+ local pts={};for i=1,6 do pts[i]={x=.3+i*.02,y=.5,name='P'..i} end
+ N.activeRoute={map=1411,width=5000,height=3000,loop=true,points=pts}
+ N.minimapRouteOverlay=nil;N.minimapRoutePins=nil
+ local function labels()
+  local t={};for _,pin in ipairs(N.minimapRoutePins or {}) do if pin:IsShown() then t[#t+1]=pin.stopIndex end end
+  table.sort(t);return table.concat(t,',')
+ end
+ N.Position=function() return 1411,.1,.1 end
+ N.waypoint=3;N:UpdateMinimapRoute();eq(labels(),'3,4,5,6')
+ -- Standing on stop 3 (0 yd away): its number hides so the node blip is visible.
+ N.Position=function() return 1411,pts[3].x,pts[3].y end
+ N:UpdateMinimapRoute();eq(labels(),'4,5,6')
+ s.minimapHideNear=0;N:UpdateMinimapRoute();eq(labels(),'3,4,5,6')
+ N.waypoint=1;s.minimapHideNear=40;N.Position=function() return 1411,.1,.1 end
+ N:UpdateMinimapRoute();eq(labels(),'1,2,3,4,5,6')
+ N.Position,Minimap,C_Minimap=oldPosition,oldMinimap,oldC;N.activeRoute=nil;N.minimapRouteOverlay=nil
 end)

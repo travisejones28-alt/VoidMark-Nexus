@@ -87,9 +87,11 @@ function N:UpdateMinimapRoute()
  local ringN=#(route.points or {})
  local ring=route.loop and not route.travelPoints and ringN>1
  local w0=math.max(1,math.min(ringN,self.waypoint or 1))
+ -- Stops already reached this lap are dropped; the ring closes back to stop 1.
  if ring then
-  geometry={}; for k=0,ringN-1 do geometry[#geometry+1]=route.points[(w0+k-1)%ringN+1] end
-  current=1; previous=route.points[(w0-2)%ringN+1]
+  geometry={}; for k=w0,ringN do geometry[#geometry+1]=route.points[k] end
+  if w0>1 then geometry[#geometry+1]=route.points[1] end
+  current=1; previous=nil
  end
  local used,dots=0,0
  local scale=Minimap:GetEffectiveScale() or 1
@@ -142,10 +144,17 @@ function N:UpdateMinimapRoute()
  self.minimapRoutePins=self.minimapRoutePins or {}
  local shown=0
  local order={}
- if ring then for k=0,math.min(ringN,150)-1 do order[#order+1]=(w0+k-1)%ringN+1 end
+ if ring then for k=w0,math.min(ringN,150) do order[#order+1]=k end
  else for index=self.waypoint or 1,math.min(#(route.points or {}),150) do order[#order+1]=index end end
+ local nearRadius=self.db.settings.minimapHideNear or 40
  for _,index in ipairs(order) do
-  local px,py=project(route.points[index])
+  local stop=route.points[index]
+  local px,py=project(stop)
+  -- Close to the next stop, hide its number so the herb/ore blip underneath shows.
+  if px and index==(self.waypoint or 1) and nearRadius>0 then
+   local dx,dy=(stop.x-x)*w,(stop.y-y)*h
+   if dx*dx+dy*dy<=nearRadius*nearRadius then px=nil end
+  end
   local margin=10/math.max(.25,scale)
   local inside=px and (square and math.abs(px*width)<=width-margin and math.abs(py*height)<=height-margin
    or not square and px*px+py*py<=(1-margin/math.min(width,height))^2)

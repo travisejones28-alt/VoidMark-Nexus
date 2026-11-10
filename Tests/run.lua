@@ -462,7 +462,7 @@ test('Minimap dots number gathering stops and hide completed/offscreen stops',fu
  Minimap=widget();Minimap.GetWidth=function() return 200 end;Minimap.GetHeight=function() return 200 end
  Minimap.GetEffectiveScale=function() return 1 end
  N.Position=function() return 1411,.4,.4 end
- N.db.settings.routeVisible=true;N.db.settings.minimapRoute=true
+ N.db.settings.routeVisible=true;N.db.settings.minimapRoute=true;N.db.settings.minimapHideNear=0
  N.activeRoute={map=1411,origin={x=.4,y=.4},points={{x=.402,y=.4},{x=.404,y=.4},{x=.9,y=.9}},
   travelPoints={{x=.401,y=.4,transit=true},{x=.402,y=.4},{x=.404,y=.4},{x=.9,y=.9}}}
  N.waypoint=1;N.terrainIndex=1
@@ -479,7 +479,7 @@ test('Minimap dots number gathering stops and hide completed/offscreen stops',fu
  N.waypoint=2;N:UpdateMinimapRoute();eq(N.minimapRoutePins[1].label.text,'2')
  assert(not N.minimapRoutePins[2]:IsShown())
  N.activeRoute=nil;N:UpdateMinimapRoute();assert(not N.minimapRouteOverlay:IsShown())
- N.Position,Minimap=position,oldMinimap;C_Minimap,GetMinimapShape=oldC,oldShape
+ N.Position,Minimap=position,oldMinimap;C_Minimap,GetMinimapShape=oldC,oldShape;N.db.settings.minimapHideNear=40
 end)
 
 
@@ -851,7 +851,7 @@ test('Insertion planner respects a directed closed-loop budget and leaves input 
  N.CachedTerrainLeg=leg
 end)
 assert(loadfile(root..'/Tests/skillroutes.lua'))(N,test,eq)
-assert(loadfile(root..'/Tests/zoneloop.lua'))(N,test,eq)
+assert(loadfile(root..'/Tests/zoneloop.lua'))(N,test,eq,nil,widget)
 test('Compact window: old tab names open the page that replaced them; settings are checkboxes',function()
  N:Show('Routes');eq(N.ui.tab,'Gather');N:Show('Dashboard');eq(N.ui.tab,'Gather')
  N:Show('Profitability');eq(N.ui.tab,'Professions');eq(N.ui.profView,'recipes')
