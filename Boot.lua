@@ -41,7 +41,8 @@ function N:Slash(msg)
  elseif command=='skillroute' then
   if args=='herb' or args=='ore' then self:SelectResource('skill:'..args);self:GenerateRoute()
   else self:Print('/vmn skillroute herb|ore') end
- elseif command=='route' or command=='start' then self:GenerateRoute()
+ elseif command=='route' or command=='start' then if args=='now' then self:GenerateRoute() else self:OpenRoutePlanner() end
+ elseif command=='routelog' then self:RouteLogCommand()
  elseif command=='skip' or command=='next' then self:SkipWaypoint()
  elseif command=='stop' then self:StopRoute()
  elseif command=='spots' then
@@ -59,7 +60,7 @@ function N:Slash(msg)
  elseif command=='target' then if args=='' then self:SelectResource('kind:all') else self:SelectResource('name:'..args) end; self:Print('Gathering: '..self:ResourceLabel())
  elseif command=='kind' then if args=='herb' or args=='ore' or args=='all' then self:SelectResource('kind:'..args) end
  elseif command=='help' then
-  self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn laps, /vmn spots, /vmn find NAME, /vmn gold, /vmn pair First Surname, /vmn unpair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
+  self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn laps, /vmn spots, /vmn route (options), /vmn route now, /vmn routelog, /vmn find NAME, /vmn gold, /vmn pair First Surname, /vmn unpair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
  elseif command=='mapcontrols' or command=='mapfilters' then
   self.db.settings.mapButton=true
   if args=='reset' then self.db.settings.mapButtonPos=nil end

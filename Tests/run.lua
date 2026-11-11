@@ -27,7 +27,8 @@ local function widget()
   GetFrameLevel=function(self) return self.level or 1 end,SetFrameLevel=function(self,v) self.level=v end,
   GetParent=function(self) return self.parent end,SetParent=function(self,v) self.parent=v end,
   SetFrameStrata=function(self,v) self.strata=v end,
-  CreateTexture=function() return widget() end,CreateFontString=function() return widget() end}
+  CreateTexture=function() return widget() end,CreateFontString=function() return widget() end,
+  CreateLine=function() return widget() end,CreateMaskTexture=function() return widget() end}
  return setmetatable(w,{__index=function(_,k) return methods[k] or (k:match('^[A-Z]') and function() end or nil) end})
 end
 function CreateFrame(_,_,parent) local w=widget();w.parent=parent;return w end
@@ -37,7 +38,7 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Data/Nodes','Data/Spawns','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','Laps','Recording','MinimapRoute','UI','Finder','Gold','Tooltip','Boot'}
+local files={'Core','Data/Nodes','Data/Spawns','Data/ZoneLand','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','Laps','RoutePlanner','Recording','MinimapRoute','UI','Finder','Gold','Tooltip','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
@@ -853,6 +854,7 @@ end)
 assert(loadfile(root..'/Tests/skillroutes.lua'))(N,test,eq)
 assert(loadfile(root..'/Tests/zoneloop.lua'))(N,test,eq,nil,widget)
 assert(loadfile(root..'/Tests/laps.lua'))(N,test,eq,widget)
+assert(loadfile(root..'/Tests/planner.lua'))(N,test,eq,widget)
 test('Compact window: old tab names open the page that replaced them; settings are checkboxes',function()
  N:Show('Routes');eq(N.ui.tab,'Gather');N:Show('Dashboard');eq(N.ui.tab,'Gather')
  N:Show('Profitability');eq(N.ui.tab,'Professions');eq(N.ui.profView,'recipes')

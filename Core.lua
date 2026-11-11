@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.8.0-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.9.0-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -132,7 +132,7 @@ function N:Initialize()
  if type(VoidMarkNexusDB)~='table' then VoidMarkNexusDB={} end
  local d=VoidMarkNexusDB
  if tonumber(d.schema) and d.schema>self.schema then self:Print('Newer saved schema detected; Nexus disabled to preserve your data.'); return false end
- for _,k in ipairs({'characters','settings','prices','itemNames','plans','nodes','routes','sessions','wish','excluded','levelEvidence','trainers','recipeVendors','spots','laps'}) do if type(d[k])~='table' then d[k]={} end end
+ for _,k in ipairs({'characters','settings','prices','itemNames','plans','nodes','routes','sessions','wish','excluded','levelEvidence','trainers','recipeVendors','spots','laps','routeHistory'}) do if type(d[k])~='table' then d[k]={} end end
  local defaults={native=true,learn=true,importedNodes=true,observedNodes=true,nodesVisible=true,routeVisible=true,minimapRoute=true,learnSpots=true,stats=true,
  includeAlts=true,includeBanks=true,includeImports=false,includeStale=false,maxAge=86400,inventoryAge=604800,
  market=true,auctionator=false,manualFirst=false,cut=.05,deposit=0,failedAuctions=0,saleFraction=1,waste=0,

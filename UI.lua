@@ -139,7 +139,7 @@ function N:CreateUI()
   local options={}; for i,m in ipairs(N.travelModes) do if m[1]~='Custom' then options[#options+1]={label=m[1],value=i} end end
   N:Choice(u.travel,options,function(i) local m=N.travelModes[i]; local s=N.db.settings; s.travel,s.speed,s.mountDelay=m[1],m[2],m[3] end)
  end)
- u.start=button(g,'Start route',14,-32,150,function() if N.activeRoute then N:StopRoute() else N:GenerateRoute() end end)
+ u.start=button(g,'Start route',14,-32,150,function() if N.activeRoute then N:StopRoute() else N:OpenRoutePlanner() end end)
  u.next=button(g,'Next stop',170,-32,110,function() N:SkipWaypoint() end)
  u.zones=button(g,'Best zones',286,-32,160,function() u.bestZones=N:BestZones(6); u.offset=0 end)
  u.gatherInfo=label(g,'',14,-64,'GameFontHighlight'); u.gatherInfo:SetWidth(W-28)

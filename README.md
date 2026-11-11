@@ -16,6 +16,11 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.9.0
+- **Route options with a preview.** Gather > Start route builds several loops (Quick, Balanced, Long, Stay on land when the zone has water to cross, plus the best loops in two other zones) and shows each on the zone's map. With OpenMap installed (English client) the preview uses OpenMap's terrain art; otherwise the game's zone map. Pick one and press Start this route. `/vmn route now` still starts the balanced loop straight away.
+- **Learns from your picks.** Every pick and every lap on it (nodes picked, minutes) is logged per zone and kind of route. Options are ranked by expected nodes per hour, pulled toward what you really got; the top one is marked Recommended and says why. `/vmn routelog` shows the history.
+- **Land outlines from OpenMap** (MIT, baked into Data/ZoneLand.lua by tools/bake_openmap.py) keep "Stay on land" loops from cutting across sea or out of the zone. They are zone outlines, not rivers or cliffs.
+
 ## What changed in 0.8.0
 - Gold tracking on every character, synced across accounts, with a total on the Characters page and `/vmn gold`.
 

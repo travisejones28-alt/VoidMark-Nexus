@@ -134,6 +134,13 @@ PASS Gold routes weight by price and skip what you cannot gather yet
 PASS Skill-up loops rebuild when a herb turns grey or a new one unlocks
 PASS /vmn spots and /vmn laps report and forget
 PASS Zone loops stay on a stop while you look, then move on when you gather or walk away
+PASS OpenMap land outlines: every baked zone decodes, Durotar coast is not land
+PASS Route options: different loops here plus other zones, ranked, one recommended
+PASS Stay on land: the land-aware loop crosses less water than the plain one
+PASS Learning: picks and laps are logged and move the ranking toward what really worked
+PASS Preview: draws the zone art and the loop; OpenMap tiles when OpenMap is loaded
+PASS Gather > Start route opens the options instead of starting blind; /vmn route now still starts
+PASS Other zones arrive a moment after the window opens, keeping your selection
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
 PASS Throttled sync messages are retried, not dropped
@@ -146,4 +153,4 @@ PASS Find item: every character, bags vs bank, partial names, IDs, links, misses
 PASS A character saved twice (import + old copy) is counted once, newest copy wins
 PASS Gold: read on change, shown per character with a total, synced and exported
 PASS Gold travels with the bank sync
-PASS: 148 tests; Lua 5.1 / standard interpreter
+PASS: 155 tests; Lua 5.1 / standard interpreter

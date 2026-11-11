@@ -11,6 +11,9 @@ local ARRIVE_RADIUS=25
 N.loopArriveRadius=ARRIVE_RADIUS
 
 local function dist(a,b) local dx,dy=a.x-b.x,a.y-b.y; return math.sqrt(dx*dx+dy*dy) end
+-- What the optimizers minimise: plain distance, or (for "stay on land") distance
+-- with legs that leave the zone's land made more expensive. Lengths shown are real yards.
+local cost=dist
 
 -- Groups spawn points (map coords 0-1) into stops in yard space.
 function N:ClusterStops(nodes,w,h,radius)
@@ -81,7 +84,7 @@ local function nearestTour(stops,start)
  local tour={}; local cur=start
  while #left>0 do
   local bi,bd=1,math.huge
-  for i,s in ipairs(left) do local d=dist(cur,s); if d<bd then bi,bd=i,d end end
+  for i,s in ipairs(left) do local d=cost(cur,s); if d<bd then bi,bd=i,d end end
   cur=table.remove(left,bi); tour[#tour+1]=cur
  end
  return tour
@@ -95,7 +98,7 @@ local function twoOpt(t,maxPasses)
    for j=i+2,n do
     if not (i==1 and j==n) then
      local a,b,c,d=t[i],t[i+1],t[j],t[j%n+1]
-     if dist(a,c)+dist(b,d)<dist(a,b)+dist(c,d)-.01 then
+     if cost(a,c)+cost(b,d)<cost(a,b)+cost(c,d)-.01 then
       local l,r=i+1,j
       while l<r do t[l],t[r]=t[r],t[l]; l=l+1; r=r-1 end
       improved=true
@@ -116,14 +119,14 @@ local function orOpt(t,maxPasses)
    local i=1
    while i<=n-len+1 do
     local prev,first,last,nextS=t[i==1 and n or i-1],t[i],t[i+len-1],t[(i+len-1)%n+1]
-    local gain=dist(prev,first)+dist(last,nextS)-dist(prev,nextS)
+    local gain=cost(prev,first)+cost(last,nextS)-cost(prev,nextS)
     local bestK,bestCost,bestRev
     for k=1,n do
      -- Skip edges that touch the run itself (including the wrap edge).
      if not (k>=i-1 and k<=i+len-1) and not (i==1 and k==n) then
       local a,b=t[k],t[k%n+1]
-      local fwd=dist(a,first)+dist(last,b)-dist(a,b)
-      local rev=dist(a,last)+dist(first,b)-dist(a,b)
+      local fwd=cost(a,first)+cost(last,b)-cost(a,b)
+      local rev=cost(a,last)+cost(first,b)-cost(a,b)
       local cost=math.min(fwd,rev)
       if cost<gain-.01 and (not bestCost or cost<bestCost) then bestK,bestCost,bestRev=k,cost,rev<fwd end
      end
@@ -153,11 +156,11 @@ local function bestWindow(t,maxStops,maxYards)
   local w,path,weight={},0,0
   for k=0,math.min(maxStops,n)-1 do
    local s=t[(i+k-1)%n+1]
-   if #w>0 then path=path+dist(w[#w],s) end
-   if path+dist(s,t[i])>maxYards and #w>=3 then break end
+   if #w>0 then path=path+cost(w[#w],s) end
+   if path+cost(s,t[i])>maxYards and #w>=3 then break end
    w[#w+1]=s; weight=weight+s.weight
   end
-  local loop=path+dist(w[#w],w[1])
+  local loop=path+cost(w[#w],w[1])
   local score=weight/math.max(100,loop)*math.min(1,#w/12)
   if #w>=3 and (not bestScore or score>bestScore) then best,bestScore={},score; for x,s in ipairs(w) do best[x]=s end end
  end
@@ -165,8 +168,9 @@ local function bestWindow(t,maxStops,maxYards)
 end
 
 -- Builds a loop for the given nodes. here={x,y} in map coords (optional).
-function N:BuildZoneLoop(map,nodes,here,settings)
- settings=settings or self.db.settings
+-- opts (optional): minutes, nodeLimit, landPenalty (extra cost per yard off the zone's land).
+function N:BuildZoneLoop(map,nodes,here,settings,opts)
+ settings=settings or self.db.settings; opts=opts or {}
  local w,h=self:MapSize(map)
  if not w then return nil,'Map size unavailable here.' end
  local stops=self:DropOutliers(self:ClusterStops(nodes,w,h))
@@ -183,13 +187,27 @@ function N:BuildZoneLoop(map,nodes,here,settings)
  local start=here and {x=here.x*w,y=here.y*h} or stops[1]
  local speed=self.TravelSpeed and self:TravelSpeed() or math.max(1,settings.speed or 7)
  local perStop=math.max(0,settings.gatherDelay or 3)+math.max(0,settings.mountDelay or 0)
- local maxStops=math.max(3,math.min(150,settings.nodeLimit or 100))
- local budget=math.max(60,(settings.routeMinutes or 20)*60)
+ local maxStops=math.max(3,math.min(150,opts.nodeLimit or settings.nodeLimit or 100))
+ local budget=math.max(60,(opts.minutes or settings.routeMinutes or 20)*60)
+ if opts.landPenalty and self.LegOffLand and self:HasLand(map) then
+  local memo,pen=setmetatable({},{__mode='k'}),opts.landPenalty
+  cost=function(a,b)
+   local row=memo[a]; if not row then row={}; memo[a]=row end
+   local c=row[b]; if c then return c end
+   local d=dist(a,b); c=d*(1+pen*self:LegOffLand(map,a.x/w,a.y/h,b.x/w,b.y/h)); row[b]=c
+   return c
+  end
+ end
  local maxYards=math.max(200,(budget-perStop*math.min(#stops,maxStops))*speed)
- local tour=nearestTour(stops,start)
- twoOpt(tour,#tour>250 and 6 or 30)
- tour=bestWindow(tour,maxStops,maxYards)
- twoOpt(tour,40); orOpt(tour,10); twoOpt(tour,10)
+ local ok,tour=pcall(function()
+  local t=nearestTour(stops,start)
+  twoOpt(t,#t>250 and 6 or 30)
+  t=bestWindow(t,maxStops,maxYards)
+  twoOpt(t,40); orOpt(t,10); twoOpt(t,10)
+  return t
+ end)
+ cost=dist
+ if not ok then error(tour,0) end
  -- Start at the stop nearest you, heading toward the nearer neighbour.
  local n=#tour
  local first,bd=1,math.huge
@@ -200,6 +218,11 @@ function N:BuildZoneLoop(map,nodes,here,settings)
   local r={ordered[1]}; for k=n,2,-1 do r[#r+1]=ordered[k] end; ordered=r
  end
  local length=tourLength(ordered)
+ local offLand
+ if self.LegOffLand and self:HasLand(map) then
+  local off=0; for i=1,#ordered do local a,b=ordered[i],ordered[i%#ordered+1]; off=off+dist(a,b)*self:LegOffLand(map,a.x/w,a.y/h,b.x/w,b.y/h) end
+  offLand=length>0 and off/length or 0
+ end
  local points={}
  for i,s in ipairs(ordered) do
   points[i]={x=s.x/w,y=s.y/h,map=map,name=s.name,kind=s.kind,object=s.object,spawns=s.count,
@@ -207,7 +230,7 @@ function N:BuildZoneLoop(map,nodes,here,settings)
  end
  local route={points=points,map=map,width=w,height=h,loop=true,strategy='zoneloop',optimizer='zoneloop-v1',
   speed=speed,mountDelay=settings.mountDelay,gatherDelay=settings.gatherDelay,mode=settings.travel,created=self:Now(),
-  length=length,seconds=length/speed+perStop*#points,arriveRadius=ARRIVE_RADIUS,origin=self:Copy(points[1]),
+  length=length,offLand=offLand,minutes=opts.minutes,seconds=length/speed+perStop*#points,arriveRadius=ARRIVE_RADIUS,origin=self:Copy(points[1]),
   skillup=settings.routeSelectionMode=='skillup' or nil,gold=settings.routeSelectionMode=='gold' or nil}
  return route
 end
@@ -235,10 +258,9 @@ function N:GenerateRoute()
  local route,err=self:BuildZoneLoop(map,nodes,{x=x,y=y})
  if not route then return self:Print(err) end
  if self.ResourceSetKey then route.resourceKey=self:ResourceSetKey(nodes) end
- if self.ResetLoopTracking then self:ResetLoopTracking() end
- self.activeRoute=route; self.waypoint=1; self.terrainIndex=1; self.routePaused=false; self.lap=1
- self.dirty=true; self:ShowArrow()
- if WorldMapFrame and WorldMapFrame.IsShown and WorldMapFrame:IsShown() and self.RefreshMap then self:RefreshMap() end
+ -- A rebuild keeps the kind of route you picked, so its laps keep counting toward it.
+ local prev=self.activeRoute; if prev and prev.map==map and prev.variant=='balanced' then route.variant='balanced' end
+ self:StartRoute(route,true)
  self:Print('Route ready: '..self:RouteSummary(route)..'.'..((self.lastDroppedSpots or 0)>0 and (' Skipped '..self.lastDroppedSpots..' spots that were always empty.') or ''))
  return route
 end
