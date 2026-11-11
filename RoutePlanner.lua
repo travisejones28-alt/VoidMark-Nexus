@@ -135,10 +135,27 @@ local function sameLoop(a,b)
  return true
 end
 
--- Builds the options: up to four loops here, plus the best loop in up to two
--- other zones. Ranked by expected nodes per hour, nudged by what you tend to pick.
+-- The zone routes are built in: the one picked with the Zone button, or where you are.
+function N:RouteZone()
+ local cur,x,y=self:Position()
+ local sel=tonumber(self.db.settings.routeZone)
+ if sel and sel~=cur then return sel,false,cur end
+ return cur,true,cur,x,y
+end
+function N:RouteZoneName(map) return zoneName(self,map) end
+-- Zone button: "Current zone" or any zone with matching spots (best first).
+function N:ChooseRouteZone(anchor)
+ local options={{label='Current zone (where you are)',value=0}}
+ for _,z in ipairs(self:BestZones(14)) do options[#options+1]={label=z.name..' - '..z.spawns..' spots',value=z.map} end
+ if #options==1 then options[#options+1]={label='No zone has matching spots',value=0} end
+ self:Choice(anchor,options,function(v) self.db.settings.routeZone=(v and v~=0) and v or nil; self.dirty=true end)
+end
+
+-- Builds the options: up to four loops in the route zone, plus (when that is where
+-- you are) the best loop in up to two other zones. Ranked by expected nodes per hour,
+-- nudged by what you tend to pick.
 function N:RouteOptions(otherZones)
- local map,x,y=self:Position()
+ local map,isHere,cur,x,y=self:RouteZone()
  if not map then return nil,'Your position is not available here.' end
  local mode=self.db.settings.routeSelectionMode
  if mode=='skillup' or mode=='gold' then self.generating=true; self:Guard('scan',function() self:ScanProfessions() end); self.generating=nil end
@@ -146,7 +163,7 @@ function N:RouteOptions(otherZones)
  local out={}
  local nodes=self:ZoneNodes(map)
  if #nodes>0 then
-  local here={x=x,y=y}
+  local here=isHere and x and {x=x,y=y} or nil
   for _,v in ipairs(VARIANTS) do
    local opts={minutes=base}
    if v.id=='quick' then opts.minutes=math.max(5,math.floor(base/2+.5))
@@ -160,15 +177,16 @@ function N:RouteOptions(otherZones)
      -- "Stay on land" only earns a place when the balanced loop really crosses water.
      if v.id=='land' and out[1] and (out[1].route.offLand or 0)<.04 then dup=true end
      if v.id=='land' and (route.offLand or 0)>=((out[1] and out[1].route.offLand) or 1)-.02 then dup=true end
-     if not dup then out[#out+1]={variant=v.id,label=v.label,note=v.note,route=route,map=map,zone=zoneName(self,map),here=true} end
+     if not dup then out[#out+1]={variant=v.id,label=v.label,note=isHere and v.note or (v.note..'; zone you picked'),route=route,map=map,zone=zoneName(self,map),here=isHere} end
     end
    end
   end
  end
- if otherZones~=false then self:AddOtherZoneOptions(out,map) end
+ if otherZones~=false and isHere then self:AddOtherZoneOptions(out,map) end
  if #out==0 then
-  return nil,mode=='skillup' and 'Nothing near you gives skill-ups. Try "Best zones".'
-   or mode=='gold' and 'Nothing near you that you can gather.' or 'Nothing matching in this zone.'
+  local where=isHere and 'in this zone' or ('in '..zoneName(self,map))
+  return nil,mode=='skillup' and ('Nothing '..where..' gives skill-ups. Pick another zone with the Zone button.')
+   or mode=='gold' and ('Nothing '..where..' that you can gather.') or ('Nothing matching '..where..'.')
  end
  self:RankRouteOptions(out)
  return out
@@ -411,9 +429,11 @@ end
 -- This zone's loops show at once; other zones are added a moment later so the
 -- game never stalls on opening the window.
 function N:OpenRoutePlanner()
- local deferred=C_Timer and C_Timer.After and true or false
+ local _,isHere=self:RouteZone()
+ local deferred=isHere and C_Timer and C_Timer.After and true or false
  local list,err=self:RouteOptions(not deferred)
  if not list and deferred then list,err=self:RouteOptions(true); deferred=false end
+ if not list and not isHere then list,err=self:RouteOptions(false) end
  if not list then return self:Print(err) end
  self.routeOptions=list; self.routeSelected=1
  local f=self:CreateRoutePreview(); f:Show()

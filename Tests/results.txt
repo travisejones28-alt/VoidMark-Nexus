@@ -141,6 +141,7 @@ PASS Learning: picks and laps are logged and move the ranking toward what really
 PASS Preview: draws the zone art and the loop; OpenMap tiles when OpenMap is loaded
 PASS Gather > Start route opens the options instead of starting blind; /vmn route now still starts
 PASS Other zones arrive a moment after the window opens, keeping your selection
+PASS Zone button: build routes in a picked zone, or switch back to the current zone
 PASS Find item covers the mailbox, worn gear and mail you sent that is not collected yet
 PASS Cooldowns: read from the game, shown per character, synced, announced when ready
 PASS Mail, gear and cooldowns travel with the sync
@@ -156,4 +157,4 @@ PASS Find item: every character, bags vs bank, partial names, IDs, links, misses
 PASS A character saved twice (import + old copy) is counted once, newest copy wins
 PASS Gold: read on change, shown per character with a total, synced and exported
 PASS Gold travels with the bank sync
-PASS: 158 tests; Lua 5.1 / standard interpreter
+PASS: 159 tests; Lua 5.1 / standard interpreter

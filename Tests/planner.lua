@@ -150,3 +150,31 @@ test('Other zones arrive a moment after the window opens, keeping your selection
  C_Timer=oldTimer; N.routePreview:Hide(); N.routeOptions=nil
  s.kind,s.target,s.routeSelectionMode=saved[1],saved[2],saved[3]
 end)
+
+test('Zone button: build routes in a picked zone, or switch back to the current zone',function()
+ local s=N.db.settings; local saved={s.kind,s.target,s.routeSelectionMode,s.routeZone}
+ s.kind,s.target,s.routeSelectionMode,s.routeZone='herb','','herb',nil
+ N:Show('Gather'); N:Render(); eq(N.ui.zones.text,'Zone: Current')
+ -- The menu lists Current zone first, then zones with spots.
+ local captured; local choice=N.Choice
+ N.Choice=function(_,_,options,fn) captured={options=options,fn=fn} end
+ N.ui.zones.scripts.OnClick()
+ eq(captured.options[1].value,0); assert(#captured.options>=3)
+ local other; for i=2,#captured.options do if captured.options[i].value~=1411 then other=captured.options[i].value; break end end
+ assert(other,'another zone listed')
+ captured.fn(other); eq(s.routeZone,other)
+ N:Render(); assert(N.ui.zones.text~='Zone: Current'); assert(N.ui.gatherInfo.text:find('Routes will be in ',1,true),N.ui.gatherInfo.text)
+ -- Options are all in the picked zone; no extra zones; nothing claims you are there.
+ local list=assert(N:RouteOptions())
+ for _,o in ipairs(list) do eq(o.map,other); eq(o.here,false) end
+ assert(#list>=2)
+ local opened=assert(N:OpenRoutePlanner()); for _,o in ipairs(opened) do eq(o.map,other) end
+ N.routePreview:Hide(); N.routeOptions=nil
+ -- Quick start goes there too.
+ local r=assert(N:GenerateRoute()); eq(r.map,other); N:StopRoute()
+ -- Back to current.
+ captured.fn(0); eq(s.routeZone,nil); N:Render(); eq(N.ui.zones.text,'Zone: Current')
+ local back=assert(N:RouteOptions(false)); eq(back[1].map,1411); eq(back[1].here,true)
+ N.Choice=choice
+ s.kind,s.target,s.routeSelectionMode,s.routeZone=saved[1],saved[2],saved[3],saved[4]
+end)

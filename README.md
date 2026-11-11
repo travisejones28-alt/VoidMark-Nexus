@@ -16,6 +16,9 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.10.1
+- **Zone button** on Gather (replaces Best zones): *Current zone* follows you, or pick any zone with matching spots (best first) and Start route / `/vmn route now` build the loop there. The arrow says which zone to go to.
+
 ## What changed in 0.10.0
 - **Find item sees the mailbox and worn gear.** The mailbox is read when you open it; gear whenever it changes. Items you mail to another character show as "In the mail to X" until that character opens their mailbox (or 30 days pass).
 - **Profession cooldowns on every character** (Mooncloth, transmutes, Salt Shaker, and any recipe cooldown seen in a profession window): synced with the other account, on the Characters page, announced at login when ready. `/vmn cd` lists them.

@@ -162,7 +162,7 @@ function N:CheckReplan()
  local map=self:Position(); if map~=route.map then return end
  local key=self:ResourceSetKey(self:ZoneNodes(map))
  if key==route.resourceKey then return end
- if key=='' then return self:Print('Nothing in this zone gives skill-ups any more. Try "Best zones".') end
+ if key=='' then return self:Print('Nothing in this zone gives skill-ups any more. Pick another zone with the Zone button.') end
  local lap,lastLap=self.lap,self.lapStats
  local fresh=self:GenerateRoute()
  if fresh then

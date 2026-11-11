@@ -141,7 +141,7 @@ function N:CreateUI()
  end)
  u.start=button(g,'Start route',14,-32,150,function() if N.activeRoute then N:StopRoute() else N:OpenRoutePlanner() end end)
  u.next=button(g,'Next stop',170,-32,110,function() N:SkipWaypoint() end)
- u.zones=button(g,'Best zones',286,-32,160,function() u.bestZones=N:BestZones(6); u.offset=0 end)
+ u.zones=button(g,'Zone: Current',286,-32,160,function() N:ChooseRouteZone(u.zones) end)
  u.gatherInfo=label(g,'',14,-64,'GameFontHighlight'); u.gatherInfo:SetWidth(W-28)
  -- Professions controls
  local pr=u.pages.Professions
@@ -278,6 +278,10 @@ function N:RenderGather(u)
  local s=self.db.settings
  u.what:SetText(self:ResourceLabel()); u.travel:SetText(s.travel or 'Foot')
  u.start:SetText(self.activeRoute and 'Stop route' or 'Start route'); u.next:SetShown(self.activeRoute~=nil)
+ local zmap,zhere,zcur=self:RouteZone()
+ local zlabel=zhere and 'Current' or self:RouteZoneName(zmap)
+ if #zlabel>14 then zlabel=zlabel:sub(1,13)..'.' end
+ u.zones:SetText('Zone: '..zlabel)
  local rows,info={},{}
  local route=self.activeRoute
  if route then
@@ -298,7 +302,8 @@ function N:RenderGather(u)
    local skills=self:GatheringSkills(); local k=skills[s.kind=='ore' and 'ore' or 'herb']
    info[#info+1]=k and (k.name..' '..k.skill..'/'..k.max) or 'Open your profession once so Nexus knows your skill.'
   end
-  info[#info+1]='Press Start route: Nexus draws one loop through this zone and the arrow guides you.'
+  if zhere then info[#info+1]='Press Start route to see route options for this zone.'
+  else info[#info+1]='Routes will be in '..self:RouteZoneName(zmap)..(zcur and (' (you are in '..self:RouteZoneName(zcur)..')') or '')..'. Zone button > Current zone to switch back.' end
   if u.bestZones then
    rows[#rows+1]=colorRow({text='Best zones for '..self:ResourceLabel():lower()},COLORS.muted)
    for _,z in ipairs(u.bestZones) do rows[#rows+1]={text=z.name..'  ('..z.spawns..' spawn spots)'} end

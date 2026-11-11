@@ -244,7 +244,8 @@ end
 
 -- Instant replacement for the old multi-pass planner.
 function N:GenerateRoute()
- local map,x,y=self:Position()
+ local map,isHere,_,x,y
+ if self.RouteZone then map,isHere,_,x,y=self:RouteZone() else map,x,y=self:Position(); isHere=true end
  if not map then return self:Print('Your position is not available here.') end
  if self.db.settings.routeSelectionMode=='skillup' or self.db.settings.routeSelectionMode=='gold' then
   self.generating=true; self:Guard('scan',function() self:ScanProfessions() end); self.generating=nil
@@ -252,10 +253,10 @@ function N:GenerateRoute()
  local nodes=self:ZoneNodes(map)
  if #nodes==0 then
   local mode=self.db.settings.routeSelectionMode
-  return self:Print(mode=='skillup' and 'Nothing in this zone gives you skill-ups. Try a zone from "Best zones".'
-   or mode=='gold' and 'Nothing here you can gather. Try a zone from "Best zones".' or 'Nothing matching in this zone.')
+  return self:Print(mode=='skillup' and 'Nothing in this zone gives you skill-ups. Pick another zone with the Zone button.'
+   or mode=='gold' and 'Nothing here you can gather. Pick another zone with the Zone button.' or 'Nothing matching in this zone.')
  end
- local route,err=self:BuildZoneLoop(map,nodes,{x=x,y=y})
+ local route,err=self:BuildZoneLoop(map,nodes,isHere and x and {x=x,y=y} or nil)
  if not route then return self:Print(err) end
  if self.ResourceSetKey then route.resourceKey=self:ResourceSetKey(nodes) end
  -- A rebuild keeps the kind of route you picked, so its laps keep counting toward it.

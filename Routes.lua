@@ -802,7 +802,7 @@ function N:UpdateArrow()
  if not point or not self.db.settings.routeVisible then arrow:Hide(); return end
  local map,x,y=self:Position()
  if map~=route.map or not x or not y then
-  arrow.status:SetText('Return to route zone');arrow.label:SetText('-- yd');arrow.eta:SetText('-- sec')
+  arrow.status:SetText('Go to '..(N.RouteZoneName and N:RouteZoneName(route.map) or 'the route zone'));arrow.label:SetText('-- yd');arrow.eta:SetText('-- sec')
   arrow.texture:Hide()
   arrow.bearing=nil
   return

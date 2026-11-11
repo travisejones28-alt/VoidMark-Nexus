@@ -539,7 +539,7 @@ test('Reference-style arrow HUD updates live progress, distance, ETA and next-st
  f.skip.scripts.OnClick();eq(N.waypoint,3)
  N.routePaused=true;N:UpdateArrow();eq(f.status.text,'Route paused');eq(f.eta.text,'-- sec')
  N.routePaused=false;N.Position=function() return 999,.4,.4 end
- N:UpdateArrow();eq(f.status.text,'Return to route zone');assert(not f.texture:IsShown())
+ N:UpdateArrow();assert(f.status.text:find('^Go to '),f.status.text);assert(not f.texture:IsShown())
  N.Position=position;N.activeRoute=nil
 end)
 
