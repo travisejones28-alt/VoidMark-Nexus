@@ -109,6 +109,22 @@ function N:CreateUI()
  close:ClearAllPoints(); close:SetPoint('TOPRIGHT',f,'TOPRIGHT',-8,-8)
  local u={frame=f,tab='Gather',profView='level',offset=0,rows={},tabs={},pages={}}
  self.ui=u
+ -- Find an item anywhere: typing jumps to Characters and lists every place it is.
+ u.find=edit(f,180,-9,200,'')
+ u.findHint=u.find:CreateFontString(nil,'OVERLAY','GameFontDisable'); u.findHint:SetPoint('LEFT',4,0); u.findHint:SetText('Find item...')
+ u.find:SetScript('OnTextChanged',function(e)
+  local text=e:GetText(); u.findHint:SetShown(text=='')
+  if text~='' then u.tab='Characters' end
+  u.offset=0; N.dirty=true
+ end)
+ u.find:SetScript('OnEscapePressed',function(e) e:SetText(''); e:ClearFocus() end)
+ u.find:SetScript('OnEnterPressed',function(e) e:ClearFocus() end)
+ -- Shift-clicking an item while the box has focus searches for it.
+ if hooksecurefunc and type(ChatEdit_InsertLink)=='function' then
+  hooksecurefunc('ChatEdit_InsertLink',function(link)
+   if u.find:HasFocus() and type(link)=='string' then local name=link:match('|h%[(.-)%]|h'); if name then u.find:SetText(name) end end
+  end)
+ end
  for i,name in ipairs(pages) do
   u.tabs[name]=button(f,name,12+(i-1)*109,-40,105,function() u.tab=name; u.offset=0; if N.menu then N.menu:Hide() end; N.dirty=true end)
  end
@@ -386,6 +402,8 @@ function N:RenderProfessions(u)
 end
 
 function N:RenderCharacters(u)
+ local query=u.find and u.find:GetText() or ''
+ if query~='' then return self:RenderFinder(u,query) end
  local lines={}
  local peers={}; for peer in pairs(self.db.sync and self.db.sync.peers or {}) do peers[#peers+1]=peer end
  if #peers==0 then lines[#lines+1]='Not paired. Type the other character\'s full name (e.g. Voidmark Bank) and press Pair. Do it on both accounts.'

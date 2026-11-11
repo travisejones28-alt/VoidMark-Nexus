@@ -37,7 +37,7 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Data/Nodes','Data/Spawns','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','Laps','Recording','MinimapRoute','UI','Tooltip','Boot'}
+local files={'Core','Data/Nodes','Data/Spawns','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','Laps','Recording','MinimapRoute','UI','Finder','Tooltip','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
@@ -979,6 +979,43 @@ test('Forever name forms: surname in the second UnitName slot, hyphen senders, b
  N.syncHelloForm['voidmark bank']=true
  N:SyncReceive('VMNX','Q:id','WHISPER','Voidmark-Bank'); eq(N:SyncTarget('voidmark bank'),'Voidmark-Bank')
  N.syncOut,N.syncContact,N.syncHyphen,N.syncHelloForm,N.syncProbeAt={},nil,nil,nil,nil; N.db.sync.peers=savedPeers
+end)
+test('Find item: every character, bags vs bank, partial names, IDs, links, misses explained',function()
+ local savedChars,savedGII,savedEx,savedNames=N.db.characters,GetItemInfo,N.db.excluded,N.db.itemNames
+ local names={[2447]='Peacebloom',[765]='Silverleaf',[2449]='Earthroot',[4306]='Silk Cloth'}
+ GetItemInfo=function(id) return names[tonumber(id)] end
+ N.db.itemNames={[3820]='Stranglekelp'} -- learned earlier, not in the client cache now
+ local me=N.character
+ N.db.characters={[N.characterID]=me,
+  ['B2/TestRealm/Voidmark Bank']={name='Voidmark Bank',realm='TestRealm',faction='Horde',synced=true,bags={[2447]=2},bank={[2447]=20,[765]=40,[3820]=6},bagsAt=now-3600,bankAt=now-172800*2,professions={}},
+  ['A1/TestRealm/Voidmark Alt']={name='Voidmark Alt',realm='TestRealm',faction='Horde',bags={[4306]=11},bank={},bagsAt=now,professions={}}}
+ me.bags={[2447]=3,[2449]=1}; me.bank={}; me.bankAt=nil
+ N.db.excluded={['A1/TestRealm/Voidmark Alt']=true}
+ local list=N:FindItems('peace')
+ eq(#list,1); eq(list[1].name,'Peacebloom'); eq(list[1].total,25)
+ eq(list[1].places[1].name,me.name) -- you first
+ eq(list[1].places[2].bank,20); eq(list[1].places[2].bags,2)
+ local line=N:FinderPlace(list[1].places[2]); assert(line:find('Voidmark Bank: bags 2, bank 20',1,true),line); assert(line:find('bank 4d ago',1,true) or line:find('bank 9',1,true) or line:find('ago',1,true),line)
+ eq(#N:FindItems('leaf silver'),1)                       -- words in any order
+ eq(N:FindItems('stranglekelp')[1].total,6)              -- saved name works without the cache
+ eq(N:FindItems('765')[1].name,'Silverleaf')             -- item ID
+ eq(N:FindItems('|cff1eff00|Hitem:4306::::::::|h[Silk Cloth]|h|r')[1].total,11) -- shift-clicked link
+ assert(N:FinderPlace(N:FindItems('silk')[1].places[1]):find('not counted',1,true)) -- excluded still found, labelled
+ eq(#N:FindItems('earth root'),1); eq(#N:FindItems('earthbloom'),0)
+ -- Search ranking: exact name before partial matches.
+ names[9001]='Peacebloom Seed'; me.bags[9001]=50
+ eq(N:FindItems('peacebloom')[1].name,'Peacebloom')
+ -- Unknown names are requested, not guessed.
+ me.bags[123456]=1; local list2,pending=N:FindItems('zzz'); eq(#list2,0); eq(pending,1)
+ -- Window: typing in Find jumps to Characters and lists rows; miss explains blind spots.
+ N:Show('Gather'); N.ui.find:SetText('silverleaf'); N.ui.find.scripts.OnTextChanged(N.ui.find); N:Render()
+ eq(N.ui.tab,'Characters'); assert(N.ui.rows[1].data.text:find('Silverleaf',1,true)); assert(N.ui.rows[2].data.text:find('Voidmark Bank: bank 40',1,true))
+ N.ui.find:SetText('nothing here'); N:Render(); assert(N.ui.syncInfo.text:find('Bank never opened on:',1,true))
+ N.ui.find:SetText(''); N.ui.find.scripts.OnTextChanged(N.ui.find); N:Render(); assert(N.ui.rows[1].data.text:find('(you)',1,true))
+ -- Chat command.
+ local printed={}; local p=N.Print; N.Print=function(_,m) printed[#printed+1]=m end
+ N:FindCommand('peacebloom'); assert(printed[1]:find('Peacebloom x25',1,true),printed[1]); N.Print=p
+ me.bags={}; me.bank={}; N.db.characters,GetItemInfo,N.db.excluded,N.db.itemNames=savedChars,savedGII,savedEx,savedNames
 end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary

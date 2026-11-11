@@ -142,4 +142,5 @@ PASS Forever full names: own record migrates by GUID, bank syncs and pairs autom
 PASS Auto sync retries until the other character answers, then checks in slowly
 PASS Sweep: remove old characters safely, no background recording from old drafts
 PASS Forever name forms: surname in the second UnitName slot, hyphen senders, both whisper forms
-PASS: 144 tests; Lua 5.1 / standard interpreter
+PASS Find item: every character, bags vs bank, partial names, IDs, links, misses explained
+PASS: 145 tests; Lua 5.1 / standard interpreter

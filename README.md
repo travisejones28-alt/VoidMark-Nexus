@@ -10,7 +10,13 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Characters.** Your characters with how fresh their bag and bank data is. Pair with the bank character on the other account to sync live while both are online. Item tooltips show how many of that item each character holds.
 
+**Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
+
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.7.0
+- Find item: search all saved bags and banks (both accounts) from the top of the window or `/vmn find`.
+- Sync works with either Forever name form and retries on its own; old first-name records move to full names.
 
 ## What changed in 0.6.1
 - Minimap stops are hollow rings with the number beside them, and route lines stop at the ring, so the herb/ore blip under a stop always shows.
