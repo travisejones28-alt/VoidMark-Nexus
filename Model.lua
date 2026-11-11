@@ -3,13 +3,14 @@ function N:Stock(targetID)
  if self.renderStocks and self.renderStocks[targetID] then return self.renderStocks[targetID] end
  local target=self.db.characters[targetID]; local stock,seen={},{}
  if not target then return stock end
+ local preferred=self:PreferredRecords(); preferred[targetID]=true
  local ids={targetID}; for id in pairs(self.db.characters) do if id~=targetID then ids[#ids+1]=id end end
  table.sort(ids,function(a,b) if a==targetID then return b~=targetID elseif b==targetID then return false end return a<b end)
  for _,id in ipairs(ids) do
   local c=self.db.characters[id]; local physical=c.guid or (c.realm..'/'..c.name)
   local allowed=not self.db.excluded[id] and (id==targetID or self.db.settings.includeAlts)
    and (not c.imported or self.db.settings.includeImports or (c.synced and self.db.settings.includeSynced)) and self:SameRealm(c.realm,target.realm) and c.faction==target.faction
-  if allowed and not seen[physical] then
+  if allowed and (preferred[id] or id==targetID) and not seen[physical] then
    seen[physical]=true
    for _,location in ipairs({'bags','bank'}) do
     local at=c[location..'At']; local sane=self:Finite(at,0,self:Now()+300)

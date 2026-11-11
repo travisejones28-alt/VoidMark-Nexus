@@ -420,10 +420,11 @@ function N:RenderCharacters(u)
  local ids={}; for id in pairs(self.db.characters) do ids[#ids+1]=id end
  table.sort(ids,function(a,b) if a==self.characterID then return true elseif b==self.characterID then return false end return self.db.characters[a].name<self.db.characters[b].name end)
  local rows={}
+ local preferred=self:PreferredRecords()
  for _,id in ipairs(ids) do
-  local c=self.db.characters[id]; local off=self.db.excluded[id]
+  local c=self.db.characters[id]; local off=self.db.excluded[id] or not preferred[id]
   local tag=id==self.characterID and ' (you)' or c.synced and ' (synced)' or c.imported and ' (imported)' or ''
-  rows[#rows+1]=colorRow({text=c.name..tag..'   bags '..self:Ago(c.bagsAt)..', bank '..self:Ago(c.bankAt)..(off and '   not counted' or ''),
+  rows[#rows+1]=colorRow({text=c.name..tag..'   bags '..self:Ago(c.bagsAt)..', bank '..self:Ago(c.bankAt)..(not preferred[id] and '   older copy, ignored' or off and '   not counted' or ''),
    click=function() if IsShiftKeyDown and IsShiftKeyDown() then self:ForgetCharacter(id) else self.db.excluded[id]=not self.db.excluded[id] or nil end end,title=c.name,
    tip=function(tt) tt:AddLine(c.realm..' / '..c.faction,1,1,1)
     for _,p in pairs(c.professions or {}) do tt:AddLine(p.name..' '..(p.skill or 0)..'/'..(p.max or 0),.8,.8,.8) end

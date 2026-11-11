@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.7.0-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.7.1-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -102,6 +102,27 @@ function N:MigrateCharacterID(d,newID,guid)
   for _,plan in ipairs(d.plans) do if type(plan)=='table' and plan.character==id then plan.character=newID end end
  end
  self.migratedFrom=bestID
+end
+-- One saved record per real character. Copies happen (an import plus a sync,
+-- an old realm spelling); the one you are playing wins, then the newest.
+-- A full "First Surname" is unique on a realm, so it identifies the character
+-- even when one copy has no GUID. Old first-name-only records fall back to GUID.
+function N:PhysicalKey(c)
+ local name=tostring(c.name or '')
+ if not name:find(' ',1,true) and type(c.guid)=='string' and c.guid~='' then return c.guid end
+ return tostring(c.realm or ''):gsub('%s',''):lower()..'/'..name:lower()
+end
+local function fresh(c) return math.max(tonumber(c.at) or 0,tonumber(c.bagsAt) or 0,tonumber(c.bankAt) or 0,tonumber(c.syncedAt) or 0) end
+function N:PreferredRecords()
+ local best={}
+ for cid,c in pairs(self.db.characters) do
+  if type(c)=='table' then
+   local k=self:PhysicalKey(c); local cur=best[k]
+   if not cur or cid==self.characterID or (cur~=self.characterID and (fresh(c)>fresh(self.db.characters[cur]) or (fresh(c)==fresh(self.db.characters[cur]) and cid<cur))) then best[k]=cid end
+  end
+ end
+ local out={}; for _,cid in pairs(best) do out[cid]=true end
+ return out
 end
 function N:ItemID(link) return self:Text(link) and tonumber(link:match('item:(%d+)')) end
 function N:ItemName(id)

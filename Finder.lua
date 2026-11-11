@@ -47,7 +47,8 @@ function N:FindItems(query)
  local label=query:match('|h%[(.-)%]|h'); if label then query=label end
  local ws=words(query)
  local byItem,unnamed={},{}
- for cid,c in pairs(self.db.characters) do
+ local preferred=self:PreferredRecords()
+ for cid,c in pairs(self.db.characters) do if preferred[cid] then
   for _,where in ipairs({'bags','bank'}) do
    for id,count in pairs(type(c[where])=='table' and c[where] or {}) do
     id=tonumber(id); count=tonumber(count) or 0
@@ -73,7 +74,7 @@ function N:FindItems(query)
     end
    end
   end
- end
+ end end
  local list={}
  for _,item in pairs(byItem) do
   if item then

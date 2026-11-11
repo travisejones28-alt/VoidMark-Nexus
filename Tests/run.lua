@@ -1017,6 +1017,25 @@ test('Find item: every character, bags vs bank, partial names, IDs, links, misse
  N:FindCommand('peacebloom'); assert(printed[1]:find('Peacebloom x25',1,true),printed[1]); N.Print=p
  me.bags={}; me.bank={}; N.db.characters,GetItemInfo,N.db.excluded,N.db.itemNames=savedChars,savedGII,savedEx,savedNames
 end)
+test('A character saved twice (import + old copy) is counted once, newest copy wins',function()
+ local savedChars,savedGII,savedEx=N.db.characters,GetItemInfo,N.db.excluded
+ GetItemInfo=function(id) return ({[2447]='Peacebloom'})[tonumber(id)] end
+ local me=N.character; me.bags={}; me.bank={[2447]=59}; me.bankAt=now
+ N.db.excluded={}
+ N.db.characters={[N.characterID]=me,
+  ['A1/TestRealm/Voidmark Soulreaver']={name='Voidmark Soulreaver',realm='TestRealm',faction='Horde',guid='G-SR',imported=true,bags={},bank={[2447]=10},bankAt=now-57600,professions={}},
+  ['old/Test Realm/Voidmark Soulreaver']={name='Voidmark Soulreaver',realm='Test Realm',faction='Horde',imported=true,bags={},bank={[2447]=10},bankAt=now-90000,professions={}},
+  ['A2/TestRealm/Voidmark Soulreaver']={name='Voidmark Soulreaver',realm='TestRealm',faction='Horde',guid='G-SR',imported=true,bags={},bank={[2447]=7},bankAt=now-99999,professions={}}}
+ local item=N:FindItems('peacebloom')[1]
+ -- All three copies are one character (full name + realm, even without a GUID): newest wins.
+ eq(#item.places,2); eq(item.total,69); eq(item.places[2].bank,10); eq(item.places[2].bankAt,now-57600)
+ -- Old first-name-only records stay apart by GUID (they may be different characters).
+ N.db.characters['x/TestRealm/Voidmark']={name='Voidmark',realm='TestRealm',faction='Horde',guid='G-1',bags={[2447]=1},bank={},professions={}}
+ N.db.characters['y/TestRealm/Voidmark']={name='Voidmark',realm='TestRealm',faction='Horde',guid='G-2',bags={[2447]=1},bank={},professions={}}
+ eq(N:FindItems('peacebloom')[1].total,71)
+ N.db.settings.includeImports=true; local total=N:ItemCounts(2447); eq(total,71); N.db.settings.includeImports=false
+ me.bank={}; me.bankAt=nil; N.db.characters,GetItemInfo,N.db.excluded=savedChars,savedGII,savedEx
+end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()

@@ -6,9 +6,10 @@ local _, N = ...
 function N:ItemCounts(id)
  id=tonumber(id); if not id or not self.db then return 0,{} end
  local me=self.character; local total,list,seen=0,{},{}
+ local preferred=self:PreferredRecords()
  for cid,c in pairs(self.db.characters) do
   local physical=c.guid or ((c.realm or '')..'/'..(c.name or ''))
-  local allowed=self:SameRealm(c.realm,me.realm) and c.faction==me.faction and not self.db.excluded[cid] and not seen[physical]
+  local allowed=self:SameRealm(c.realm,me.realm) and c.faction==me.faction and preferred[cid] and not self.db.excluded[cid] and not seen[physical]
    and (not c.imported or c.synced or self.db.settings.includeImports)
   if allowed then
    seen[physical]=true
