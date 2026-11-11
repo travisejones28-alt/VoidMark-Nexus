@@ -44,7 +44,7 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() eq(N.version,'0.5.1-beta') end)
+test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() local toc=assert(io.open(root..'/VoidMarkNexus.toc')):read('*a'); eq(N.version,toc:match('## Version: (%S+)')) end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')
 end)
@@ -947,6 +947,19 @@ test('Auto sync retries until the other character answers, then checks in slowly
  N:SyncTick(230); eq(hellos,2); N:SyncTick(462); eq(hellos,3) -- every 5 minutes once connected
  N.syncOut={['voidmark bank']={'x'}}; N:SyncTick(2000); eq(hellos,3) -- never stacks while still sending
  N.syncOut={}; N.SyncHello=orig; N.db.sync.peers=savedPeers; N.syncContact,N.syncProbeAt=nil,nil
+end)
+test('Sweep: remove old characters safely, no background recording from old drafts',function()
+ local saved=N.db.characters; local me=N.character
+ N.db.characters={[N.characterID]=me,['old/TestRealm/Voidmark']={name='Voidmark',realm='TestRealm',faction='Horde',bags={},bank={},professions={}}}
+ N.db.excluded={['old/TestRealm/Voidmark']=true}
+ N:ForgetCharacter('old/TestRealm/Voidmark'); assert(N.db.characters['old/TestRealm/Voidmark']) -- first click only asks
+ N:ForgetCharacter('old/TestRealm/Voidmark'); eq(N.db.characters['old/TestRealm/Voidmark'],nil); eq(N.db.excluded['old/TestRealm/Voidmark'],nil)
+ N:ForgetCharacter(N.characterID); N:ForgetCharacter(N.characterID); assert(N.db.characters[N.characterID]) -- never yourself
+ N.db.characters=saved; N.db.excluded={}
+ N.db.recordings={[N.characterID]={version=1,name='old',map=1411,width=1000,height=1000,points={{x=.1,y=.1}}}}
+ N:InitializeRecording(); assert(N.recording,tostring(N.recordingReadOnly)..' '..tostring(N.characterID)..' '..tostring(N.db.recordings[N.characterID])); assert(not N.recordingActive) -- kept, but not sampled in the background
+ N.db.recordings={}; N:InitializeRecording(); N.recordingActive=nil
+ assert(N.handlers and true)
 end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary

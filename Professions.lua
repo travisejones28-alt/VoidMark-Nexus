@@ -45,7 +45,7 @@ function N:ScanProfessions()
  local function save(key,name,skill,max,icon)
   if not self:Text(name) then return end
   key=self:ProfessionKey(name,key); local p=c.professions[key] or {recipes={}}
-  p.name,p.skill,p.max,p.icon,p.at=name,tonumber(skill) or 0,tonumber(max) or 0,icon,self:Now(); c.professions[key]=p
+  p.name,p.skill,p.max,p.icon,p.at=name,tonumber(skill) or 0,tonumber(max) or 0,icon or p.icon,self:Now(); c.professions[key]=p
  end
  if GetProfessions and GetProfessionInfo then
   local ids={self:Call(GetProfessions)}

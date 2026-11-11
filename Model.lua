@@ -51,7 +51,7 @@ function N:Evaluate(recipe,qty,targetID,used)
  local out={rows=self:Allocate(self:Requirements(recipe,qty),self:Stock(targetID),used),buyAll=0,buyMissing=0,owned=0,unknown=false,stale=false}
  local settings=self.db.settings
  local target=self.db.characters[targetID]
- if not target or target.realm~=self.character.realm or target.faction~=self.character.faction then out.unknown=true end
+ if not target or not self:SameRealm(target.realm,self.character.realm) or target.faction~=self.character.faction then out.unknown=true end
  if recipe.incomplete or not recipe.reagents then out.unknown=true end
  for _,r in ipairs(out.rows) do
   local p=self:Price(r.id); r.price=p; local cost=p and p.unit

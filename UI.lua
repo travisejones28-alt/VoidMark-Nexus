@@ -398,7 +398,7 @@ function N:RenderCharacters(u)
  end
  if self.syncIgnored then lines[#lines+1]='Ignored data from '..tostring(self.syncIgnored)..' (not paired here).' end
  u.syncInfo:SetText(table.concat(lines,'\n'))
- u.footer:SetText('Click a character to stop or start counting their items.')
+ u.footer:SetText('Click: count on/off. Shift-click twice: remove an old character.')
  local ids={}; for id in pairs(self.db.characters) do ids[#ids+1]=id end
  table.sort(ids,function(a,b) if a==self.characterID then return true elseif b==self.characterID then return false end return self.db.characters[a].name<self.db.characters[b].name end)
  local rows={}
@@ -406,12 +406,30 @@ function N:RenderCharacters(u)
   local c=self.db.characters[id]; local off=self.db.excluded[id]
   local tag=id==self.characterID and ' (you)' or c.synced and ' (synced)' or c.imported and ' (imported)' or ''
   rows[#rows+1]=colorRow({text=c.name..tag..'   bags '..self:Ago(c.bagsAt)..', bank '..self:Ago(c.bankAt)..(off and '   not counted' or ''),
-   click=function() self.db.excluded[id]=not self.db.excluded[id] or nil end,title=c.name,
+   click=function() if IsShiftKeyDown and IsShiftKeyDown() then self:ForgetCharacter(id) else self.db.excluded[id]=not self.db.excluded[id] or nil end end,title=c.name,
    tip=function(tt) tt:AddLine(c.realm..' / '..c.faction,1,1,1)
     for _,p in pairs(c.professions or {}) do tt:AddLine(p.name..' '..(p.skill or 0)..'/'..(p.max or 0),.8,.8,.8) end
     if c.synced then tt:AddLine('Last synced '..self:Ago(c.syncedAt),.7,.7,.7) end end},off and COLORS.gray or nil)
  end
  return rows
+end
+
+-- Remove a saved character record (never the one you are playing). Asks twice.
+function N:ForgetCharacter(id)
+ local c=self.db.characters[id]; if not c then return end
+ if id==self.characterID then return self:Print('You cannot remove the character you are playing.') end
+ local now=GetTime and GetTime() or self:Now()
+ if self.forgetPending~=id or now-(self.forgetAt or 0)>8 then
+  self.forgetPending,self.forgetAt=id,now
+  return self:Print('Shift-click '..tostring(c.name)..' again to remove its saved record.')
+ end
+ self.forgetPending=nil
+ self.db.characters[id]=nil; self.db.excluded[id]=nil
+ -- A synced record comes back on the next sync; clear its hashes so it resends in full.
+ local known=self.db.sync and self.db.sync.known
+ if c.synced and type(known)=='table' then for peer in pairs(known) do if (c.name or ''):lower()==peer then known[peer]=nil end end end
+ self.renderStocks=nil; self.dirty=true
+ self:Print('Removed '..tostring(c.name)..'.')
 end
 
 function N:Render()

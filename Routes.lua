@@ -716,7 +716,7 @@ function N:ShowArrow()
     elseif action=='restart' and N.activeRoute then N.waypoint=1;N.terrainIndex=1;N.routePaused=false; N.dirty=true
     elseif action=='pause' then N.routePaused=not N.routePaused
     elseif action=='rejoin' then N:RejoinRoute()
-    elseif action=='cancel' then N.activeRoute=nil; N.waypoint=nil; f:Hide(); N.dirty=true end
+    elseif action=='cancel' then N:StopRoute(); if N.ResetLoopTracking then N:ResetLoopTracking() end end
     f.refreshAt=0
     if WorldMapFrame and WorldMapFrame:IsShown() then N:RefreshMap() end
    end)

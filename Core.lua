@@ -1,6 +1,11 @@
 local _, N = ...
 _G.VoidMarkNexus = N
-N.version, N.schema = '0.5.1-beta', 1
+N.schema = 1
+do -- One source of truth: the TOC's Version line (the fallback must match it).
+ local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+ local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.6.4-beta'
+end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
 function N:Finite(v, lo, hi)

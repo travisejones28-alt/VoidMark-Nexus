@@ -140,4 +140,5 @@ PASS Throttled sync messages are retried, not dropped
 PASS Item tooltips list counts per character and skip other realms and excluded characters
 PASS Forever full names: own record migrates by GUID, bank syncs and pairs automatically
 PASS Auto sync retries until the other character answers, then checks in slowly
-PASS: 142 tests; Lua 5.1 / standard interpreter
+PASS Sweep: remove old characters safely, no background recording from old drafts
+PASS: 143 tests; Lua 5.1 / standard interpreter

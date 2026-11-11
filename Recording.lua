@@ -13,7 +13,8 @@ function N:InitializeRecording()
  local d=self.db.recordings[self.characterID]
  self.recordingReadOnly=type(d)=='table' and type(d.version)=='number' and d.version>1
  self.recording=validDraft(self,d) and d or nil
- self.recordingAt=nil
+ -- A draft left by an older version is kept but not sampled; only StartRecording samples.
+ self.recordingAt=nil;self.recordingActive=nil
 end
 function N:StartRecording(name)
  if self.recordingReadOnly then return self:Print('Newer recording format preserved. Update Nexus to continue it.') end
@@ -24,7 +25,7 @@ function N:StartRecording(name)
  if not (w and h and x and y) then return self:Print('Zone position unavailable.') end
  name=tostring(name or ''):sub(1,80);if name=='' then name='Recorded '..date('%m-%d %H:%M') end
  self.recording={version=1,name=name,map=map,width=w,height=h,points={{x=x,y=y}},created=self:Now()}
- self.db.recordings[self.characterID]=self.recording;self.recordingAt=nil
+ self.db.recordings[self.characterID]=self.recording;self.recordingAt=nil;self.recordingActive=true
  self:Print('Recording '..name..'. /vmn record finish saves it; /vmn record discard removes the draft.')
  self.dirty=true
 end
