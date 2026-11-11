@@ -10,9 +10,14 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Characters.** Your characters with how fresh their bag and bank data is. Pair with the bank character on the other account to sync live while both are online. Item tooltips show how many of that item each character holds.
 
+**Gold.** Every character's gold is saved when you log in and whenever it changes, and the bank character's gold syncs over with its bags. The Characters page shows each character's gold and the total; `/vmn gold` prints it in chat.
+
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.8.0
+- Gold tracking on every character, synced across accounts, with a total on the Characters page and `/vmn gold`.
 
 ## What changed in 0.7.0
 - Find item: search all saved bags and banks (both accounts) from the top of the window or `/vmn find`.

@@ -415,6 +415,7 @@ function N:RenderCharacters(u)
    lines[#lines+1]=string.format('Sent %d messages, %d waiting%s.',st.sent,waiting,st.failed>0 and (', '..st.failed..' failed') or '') end
  end
  if self.syncIgnored then lines[#lines+1]='Ignored data from '..tostring(self.syncIgnored)..' (not paired here).' end
+ local gold=self:GoldLine(); if gold then table.insert(lines,1,gold) end
  u.syncInfo:SetText(table.concat(lines,'\n'))
  u.footer:SetText('Click: count on/off. Shift-click twice: remove an old character.')
  local ids={}; for id in pairs(self.db.characters) do ids[#ids+1]=id end
@@ -424,9 +425,11 @@ function N:RenderCharacters(u)
  for _,id in ipairs(ids) do
   local c=self.db.characters[id]; local off=self.db.excluded[id] or not preferred[id]
   local tag=id==self.characterID and ' (you)' or c.synced and ' (synced)' or c.imported and ' (imported)' or ''
-  rows[#rows+1]=colorRow({text=c.name..tag..'   bags '..self:Ago(c.bagsAt)..', bank '..self:Ago(c.bankAt)..(not preferred[id] and '   older copy, ignored' or off and '   not counted' or ''),
+  rows[#rows+1]=colorRow({text=c.name..tag..'   '..(c.money and self:Gold(c.money) or 'gold ?')..'   bank '..self:Ago(c.bankAt)..(not preferred[id] and '   older copy, ignored' or off and '   not counted' or ''),
    click=function() if IsShiftKeyDown and IsShiftKeyDown() then self:ForgetCharacter(id) else self.db.excluded[id]=not self.db.excluded[id] or nil end end,title=c.name,
    tip=function(tt) tt:AddLine(c.realm..' / '..c.faction,1,1,1)
+    tt:AddLine('Gold '..(c.money and self:Gold(c.money)..' (seen '..self:Ago(c.moneyAt)..')' or 'not seen yet: log in once'),1,.82,0)
+    tt:AddLine('Bags '..self:Ago(c.bagsAt)..', bank '..self:Ago(c.bankAt),.8,.8,.8)
     for _,p in pairs(c.professions or {}) do tt:AddLine(p.name..' '..(p.skill or 0)..'/'..(p.max or 0),.8,.8,.8) end
     if c.synced then tt:AddLine('Last synced '..self:Ago(c.syncedAt),.7,.7,.7) end end},off and COLORS.gray or nil)
  end

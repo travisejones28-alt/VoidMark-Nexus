@@ -163,7 +163,7 @@ N.SyncHash=hash
 function N:SyncSections()
  local c=self:CleanImported(self.character)
  c.account=self.db.account;c.imported=nil
- local inv={bags=c.bags,bank=c.bank,bagsAt=c.bagsAt,bankAt=c.bankAt}
+ local inv={bags=c.bags,bank=c.bank,bagsAt=c.bagsAt,bankAt=c.bankAt,money=c.money,moneyAt=c.moneyAt}
  local id={name=c.name,realm=c.realm,faction=c.faction,guid=c.guid,account=c.account,at=c.at}
  local out={}
  for key,value in pairs({id=id,inv=inv,prof={professions=c.professions}}) do
@@ -241,6 +241,7 @@ function N:ApplySync(peer,key,data)
   for _,k in ipairs({'name','realm','faction','guid','account','at'}) do pending[k]=data[k] end
  elseif key=='inv' then
   pending.bags,pending.bank,pending.bagsAt,pending.bankAt=data.bags or {},data.bank or {},data.bagsAt,data.bankAt
+  if data.money~=nil then pending.money,pending.moneyAt=data.money,data.moneyAt end
  elseif key=='prof' then pending.professions=data.professions or {} end
  if not pending.name then return end
  if shortName(pending.name)~=peer then return self:Print('Ignored sync: sender name does not match its data.') end

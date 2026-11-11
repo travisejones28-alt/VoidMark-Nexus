@@ -59,7 +59,7 @@ function N:Slash(msg)
  elseif command=='target' then if args=='' then self:SelectResource('kind:all') else self:SelectResource('name:'..args) end; self:Print('Gathering: '..self:ResourceLabel())
  elseif command=='kind' then if args=='herb' or args=='ore' or args=='all' then self:SelectResource('kind:'..args) end
  elseif command=='help' then
-  self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn laps, /vmn spots, /vmn find NAME, /vmn pair First Surname, /vmn unpair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
+  self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn laps, /vmn spots, /vmn find NAME, /vmn gold, /vmn pair First Surname, /vmn unpair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
  elseif command=='mapcontrols' or command=='mapfilters' then
   self.db.settings.mapButton=true
   if args=='reset' then self.db.settings.mapButtonPos=nil end
@@ -67,6 +67,7 @@ function N:Slash(msg)
    self:EnsureMapControls();self:PlaceMapControls(args=='reset');self:RefreshMap()
    self:ToggleMapFilterMenu(self.mapControls)
   else self:ToggleMapFilterMenu() end
+ elseif command=='gold' or command=='money' then self:GoldCommand()
  elseif command=='find' or command=='search' then self:FindCommand(args)
  elseif command=='cancelplan' then self:CancelPlanner('Route calculation cancelled.')
  elseif command=='pair' then self:PairPeer(args)
@@ -228,7 +229,7 @@ frame:SetScript('OnEvent',function(_,event,...)
   if ...=='VoidMarkNexus' then N:Guard('initialize',function() N:Initialize() end) end
  elseif event=='PLAYER_LOGIN' then
   if not N.ready then return end
-  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:RestoreSession(); N:MinimapButton(); N:RestoreNavigation(); N:HookTooltips();if C_Timer and C_Timer.After then C_Timer.After(8,function() N:Guard('sync',function() N:SyncTick() end) end) end;if C_Timer and C_Timer.NewTicker then C_Timer.NewTicker(30,function() N:Guard('sync',function() N:SyncTick() end) end) end;end)
+  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:ScanMoney(); N:RestoreSession(); N:MinimapButton(); N:RestoreNavigation(); N:HookTooltips();if C_Timer and C_Timer.After then C_Timer.After(8,function() N:Guard('sync',function() N:SyncTick() end) end) end;if C_Timer and C_Timer.NewTicker then C_Timer.NewTicker(30,function() N:Guard('sync',function() N:SyncTick() end) end) end;end)
   if C_Timer and C_Timer.NewTicker then
    C_Timer.NewTicker(1,function() if WorldMapFrame and WorldMapFrame:IsShown() then N:Guard('map',function() N:RefreshMap() end) end end)
    -- Background work only for features that are switched on.

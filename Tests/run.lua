@@ -37,7 +37,7 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Data/Nodes','Data/Spawns','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','Laps','Recording','MinimapRoute','UI','Finder','Tooltip','Boot'}
+local files={'Core','Data/Nodes','Data/Spawns','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','Laps','Recording','MinimapRoute','UI','Finder','Gold','Tooltip','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
@@ -1035,6 +1035,41 @@ test('A character saved twice (import + old copy) is counted once, newest copy w
  eq(N:FindItems('peacebloom')[1].total,71)
  N.db.settings.includeImports=true; local total=N:ItemCounts(2447); eq(total,71); N.db.settings.includeImports=false
  me.bank={}; me.bankAt=nil; N.db.characters,GetItemInfo,N.db.excluded=savedChars,savedGII,savedEx
+end)
+test('Gold: read on change, shown per character with a total, synced and exported',function()
+ local savedChars,savedGM=N.db.characters,GetMoney
+ local me=N.character; me.money,me.moneyAt=nil,nil
+ local money=1234567; GetMoney=function() return money end
+ N.db.characters={[N.characterID]=me,
+  ['B2/TestRealm/Voidmark Bank']={name='Voidmark Bank',realm='TestRealm',faction='Horde',synced=true,account='B2',at=now,money=98765432,moneyAt=now-3600,bags={},bank={},professions={}},
+  ['A1/TestRealm/Voidmark Alt']={name='Voidmark Alt',realm='TestRealm',faction='Horde',account='A1',at=now,bags={},bank={},professions={}}}
+ N.handlers=N.handlers; N:ScanMoney(); eq(me.money,1234567)
+ money=1300000; N:ScanMoney(); eq(me.money,1300000)
+ eq(N:Gold(98765432),'9,876g 54s'); eq(N:Gold(5),'0g 0s'); eq(N:Gold(10000000000),'1,000,000g 0s')
+ local total,list,unknown=N:GoldSummary(); eq(total,98765432+1300000); eq(unknown,1); eq(list[1].you,true); eq(list[2].name,'Voidmark Bank')
+ assert(N:GoldLine():find('Gold: 10,006g 54s on 2 characters (1 not seen yet',1,true),N:GoldLine())
+ -- Characters page shows it.
+ N:Show('Characters'); N.ui.find:SetText(''); N:Render()
+ assert(N.ui.syncInfo.text:find('Gold: 10,006g 54s',1,true)); assert(N.ui.rows[1].data.text:find('130g 0s',1,true),N.ui.rows[1].data.text)
+ -- Export/import keeps gold; bad gold is rejected.
+ local clean=N:CleanImported(N.db.characters['B2/TestRealm/Voidmark Bank']); eq(clean.money,98765432)
+ local bad=N:Copy(clean); bad.money=-5; assert(not pcall(N.ValidateCharacter,N,bad))
+ -- Chat command.
+ local printed={}; local p=N.Print; N.Print=function(_,m) printed[#printed+1]=m end
+ N:GoldCommand(); assert(printed[#printed]=='Total: 10,006g 54s',printed[#printed]); N.Print=p
+ me.money,me.moneyAt=nil,nil; GetMoney=savedGM; N.db.characters=savedChars
+end)
+test('Gold travels with the bank sync',function()
+ local savedPeers=N.db.sync.peers; N.db.sync.peers={['voidmark bank']='Voidmark Bank'}
+ local api=C_ChatInfo; C_ChatInfo={SendAddonMessage=function() return 0 end}
+ local raw={id=N:EncodeData({name='Voidmark Bank',realm='TestRealm',faction='Horde',guid='GUID-Bank2',account='B9',at=now}),
+  inv=N:EncodeData({bags={},bank={},bankAt=now,money=55550000,moneyAt=now}),prof=N:EncodeData({professions={}})}
+ local sender='Voidmark-Bank'
+ N:SyncReceive('VMNX','H:B9:'..N.SyncHash(raw.id)..':'..N.SyncHash(raw.inv)..':'..N.SyncHash(raw.prof),'WHISPER',sender)
+ for _,k in ipairs({'id','inv','prof'}) do N:SyncReceive('VMNX','D:1:'..k..':1:1:'..N.SyncEscape(raw[k]),'WHISPER',sender) end
+ local got=N.db.characters['B9/TestRealm/Voidmark Bank']; assert(got,'not stored'); eq(got.money,55550000)
+ N.db.characters['B9/TestRealm/Voidmark Bank']=nil
+ C_ChatInfo=api; N.db.sync.peers=savedPeers; N.syncOut,N.syncContact,N.syncHyphen,N.syncHelloForm,N.syncProbeAt={},nil,nil,nil,nil
 end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
