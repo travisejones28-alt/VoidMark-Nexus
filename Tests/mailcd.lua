@@ -1,0 +1,101 @@
+local N,test,eq,widget=...
+-- Mail, worn gear and profession cooldowns.
+
+test('Find item covers the mailbox, worn gear and mail you sent that is not collected yet',function()
+ local savedChars,savedGII,savedSent=N.db.characters,GetItemInfo,N.db.sentMail
+ local names={[2447]='Peacebloom',[2589]='Linen Cloth',[6125]='Brawler\'s Harness',[4306]='Silk Cloth'}
+ GetItemInfo=function(id) return names[tonumber(id)] end
+ local me=N.character; me.bags={}; me.bank={}; me.mail=nil; me.equipped=nil
+ N.db.characters={[N.characterID]=me,
+  ['B2/TestRealm/Voidmark Bank']={name='Voidmark Bank',realm='TestRealm',faction='Horde',synced=true,account='B2',at=N:Now(),bags={},bank={[4306]=5},bankAt=N:Now(),mailAt=N:Now()-7200,professions={}}}
+ N.db.sentMail={}
+ -- Inbox: two mails, one with two attachments.
+ local inbox={{true,{{'Peacebloom',2447,nil,20},{'Linen Cloth',2589,nil,10}}},{false,{}},{true,{{'Peacebloom',2447,nil,5}}}}
+ GetInboxNumItems=function() return #inbox end
+ GetInboxHeaderInfo=function(i) return nil,nil,'Someone','Subject',0,0,30,inbox[i][1] end
+ GetInboxItem=function(i,a) local it=inbox[i][2][a]; if it then return it[1],it[2],it[3],it[4] end end
+ ATTACHMENTS_MAX_RECEIVE=16
+ N:ScanMail(); eq(me.mail[2447],25); eq(me.mail[2589],10); assert(me.mailAt)
+ -- Worn gear.
+ GetInventoryItemID=function(_,slot) if slot==5 then return 6125 end end
+ N:ScanEquipped(); eq(me.equipped[6125],1)
+ local item=N:FindItems('peacebloom')[1]; eq(item.total,25)
+ assert(N:FinderPlace(item.places[1]):find('mailbox 25',1,true),N:FinderPlace(item.places[1]))
+ assert(N:FinderPlace(N:FindItems('harness')[1].places[1]):find('worn',1,true))
+ -- Sending 3 Silk Cloth to the bank: it shows in the mail until the bank reads its mailbox.
+ GetSendMailItem=function(a) if a==1 then return 'Silk Cloth',4306,nil,3 end end
+ ATTACHMENTS_MAX_SEND=12
+ N:CaptureOutgoingMail('Voidmark Bank'); N:CommitOutgoingMail()
+ local silk=N:FindItems('silk')[1]; eq(silk.total,8)
+ local transit; for _,p in ipairs(silk.places) do if p.transit then transit=p end end
+ assert(transit and N:FinderPlace(transit):find('In the mail to Voidmark Bank: 3',1,true))
+ -- A failed send records nothing.
+ N:CaptureOutgoingMail('Voidmark Bank'); N.outgoingMail=nil; N:CommitOutgoingMail(); eq(#N.db.sentMail,1)
+ -- The bank opens its mailbox later (synced mailAt newer than the send): the note goes away.
+ N.db.characters['B2/TestRealm/Voidmark Bank'].mailAt=N:Now()+5
+ eq(N:FindItems('silk')[1].total,5); eq(#N.db.sentMail,0)
+ -- Hyphen form of the name matches too.
+ N:CaptureOutgoingMail('Voidmark-Bank'); N:CommitOutgoingMail(); N.db.characters['B2/TestRealm/Voidmark Bank'].mailAt=N:Now()+10
+ eq(#N:MailInTransit(),0)
+ -- Item data still loading: the last good read is kept.
+ inbox={{true,{{'Peacebloom',nil,nil,1}}}}; GetInboxItemLink=function() return nil end
+ N:ScanMail(); eq(me.mail[2447],25)
+ -- Export keeps mail and gear; bad mail is rejected.
+ local clean=N:CleanImported(me); eq(clean.mail[2447],25); eq(clean.equipped[6125],1)
+ local bad=N:Copy(clean); bad.mail={[2447]=-1}; assert(not pcall(N.ValidateCharacter,N,bad))
+ me.mail,me.equipped,me.mailAt=nil,nil,nil
+ GetInboxNumItems,GetInboxHeaderInfo,GetInboxItem,GetInventoryItemID,GetSendMailItem,GetInboxItemLink=nil,nil,nil,nil,nil,nil
+ N.db.characters,GetItemInfo,N.db.sentMail=savedChars,savedGII,savedSent
+end)
+
+test('Cooldowns: read from the game, shown per character, synced, announced when ready',function()
+ local savedChars,savedTime=N.db.characters,GetTime
+ local me=N.character; me.cooldowns=nil
+ GetTime=function() return 1000 end
+ local known={Mooncloth=18560,['Transmute: Arcanite']=17187}
+ GetSpellInfo=function(name) local id=known[name] or (type(name)=='number' and name); if id then return name,nil,nil,nil,nil,nil,id end end
+ GetSpellCooldown=function(id) if id==18560 then return 900,4*86400 elseif id==17187 then return 0,0 end return 0,0 end
+ N:ScanCooldowns()
+ local moon=me.cooldowns[18560]; assert(moon and moon.name=='Mooncloth')
+ eq(moon.readyAt,N:Now()+4*86400-100)
+ eq(me.cooldowns[17187].readyAt,N:Now())                       -- ready
+ -- A global cooldown is not a profession cooldown.
+ GetSpellCooldown=function() return 999,1.5 end; N:ScanCooldowns(); eq(me.cooldowns[18560].readyAt,N:Now())
+ GetSpellCooldown=function(id) if id==18560 then return 900,4*86400 end return 0,0 end; N:ScanCooldowns()
+ -- Salt Shaker counts only when you carry it.
+ GetItemCooldown=function() return 950,3*86400 end
+ me.bags={[15846]=1}; N:ScanCooldowns(); assert(me.cooldowns[15846] and me.cooldowns[15846].name=='Salt Shaker'); me.bags={}; N:ScanCooldowns(); eq(me.cooldowns[15846],nil)
+ -- Other character's synced cooldowns, and the lists.
+ N.db.characters={[N.characterID]=me,['B2/TestRealm/Voidmark Bank']={name='Voidmark Bank',realm='TestRealm',faction='Horde',synced=true,account='B2',at=N:Now(),bags={},bank={},professions={},
+  cooldowns={[17187]={name='Transmute: Arcanite',readyAt=N:Now()-60}}}}
+ local list=N:CooldownList(); eq(#list,3); eq(list[1].character,'Voidmark Bank'); assert(list[1].ready)
+ assert(N:CooldownText(list[#list]):find('Mooncloth in 3d 23h',1,true),N:CooldownText(list[#list]))
+ assert(N:CooldownLine():find('Cooldowns: ',1,true))
+ local printed={}; local p=N.Print; N.Print=function(_,m) printed[#printed+1]=m end
+ N.cooldownsAnnounced=nil; N:AnnounceCooldowns()
+ assert(printed[1]:find('Transmute: Arcanite on Voidmark Bank',1,true),printed[1]); N:AnnounceCooldowns(); eq(#printed,1)
+ N:CooldownCommand(); eq(#printed,4)
+ N.Print=p
+ -- Characters page shows the line.
+ N:Show('Characters'); N.ui.find:SetText(''); N:Render(); assert(N.ui.syncInfo.text:find('Cooldowns:',1,true))
+ -- Validation: bad cooldown rejected; good one exported.
+ local clean=N:CleanImported(me); assert(clean.cooldowns[18560])
+ local bad=N:Copy(clean); bad.cooldowns={[1]={name='x',readyAt=-5}}; assert(not pcall(N.ValidateCharacter,N,bad))
+ me.cooldowns=nil; N.db.characters=savedChars; GetTime=savedTime
+ GetSpellInfo,GetSpellCooldown,GetItemCooldown=nil,nil,nil
+end)
+
+test('Mail, gear and cooldowns travel with the sync',function()
+ local savedPeers=N.db.sync.peers; N.db.sync.peers={['voidmark bank']='Voidmark Bank'}
+ local api=C_ChatInfo; C_ChatInfo={SendAddonMessage=function() return 0 end}
+ local raw={id=N:EncodeData({name='Voidmark Bank',realm='TestRealm',faction='Horde',guid='GUID-B7',account='B7',at=N:Now()}),
+  inv=N:EncodeData({bags={},bank={},bankAt=N:Now(),mail={[2447]=4},mailAt=N:Now(),equipped={[6125]=1},equippedAt=N:Now()}),
+  prof=N:EncodeData({professions={},cooldowns={[18560]={name='Mooncloth',readyAt=N:Now()+3600}}})}
+ local sender='Voidmark Bank-TestRealm'
+ N:SyncReceive('VMNX','H:B7:'..N.SyncHash(raw.id)..':'..N.SyncHash(raw.inv)..':'..N.SyncHash(raw.prof),'WHISPER',sender)
+ for _,k in ipairs({'id','inv','prof'}) do N:SyncReceive('VMNX','D:1:'..k..':1:1:'..N.SyncEscape(raw[k]),'WHISPER',sender) end
+ local got=assert(N.db.characters['B7/TestRealm/Voidmark Bank'],'stored')
+ eq(got.mail[2447],4); eq(got.equipped[6125],1); eq(got.cooldowns[18560].name,'Mooncloth')
+ N.db.characters['B7/TestRealm/Voidmark Bank']=nil
+ C_ChatInfo=api; N.db.sync.peers=savedPeers; N.syncOut,N.syncContact,N.syncHyphen,N.syncHelloForm,N.syncProbeAt={},nil,nil,nil,nil
+end)

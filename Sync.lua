@@ -163,10 +163,10 @@ N.SyncHash=hash
 function N:SyncSections()
  local c=self:CleanImported(self.character)
  c.account=self.db.account;c.imported=nil
- local inv={bags=c.bags,bank=c.bank,bagsAt=c.bagsAt,bankAt=c.bankAt,money=c.money,moneyAt=c.moneyAt}
+ local inv={bags=c.bags,bank=c.bank,bagsAt=c.bagsAt,bankAt=c.bankAt,money=c.money,moneyAt=c.moneyAt,mail=c.mail,mailAt=c.mailAt,equipped=c.equipped,equippedAt=c.equippedAt}
  local id={name=c.name,realm=c.realm,faction=c.faction,guid=c.guid,account=c.account,at=c.at}
  local out={}
- for key,value in pairs({id=id,inv=inv,prof={professions=c.professions}}) do
+ for key,value in pairs({id=id,inv=inv,prof={professions=c.professions,cooldowns=c.cooldowns}}) do
   local raw=self:EncodeData(value);out[key]={raw=raw,hash=hash(raw)}
  end
  return out
@@ -242,7 +242,9 @@ function N:ApplySync(peer,key,data)
  elseif key=='inv' then
   pending.bags,pending.bank,pending.bagsAt,pending.bankAt=data.bags or {},data.bank or {},data.bagsAt,data.bankAt
   if data.money~=nil then pending.money,pending.moneyAt=data.money,data.moneyAt end
- elseif key=='prof' then pending.professions=data.professions or {} end
+  if data.mail~=nil then pending.mail,pending.mailAt=data.mail,data.mailAt end
+  if data.equipped~=nil then pending.equipped,pending.equippedAt=data.equipped,data.equippedAt end
+ elseif key=='prof' then pending.professions=data.professions or {}; if data.cooldowns~=nil then pending.cooldowns=data.cooldowns end end
  if not pending.name then return end
  if shortName(pending.name)~=peer then return self:Print('Ignored sync: sender name does not match its data.') end
  if pending.account~=state.account or pending.account==self.db.account then return end

@@ -60,7 +60,7 @@ function N:Slash(msg)
  elseif command=='target' then if args=='' then self:SelectResource('kind:all') else self:SelectResource('name:'..args) end; self:Print('Gathering: '..self:ResourceLabel())
  elseif command=='kind' then if args=='herb' or args=='ore' or args=='all' then self:SelectResource('kind:'..args) end
  elseif command=='help' then
-  self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn laps, /vmn spots, /vmn route (options), /vmn route now, /vmn routelog, /vmn find NAME, /vmn gold, /vmn pair First Surname, /vmn unpair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
+  self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn laps, /vmn spots, /vmn route (options), /vmn route now, /vmn routelog, /vmn find NAME, /vmn gold, /vmn cd, /vmn pair First Surname, /vmn unpair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
  elseif command=='mapcontrols' or command=='mapfilters' then
   self.db.settings.mapButton=true
   if args=='reset' then self.db.settings.mapButtonPos=nil end
@@ -69,6 +69,7 @@ function N:Slash(msg)
    self:ToggleMapFilterMenu(self.mapControls)
   else self:ToggleMapFilterMenu() end
  elseif command=='gold' or command=='money' then self:GoldCommand()
+ elseif command=='cd' or command=='cooldowns' then self:CooldownCommand()
  elseif command=='find' or command=='search' then self:FindCommand(args)
  elseif command=='cancelplan' then self:CancelPlanner('Route calculation cancelled.')
  elseif command=='pair' then self:PairPeer(args)

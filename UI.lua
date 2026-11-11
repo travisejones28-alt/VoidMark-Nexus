@@ -416,6 +416,7 @@ function N:RenderCharacters(u)
  end
  if self.syncIgnored then lines[#lines+1]='Ignored data from '..tostring(self.syncIgnored)..' (not paired here).' end
  local gold=self:GoldLine(); if gold then table.insert(lines,1,gold) end
+ local cds=self.CooldownLine and self:CooldownLine(); if cds then table.insert(lines,gold and 2 or 1,cds) end
  u.syncInfo:SetText(table.concat(lines,'\n'))
  u.footer:SetText('Click: count on/off. Shift-click twice: remove an old character.')
  local ids={}; for id in pairs(self.db.characters) do ids[#ids+1]=id end
@@ -429,7 +430,8 @@ function N:RenderCharacters(u)
    click=function() if IsShiftKeyDown and IsShiftKeyDown() then self:ForgetCharacter(id) else self.db.excluded[id]=not self.db.excluded[id] or nil end end,title=c.name,
    tip=function(tt) tt:AddLine(c.realm..' / '..c.faction,1,1,1)
     tt:AddLine('Gold '..(c.money and self:Gold(c.money)..' (seen '..self:Ago(c.moneyAt)..')' or 'not seen yet: log in once'),1,.82,0)
-    tt:AddLine('Bags '..self:Ago(c.bagsAt)..', bank '..self:Ago(c.bankAt),.8,.8,.8)
+    tt:AddLine('Bags '..self:Ago(c.bagsAt)..', bank '..self:Ago(c.bankAt)..', mailbox '..self:Ago(c.mailAt),.8,.8,.8)
+    for _,cd in ipairs(self:CooldownList()) do if cd.character==c.name then tt:AddLine(self:CooldownText(cd),cd.ready and .3 or .8,cd.ready and 1 or .8,cd.ready and .4 or .8) end end
     for _,p in pairs(c.professions or {}) do tt:AddLine(p.name..' '..(p.skill or 0)..'/'..(p.max or 0),.8,.8,.8) end
     if c.synced then tt:AddLine('Last synced '..self:Ago(c.syncedAt),.7,.7,.7) end end},off and COLORS.gray or nil)
  end

@@ -4,7 +4,7 @@ local _,N=...
 
 function N:ScanMoney()
  if not self.character then return end
- local money=tonumber(self:Call(GetMoney))
+ local money=tonumber((self:Call(GetMoney)))
  if not self:Finite(money,0,1e13) then return end
  money=math.floor(money)
  local changed=self.character.money~=money

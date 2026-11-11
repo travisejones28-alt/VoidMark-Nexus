@@ -16,6 +16,10 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.10.0
+- **Find item sees the mailbox and worn gear.** The mailbox is read when you open it; gear whenever it changes. Items you mail to another character show as "In the mail to X" until that character opens their mailbox (or 30 days pass).
+- **Profession cooldowns on every character** (Mooncloth, transmutes, Salt Shaker, and any recipe cooldown seen in a profession window): synced with the other account, on the Characters page, announced at login when ready. `/vmn cd` lists them.
+
 ## What changed in 0.9.0
 - **Route options with a preview.** Gather > Start route builds several loops (Quick, Balanced, Long, Stay on land when the zone has water to cross, plus the best loops in two other zones) and shows each on the zone's map. With OpenMap installed (English client) the preview uses OpenMap's terrain art; otherwise the game's zone map. Pick one and press Start this route. `/vmn route now` still starts the balanced loop straight away.
 - **Learns from your picks.** Every pick and every lap on it (nodes picked, minutes) is logged per zone and kind of route. Options are ranked by expected nodes per hour, pulled toward what you really got; the top one is marked Recommended and says why. `/vmn routelog` shows the history.

@@ -47,38 +47,54 @@ function N:FindItems(query)
  local label=query:match('|h%[(.-)%]|h'); if label then query=label end
  local ws=words(query)
  local byItem,unnamed={},{}
+ local function lookup(id)
+  local item=byItem[id]
+  if item==nil then
+   local name=self:FinderName(id)
+   if wantID then item=(id==wantID) and {id=id,name=name or ('Item '..id),total=0,places={},at={}} or false
+   elseif name then item=matches(name,ws) and {id=id,name=name,total=0,places={},at={}} or false
+   else unnamed[id]=true; item=false end
+   byItem[id]=item
+  end
+  return item
+ end
  local preferred=self:PreferredRecords()
  for cid,c in pairs(self.db.characters) do if preferred[cid] then
-  for _,where in ipairs({'bags','bank'}) do
+  for _,where in ipairs({'bags','bank','mail','equipped'}) do
    for id,count in pairs(type(c[where])=='table' and c[where] or {}) do
     id=tonumber(id); count=tonumber(count) or 0
-    if id and count>0 then
-     local item=byItem[id]
-     if item==nil then
-      local name=self:FinderName(id)
-      if wantID then item=(id==wantID) and {id=id,name=name or ('Item '..id),total=0,places={},at={}} or false
-      elseif name then item=matches(name,ws) and {id=id,name=name,total=0,places={},at={}} or false
-      else unnamed[id]=true; item=false end
-      byItem[id]=item
+    local item=id and count>0 and lookup(id)
+    if item then
+     local p=item.at[cid]
+     if not p then
+      p={id=cid,name=c.name or '?',you=cid==self.characterID,synced=c.synced,imported=c.imported,
+       counted=not self.db.excluded[cid],bags=0,bank=0,mail=0,equipped=0,bagsAt=c.bagsAt,bankAt=c.bankAt,mailAt=c.mailAt,
+       realm=c.realm,faction=c.faction}
+      item.at[cid]=p; item.places[#item.places+1]=p
      end
-     if item then
-      local p=item.at[cid]
-      if not p then
-       p={id=cid,name=c.name or '?',you=cid==self.characterID,synced=c.synced,imported=c.imported,
-        counted=not self.db.excluded[cid],bags=0,bank=0,bagsAt=c.bagsAt,bankAt=c.bankAt,
-        realm=c.realm,faction=c.faction}
-       item.at[cid]=p; item.places[#item.places+1]=p
-      end
-      p[where]=p[where]+count; item.total=item.total+count
-     end
+     p[where]=p[where]+count; item.total=item.total+count
     end
    end
   end
  end end
+ -- Mail you sent that the other character has not collected yet.
+ if self.MailInTransit then
+  for _,m in ipairs(self:MailInTransit()) do
+   for id,count in pairs(type(m.items)=='table' and m.items or {}) do
+    id=tonumber(id); count=tonumber(count) or 0
+    local item=id and count>0 and lookup(id)
+    if item then
+     item.places[#item.places+1]={name='In the mail to '..tostring(m.to),transit=true,counted=true,bags=0,bank=0,mail=count,equipped=0,mailAt=m.at}
+     item.total=item.total+count
+    end
+   end
+  end
+ end
  local list={}
  for _,item in pairs(byItem) do
   if item then
-   table.sort(item.places,function(a,b) if a.you~=b.you then return a.you end; return (a.bags+a.bank)>(b.bags+b.bank) end)
+   local function held(p) return p.bags+p.bank+(p.mail or 0)+(p.equipped or 0) end
+   table.sort(item.places,function(a,b) if (a.you or false)~=(b.you or false) then return a.you or false end; return held(a)>held(b) end)
    item.at=nil; list[#list+1]=item
   end
  end
@@ -97,10 +113,14 @@ end
 
 -- One plain line per place: "Voidmark Bank: bank 20, bags 2  (bank 2d ago)".
 function N:FinderPlace(p)
+ if p.transit then return p.name..': '..p.mail..'   sent '..self:Ago(p.mailAt) end
  local parts={}
  if p.bags>0 then parts[#parts+1]='bags '..p.bags end
  if p.bank>0 then parts[#parts+1]='bank '..p.bank end
- local age=p.bank>0 and ('bank '..self:Ago(p.bankAt)) or (not p.you and ('bags '..self:Ago(p.bagsAt))) or nil
+ if (p.mail or 0)>0 then parts[#parts+1]='mailbox '..p.mail end
+ if (p.equipped or 0)>0 then parts[#parts+1]='worn' end
+ local age=p.bank>0 and ('bank '..self:Ago(p.bankAt)) or (p.mail or 0)>0 and ('mailbox '..self:Ago(p.mailAt))
+  or (not p.you and p.bags>0 and ('bags '..self:Ago(p.bagsAt))) or nil
  local tags={}
  if p.you then tags[#tags+1]='you' end
  if p.faction and self.character and p.faction~=self.character.faction then tags[#tags+1]=p.faction end
@@ -126,7 +146,7 @@ function N:RenderFinder(u,query)
   shown=shown+1
   rows[#rows+1]={text=item.name..'   x'..item.total,item=item.id,itemName=item.name,color=accent}
   for _,p in ipairs(item.places) do
-   rows[#rows+1]={text='     '..self:FinderPlace(p),item=item.id,itemName=item.name,color=p.counted and nil or {.6,.6,.6}}
+   rows[#rows+1]={text='     '..self:FinderPlace(p),item=item.id,itemName=item.name,color=p.transit and {1,.85,.4} or (p.counted and nil or {.6,.6,.6})}
   end
  end
  local n=0; for _ in pairs(self.db.characters) do n=n+1 end
@@ -137,7 +157,7 @@ function N:RenderFinder(u,query)
   if #blind>0 then info=info..'\nBank never opened on: '..table.concat(blind,', ')..'. Open it once so Nexus can see it.' end
  else
   local total=0; for _,item in ipairs(list) do total=total+1 end
-  info=total..' match'..(total==1 and '' or 'es')..' across '..n..' character'..(n==1 and '' or 's')..'. Bags update live; banks update when opened.'
+  info=total..' match'..(total==1 and '' or 'es')..' across '..n..' character'..(n==1 and '' or 's')..'. Bags and gear update live; bank and mailbox when opened.'
  end
  if pending>0 then info=info..'\nLooking up '..pending..' item name'..(pending==1 and '' or 's')..'...' end
  u.syncInfo:SetText(info)

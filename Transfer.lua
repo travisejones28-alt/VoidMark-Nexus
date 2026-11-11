@@ -58,7 +58,12 @@ function N:ValidateCharacter(c)
  assert(self:Finite(c.at,0,self:Now()+300),'Invalid timestamp')
  if c.guid then assert(text(c.guid),'Invalid GUID') end
  inventory(c.bags); inventory(c.bank)
- for _,k in ipairs({'bagsAt','bankAt','moneyAt'}) do if c[k] then assert(self:Finite(c[k],0,self:Now()+300),'Invalid inventory timestamp') end end
+ if c.mail~=nil then inventory(c.mail) end; if c.equipped~=nil then inventory(c.equipped) end
+ if c.cooldowns~=nil then
+  assert(type(c.cooldowns)=='table','Invalid cooldowns'); local n=0
+  for id,cd in pairs(c.cooldowns) do n=n+1; assert(n<=100 and self:Finite(id,1,1e9) and type(cd)=='table' and text(cd.name) and self:Finite(cd.readyAt,0,self:Now()+60*86400),'Invalid cooldown') end
+ end
+ for _,k in ipairs({'bagsAt','bankAt','moneyAt','mailAt','equippedAt','cooldownsAt'}) do if c[k] then assert(self:Finite(c[k],0,self:Now()+300),'Invalid inventory timestamp') end end
  if c.money~=nil then assert(self:Finite(c.money,0,1e13) and c.money%1==0,'Invalid gold') end
  assert(type(c.professions)=='table','Missing professions')
  local np,nr=0,0
@@ -83,7 +88,7 @@ function N:ValidateCharacter(c)
 end
 function N:CleanImported(c)
  local out={name=c.name,realm=c.realm,faction=c.faction,guid=c.guid,account=c.account,at=c.at,
-  bags=self:Copy(c.bags),bank=self:Copy(c.bank),bagsAt=c.bagsAt,bankAt=c.bankAt,money=c.money,moneyAt=c.moneyAt,professions={}}
+  bags=self:Copy(c.bags),bank=self:Copy(c.bank),bagsAt=c.bagsAt,bankAt=c.bankAt,money=c.money,moneyAt=c.moneyAt,mail=c.mail and self:Copy(c.mail),mailAt=c.mailAt,equipped=c.equipped and self:Copy(c.equipped),equippedAt=c.equippedAt,cooldowns=c.cooldowns and self:Copy(c.cooldowns),professions={}}
  for pid,p in pairs(c.professions) do
   local prof={name=p.name,skill=p.skill or 0,max=p.max or 0,at=p.at,recipes={}}; out.professions[pid]=prof
   for rid,r in pairs(p.recipes or {}) do
