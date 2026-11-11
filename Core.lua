@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.6.4-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.6.5-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -66,7 +66,15 @@ function N:UnitFullName(unit)
    return (last and last~='') and (first..' '..last) or first
   end
  end
- return self:Text(self:Call(UnitName,unit))
+  local first,second=self:Call(UnitName,unit)
+ first,second=self:Text(first),self:Text(second)
+ if not first or first=='' then return nil end
+ -- Forever returns the surname in the slot other clients use for a realm.
+ local realm=self:Text(self:Call(GetRealmName)) or ''
+ if second and second~='' and second:gsub('%s',''):lower()~=realm:gsub('%s',''):lower() and not first:find(' ',1,true) then
+  return first..' '..second
+ end
+ return first
 end
 function N:SameRealm(a,b)
  if type(a)~='string' or type(b)~='string' then return a==b end

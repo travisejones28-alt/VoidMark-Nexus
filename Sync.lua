@@ -14,9 +14,27 @@ local PER_TICK=4         -- messages per 0.25 s; well under client throttles
 local MAX_CHUNKS=9000    -- ~2 MB, matching the import limit
 N.syncPrefix=PREFIX
 
+-- One key for a character however the client writes it: "Voidmark Bank",
+-- "Voidmark-Bank" (surname in the realm slot) or "Voidmark Bank-Realm".
 local function shortName(name)
- if type(name)~='string' then return nil end
- return (name:match('^([^%-]+)') or name):lower()
+ if type(name)~='string' or name=='' then return nil end
+ local s=name:lower()
+ local realm=((GetNormalizedRealmName and GetNormalizedRealmName()) or (GetRealmName and GetRealmName()) or ''):gsub('%s',''):lower()
+ if realm~='' then
+  local base,tail=s:match('^(.-)%-([^%-]+)$')
+  if base and base~='' and tail:gsub('%s','')==realm then s=base end
+ end
+ s=s:gsub('%-',' '):gsub('%s+',' '):match('^%s*(.-)%s*$')
+ return s~='' and s or nil
+end
+N.SyncKey=shortName
+-- Whisper the other character as "First Surname", or as "First-Surname" when
+-- that form is what reaches them. Until they answer, probes alternate forms.
+function N:SyncTarget(peer)
+ local name=type(self.db.sync.peers[peer])=='string' and self.db.sync.peers[peer] or peer
+ local hyphen=self.syncHyphen and self.syncHyphen[peer]
+ if hyphen then return (name:gsub(' ','-',1)) end
+ return name
 end
 
 function N:InitializeSync()
@@ -34,7 +52,8 @@ function N:InitializeSync()
   -- Hide "No player named X is currently playing" for our own probes only.
   ChatFrame_AddMessageEventFilter('CHAT_MSG_SYSTEM',function(_,_,msg)
    if type(msg)~='string' or not N.syncProbeUntil or (GetTime and GetTime() or 0)>N.syncProbeUntil then return false end
-   for peer in pairs(N.db.sync.peers) do if msg:lower():find(peer,1,true) then return true end end
+   local m=msg:lower()
+   for peer in pairs(N.db.sync.peers) do if m:find(peer,1,true) or m:find((peer:gsub(' ','-',1)),1,true) then return true end end
    return false
   end)
  end
@@ -60,7 +79,12 @@ function N:PairPeer(name)
  end
  if key==shortName(self.character.name) then return self:Print('Pair with the character on your other account.') end
  if not key:find(' ',1,true) then self:Print('Use the full name with surname, e.g. /vmn pair Voidmark Bank.') end
- self.db.sync.peers[key]=name:match('^([^%-]+)') or name
+ -- Keep the name as typed, minus a realm suffix, with the surname space restored.
+ local display=name
+ local realm=((GetNormalizedRealmName and GetNormalizedRealmName()) or (GetRealmName and GetRealmName()) or ''):gsub('%s',''):lower()
+ local base,tail=display:match('^(.-)%-([^%-]+)$')
+ if base and base~='' and tail:gsub('%s',''):lower()==realm then display=base end
+ self.db.sync.peers[key]=(display:gsub('%-',' '))
  self.dirty=true
  self:Print('Paired with '..self.db.sync.peers[key]..'. Pair this character on the other account too, then both sync while online.')
  self:SyncHello(key)
@@ -106,7 +130,7 @@ function N:FlushSync()
    for _=1,PER_TICK do
     local msg=q[1];if not msg then break end
     self.syncProbeUntil=now+3
-    local target=type(self.db.sync.peers[peer])=='string' and self.db.sync.peers[peer] or peer
+    local target=self:SyncTarget(peer)
     local state='failed'
     if type(send)=='function' then state=self:SendResult(pcall(send,PREFIX,msg,'WHISPER',target)) end
     if state=='throttled' then
@@ -177,7 +201,10 @@ function N:SyncTick(now)
   local wait=(last and now-last<CHECKIN*2) and CHECKIN or PROBE
   if not (self.syncOut and self.syncOut[peer]) and now-(self.syncProbeAt[peer] or -1e9)>=wait then
    self.syncProbeAt[peer]=now
+   self.syncHyphen=self.syncHyphen or {}; self.syncHelloForm=self.syncHelloForm or {}
+   self.syncHelloForm[peer]=self.syncHyphen[peer] or false
    self:SyncHello(peer)
+   if not last then self.syncHyphen[peer]=not self.syncHyphen[peer] end -- unanswered: try the other name form next
   end
  end
 end
@@ -242,7 +269,11 @@ function N:SyncReceive(prefix,msg,channel,sender)
   if peer then self.syncIgnored=sender end
   return
  end
- self.syncContact=self.syncContact or {}; self.syncContact[peer]=GetTime and GetTime() or 0
+ self.syncContact=self.syncContact or {}
+ if not self.syncContact[peer] and self.syncHelloForm and self.syncHelloForm[peer]~=nil then
+  self.syncHyphen=self.syncHyphen or {}; self.syncHyphen[peer]=self.syncHelloForm[peer] -- keep the form that got through
+ end
+ self.syncContact[peer]=GetTime and GetTime() or 0
  local kind=msg:sub(1,2)
  if kind=='H:' or kind=='R:' then
   local account,idh,invh,profh=msg:match('^[HR]:([^:]+):([^:]+):([^:]+):([^:]+)$')

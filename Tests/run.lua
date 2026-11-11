@@ -961,6 +961,25 @@ test('Sweep: remove old characters safely, no background recording from old draf
  N.db.recordings={}; N:InitializeRecording(); N.recordingActive=nil
  assert(N.handlers and true)
 end)
+test('Forever name forms: surname in the second UnitName slot, hyphen senders, both whisper forms',function()
+ local savedUN=UnitName; local savedPeers=N.db.sync.peers
+ UnitName=function() return 'Voidmark','Soulreaver' end
+ eq(N:UnitFullName('player'),'Voidmark Soulreaver')
+ UnitName=function() return 'Voidmark','Test Realm' end; eq(N:UnitFullName('player'),'Voidmark') -- a real realm is not a surname
+ UnitName=savedUN
+ local key=N.SyncKey
+ eq(key('Voidmark-Bank'),'voidmark bank'); eq(key('Voidmark Bank-TestRealm'),'voidmark bank'); eq(key('Voidmark-Bank-TestRealm'),'voidmark bank'); eq(key('Voidmark Bank'),'voidmark bank')
+ N.db.sync.peers={}; N:PairPeer('Voidmark-Bank'); eq(N.db.sync.peers['voidmark bank'],'Voidmark Bank')
+ N.syncContact,N.syncProbeAt,N.syncOut,N.syncHyphen,N.syncHelloForm={},{},{},{},{}
+ local targets={}; local orig=N.SyncHello; N.SyncHello=function(self,peer) targets[#targets+1]=self:SyncTarget(peer) end
+ N:SyncTick(1000); N:SyncTick(1061); N:SyncTick(1122)
+ eq(targets[1],'Voidmark Bank'); eq(targets[2],'Voidmark-Bank'); eq(targets[3],'Voidmark Bank')
+ N.SyncHello=orig
+ -- An answer arrives after the hyphen probe: that form is kept.
+ N.syncHelloForm['voidmark bank']=true
+ N:SyncReceive('VMNX','Q:id','WHISPER','Voidmark-Bank'); eq(N:SyncTarget('voidmark bank'),'Voidmark-Bank')
+ N.syncOut,N.syncContact,N.syncHyphen,N.syncHelloForm,N.syncProbeAt={},nil,nil,nil,nil; N.db.sync.peers=savedPeers
+end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()
