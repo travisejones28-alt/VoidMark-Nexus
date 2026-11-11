@@ -47,6 +47,49 @@ function N:Age(at)
  if not at then return 'Never scanned' end
  return string.format('%.1fh old', math.max(0,self:Now()-at)/3600)
 end
+-- Forever characters have a first name and a surname ("Voidmark Bank").
+-- UnitName returns only the first name, so every character looked like
+-- "Voidmark" and cross-account sync rejected the bank's data.
+function N:UnitFullName(unit)
+ unit=unit or 'player'
+ if NameUtil and NameUtil.GetUnmodifiedUnitFullName and NameUtil.GetFullNameWithoutRealm and UnitNameUnmodified then
+  local first,last=self:Call(UnitNameUnmodified,unit)
+  first,last=self:Text(first),self:Text(last)
+  if first and first~='' then
+   local full=self:Text(self:Call(NameUtil.GetFullNameWithoutRealm,first,last))
+   if full and full~='' then return full end
+   return (last and last~='') and (first..' '..last) or first
+  end
+ end
+ return self:Text(self:Call(UnitName,unit))
+end
+function N:SameRealm(a,b)
+ if type(a)~='string' or type(b)~='string' then return a==b end
+ return a:gsub('%s',''):lower()==b:gsub('%s',''):lower()
+end
+-- Move this character's old record (saved under the first name only, or an
+-- older realm spelling) to its full-name ID. Matched by GUID, so it is always
+-- the same physical character. Older same-GUID copies are stale duplicates.
+function N:MigrateCharacterID(d,newID,guid)
+ if not guid or d.characters[newID] then return end
+ local best,bestID,dups=nil,nil,{}
+ for id,c in pairs(d.characters) do
+  if id~=newID and type(c)=='table' and not c.imported and c.guid==guid then
+   dups[#dups+1]=id
+   if not best or (tonumber(c.at) or 0)>(tonumber(best.at) or 0) then best,bestID=c,id end
+  end
+ end
+ if not best then return end
+ d.characters[newID]=best
+ for _,id in ipairs(dups) do
+  d.characters[id]=nil; d.excluded[id]=nil
+  for _,k in ipairs({'recordings','activeSessions','navigation'}) do
+   local t=d[k]; if type(t)=='table' and t[id]~=nil then if id==bestID and t[newID]==nil then t[newID]=t[id] end; t[id]=nil end
+  end
+  for _,plan in ipairs(d.plans) do if type(plan)=='table' and plan.character==id then plan.character=newID end end
+ end
+ self.migratedFrom=bestID
+end
 function N:ItemID(link) return self:Text(link) and tonumber(link:match('item:(%d+)')) end
 function N:ItemName(id)
  return self:Call(GetItemInfo,id) or self.db.itemNames[id] or ('Item '..tostring(id))
@@ -74,8 +117,9 @@ function N:Initialize()
  d.schema=self.schema; d.account=d.account or ('VMN-'..tostring(self:Now())..'-'..tostring(math.random(100000,999999)))
  self.db=d
  local realm=self:Call(GetNormalizedRealmName) or self:Call(GetRealmName) or 'Unknown'
- local name=self:Call(UnitName,'player') or 'Unknown'; local guid=self:Call(UnitGUID,'player')
+ local name=self:UnitFullName('player') or 'Unknown'; local guid=self:Text(self:Call(UnitGUID,'player'))
  self.characterID=d.account..'/'..realm..'/'..name
+ self:MigrateCharacterID(d,self.characterID,guid)
  local c=d.characters[self.characterID] or {professions={},bags={},bank={}}
  c.name,c.realm,c.faction,c.guid,c.account=name,realm,self:Call(UnitFactionGroup,'player') or 'Unknown',guid,d.account
  c.imported=false; c.at=self:Now(); c.professions=c.professions or {}; c.bags=c.bags or {}; c.bank=c.bank or {}

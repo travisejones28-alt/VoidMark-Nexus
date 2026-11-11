@@ -388,13 +388,15 @@ end
 function N:RenderCharacters(u)
  local lines={}
  local peers={}; for peer in pairs(self.db.sync and self.db.sync.peers or {}) do peers[#peers+1]=peer end
- if #peers==0 then lines[#lines+1]='Not paired. Type the bank character\'s name and press Pair (do it on both accounts).'
+ if #peers==0 then lines[#lines+1]='Not paired. Type the other character\'s full name (e.g. Voidmark Bank) and press Pair. Do it on both accounts.'
  else
-  lines[#lines+1]='Paired with: '..table.concat(peers,', ')..'. Both must be online to sync.'
+  local names={}; for _,p in ipairs(peers) do names[#names+1]=self.db.sync.peers[p] or p end
+  lines[#lines+1]='Paired with: '..table.concat(names,', ')..'. Both must be online to sync.'
   local st=self.syncStats
   if st then local waiting=0; for _,q in pairs(self.syncOut or {}) do waiting=waiting+#q end
    lines[#lines+1]=string.format('Sent %d messages, %d waiting%s.',st.sent,waiting,st.failed>0 and (', '..st.failed..' failed') or '') end
  end
+ if self.syncIgnored then lines[#lines+1]='Ignored data from '..tostring(self.syncIgnored)..' (not paired here).' end
  u.syncInfo:SetText(table.concat(lines,'\n'))
  u.footer:SetText('Click a character to stop or start counting their items.')
  local ids={}; for id in pairs(self.db.characters) do ids[#ids+1]=id end

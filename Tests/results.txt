@@ -138,4 +138,5 @@ PASS Compact window: old tab names open the page that replaced them; settings ar
 PASS Duplicate profession records merge without losing recipes or queued crafts
 PASS Throttled sync messages are retried, not dropped
 PASS Item tooltips list counts per character and skip other realms and excluded characters
-PASS: 140 tests; Lua 5.1 / standard interpreter
+PASS Forever full names: own record migrates by GUID, bank syncs and pairs automatically
+PASS: 141 tests; Lua 5.1 / standard interpreter

@@ -8,7 +8,7 @@ function N:Stock(targetID)
  for _,id in ipairs(ids) do
   local c=self.db.characters[id]; local physical=c.guid or (c.realm..'/'..c.name)
   local allowed=not self.db.excluded[id] and (id==targetID or self.db.settings.includeAlts)
-   and (not c.imported or self.db.settings.includeImports or (c.synced and self.db.settings.includeSynced)) and c.realm==target.realm and c.faction==target.faction
+   and (not c.imported or self.db.settings.includeImports or (c.synced and self.db.settings.includeSynced)) and self:SameRealm(c.realm,target.realm) and c.faction==target.faction
   if allowed and not seen[physical] then
    seen[physical]=true
    for _,location in ipairs({'bags','bank'}) do

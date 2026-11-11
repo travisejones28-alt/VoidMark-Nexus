@@ -901,6 +901,43 @@ test('Item tooltips list counts per character and skip other realms and excluded
  N.db.settings.tooltipCounts=false; tt.vmnItem=nil; N:AddItemCounts(tt,2447); eq(#lines,n); N.db.settings.tooltipCounts=true
  me.bags[2447]=mine; N.db.characters=saved; N.db.excluded=ex
 end)
+test('Forever full names: own record migrates by GUID, bank syncs and pairs automatically',function()
+ local saved=VoidMarkNexusDB; local savedPlayer=player
+ local first,last='Voidmark','Soulreaver'
+ NameUtil={GetUnmodifiedUnitFullName=function() end,GetFullNameWithoutRealm=function(a,b) return b and b~='' and a..' '..b or a end}
+ function UnitNameUnmodified() return first,last end
+ player='Voidmark' -- UnitName still returns the first name only
+ VoidMarkNexusDB={schema=1,account='A1',characters={
+  ['A1/TestRealm/Voidmark']={name='Voidmark',realm='TestRealm',faction='Horde',guid='GUID-Voidmark',account='A1',at=now-10,bags={[765]=3},bank={[765]=7},bankAt=now-100,professions={}},
+  ['A1/Test Realm/Voidmark']={name='Voidmark',realm='Test Realm',faction='Horde',guid='GUID-Voidmark',account='A1',at=now-99999,bags={},bank={},professions={}}},
+  excluded={['A1/TestRealm/Voidmark']=true},plans={{character='A1/TestRealm/Voidmark'}}}
+ assert(N:Initialize())
+ eq(N.characterID,'A1/TestRealm/Voidmark Soulreaver'); eq(N.character.name,'Voidmark Soulreaver')
+ eq(N.character.bank[765],7); eq(N.character.bankAt,now-100)
+ local n=0; for _ in pairs(N.db.characters) do n=n+1 end; eq(n,1)
+ eq(N.db.excluded['A1/TestRealm/Voidmark'],nil); eq(N.db.plans[1].character,N.characterID)
+ eq(N.db.sync.peers['voidmark bank'],'Voidmark Bank') -- auto-paired
+ N.db.sync.peers={}; N:AutoPair(); eq(next(N.db.sync.peers),nil) -- only once, never re-added after unpair
+ N:PairPeer('  Voidmark   Bank '); eq(N.db.sync.peers['voidmark bank'],'Voidmark Bank')
+ N:PairPeer('Voidmark Soulreaver'); eq(N.db.sync.peers['voidmark soulreaver'],nil) -- not yourself
+ -- Bank on the other account sends its sections over the addon whisper channel.
+ local sent={}; local api=C_ChatInfo; C_ChatInfo={SendAddonMessage=function(_,msg,_,target) sent[#sent+1]={msg,target}; return 0 end}
+ local bank={name='Voidmark Bank',realm='TestRealm',faction='Horde',guid='GUID-Bank',account='B2',at=now,bags={},bank={[765]=40},bankAt=now,professions={}}
+ local raw={id=N:EncodeData({name=bank.name,realm=bank.realm,faction=bank.faction,guid=bank.guid,account=bank.account,at=bank.at}),
+  inv=N:EncodeData({bags=bank.bags,bank=bank.bank,bagsAt=nil,bankAt=bank.bankAt}),prof=N:EncodeData({professions={}})}
+ local sender='Voidmark Bank-TestRealm'
+ N:SyncReceive('VMNX','H:B2:'..N.SyncHash(raw.id)..':'..N.SyncHash(raw.inv)..':'..N.SyncHash(raw.prof),'WHISPER',sender)
+ N.syncPauseUntil=nil; N:FlushSync()
+ local q; for _,m in ipairs(sent) do eq(m[2],'Voidmark Bank'); if m[1]:sub(1,2)=='Q:' then q=m[1] end end; eq(q,'Q:id,inv,prof')
+ for _,k in ipairs({'id','inv','prof'}) do N:SyncReceive('VMNX','D:1:'..k..':1:1:'..N.SyncEscape(raw[k]),'WHISPER',sender) end
+ local got=N.db.characters['B2/TestRealm/Voidmark Bank']; assert(got and got.synced,'bank record not stored')
+ eq(got.bank[765],40)
+ local total,list=N:ItemCounts(765); eq(total,50); eq(#list,2)
+ -- Unpaired senders are ignored and reported.
+ N:SyncReceive('VMNX','H:C3:a:b:c','WHISPER','Stranger Person-TestRealm'); eq(N.syncIgnored,'Stranger Person-TestRealm')
+ C_ChatInfo=api; NameUtil=nil; UnitNameUnmodified=nil; player=savedPlayer; N.syncIgnored=nil
+ VoidMarkNexusDB=saved; assert(N:Initialize())
+end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()

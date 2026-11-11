@@ -26,6 +26,7 @@ function N:InitializeSync()
  if type(d.sync.known)~='table' then d.sync.known={} end
  -- Section hashes persist so a reload does not resend unchanged data.
  self.syncIn,self.syncOut,self.syncHashes,self.syncSeq={},{},d.sync.known,0
+ self:AutoPair()
  if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then self:Call(C_ChatInfo.RegisterAddonMessagePrefix,PREFIX)
  elseif RegisterAddonMessagePrefix then self:Call(RegisterAddonMessagePrefix,PREFIX) end
  if ChatFrame_AddMessageEventFilter and not self.syncFilter then
@@ -39,15 +40,29 @@ function N:InitializeSync()
  end
 end
 
+-- The two VoidMark characters pair themselves the first time (same as Market).
+local AUTO={['voidmark soulreaver']='Voidmark Bank',['voidmark bank']='Voidmark Soulreaver'}
+function N:AutoPair()
+ local s=self.db.sync
+ if s.autoPairSeen then return end
+ local other=AUTO[shortName(self.character and self.character.name) or '']
+ if not other then return end
+ s.autoPairSeen=true
+ if not next(s.peers) then s.peers[shortName(other)]=other end
+end
+
 function N:PairPeer(name)
+ if type(name)=='string' then name=name:match('^%s*(.-)%s*$'):gsub(' +',' ') end
  local key=shortName(name)
  if not key or key=='' then
   local list={};for p in pairs(self.db.sync.peers) do list[#list+1]=p end
   return self:Print('Paired: '..(#list>0 and table.concat(list,', ') or 'none')..'. Use /vmn pair NAME on both characters.')
  end
  if key==shortName(self.character.name) then return self:Print('Pair with the character on your other account.') end
+ if not key:find(' ',1,true) then self:Print('Use the full name with surname, e.g. /vmn pair Voidmark Bank.') end
  self.db.sync.peers[key]=name:match('^([^%-]+)') or name
- self:Print('Paired with '..key..'. Pair this character on the other account too, then both sync while online.')
+ self.dirty=true
+ self:Print('Paired with '..self.db.sync.peers[key]..'. Pair this character on the other account too, then both sync while online.')
  self:SyncHello(key)
 end
 function N:UnpairPeer(name)
@@ -202,7 +217,10 @@ end
 function N:SyncReceive(prefix,msg,channel,sender)
  if prefix~=PREFIX or channel~='WHISPER' or type(msg)~='string' then return end
  local peer=shortName(sender)
- if not peer or not self.db.sync.peers[peer] then return end
+ if not peer or not self.db.sync.peers[peer] then
+  if peer then self.syncIgnored=sender end
+  return
+ end
  local kind=msg:sub(1,2)
  if kind=='H:' or kind=='R:' then
   local account,idh,invh,profh=msg:match('^[HR]:([^:]+):([^:]+):([^:]+):([^:]+)$')
