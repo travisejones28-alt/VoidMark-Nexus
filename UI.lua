@@ -390,8 +390,8 @@ function N:RenderCharacters(u)
  local peers={}; for peer in pairs(self.db.sync and self.db.sync.peers or {}) do peers[#peers+1]=peer end
  if #peers==0 then lines[#lines+1]='Not paired. Type the other character\'s full name (e.g. Voidmark Bank) and press Pair. Do it on both accounts.'
  else
-  local names={}; for _,p in ipairs(peers) do names[#names+1]=self.db.sync.peers[p] or p end
-  lines[#lines+1]='Paired with: '..table.concat(names,', ')..'. Both must be online to sync.'
+  local names={}; for _,p in ipairs(peers) do names[#names+1]=(self.db.sync.peers[p] or p)..(self:SyncConnected(p) and ' (connected, auto-syncing)' or ' (waiting for them to log in)') end
+  lines[#lines+1]='Paired with: '..table.concat(names,', ')..'.'
   local st=self.syncStats
   if st then local waiting=0; for _,q in pairs(self.syncOut or {}) do waiting=waiting+#q end
    lines[#lines+1]=string.format('Sent %d messages, %d waiting%s.',st.sent,waiting,st.failed>0 and (', '..st.failed..' failed') or '') end

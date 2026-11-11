@@ -165,6 +165,27 @@ function N:SyncSoon()
  if C_Timer and C_Timer.After then C_Timer.After(20,run) else run() end
 end
 
+-- Background retry so syncing never waits on a button: until the other
+-- character answers, say hello every minute (one tiny message); after that,
+-- check in every 5 minutes. Unchanged data is never resent (hashes match).
+local PROBE,CHECKIN=60,300
+function N:SyncTick(now)
+ now=now or (GetTime and GetTime() or 0)
+ self.syncContact=self.syncContact or {}; self.syncProbeAt=self.syncProbeAt or {}
+ for peer in pairs(self.db.sync and self.db.sync.peers or {}) do
+  local last=self.syncContact[peer]
+  local wait=(last and now-last<CHECKIN*2) and CHECKIN or PROBE
+  if not (self.syncOut and self.syncOut[peer]) and now-(self.syncProbeAt[peer] or -1e9)>=wait then
+   self.syncProbeAt[peer]=now
+   self:SyncHello(peer)
+  end
+ end
+end
+function N:SyncConnected(peer)
+ local last=self.syncContact and self.syncContact[peer]
+ return last and ((GetTime and GetTime() or 0)-last)<600
+end
+
 function N:SendSection(peer,key)
  local s=self.syncSections or self:SyncSections();self.syncSections=s
  local raw=s[key] and s[key].raw;if not raw then return end
@@ -221,6 +242,7 @@ function N:SyncReceive(prefix,msg,channel,sender)
   if peer then self.syncIgnored=sender end
   return
  end
+ self.syncContact=self.syncContact or {}; self.syncContact[peer]=GetTime and GetTime() or 0
  local kind=msg:sub(1,2)
  if kind=='H:' or kind=='R:' then
   local account,idh,invh,profh=msg:match('^[HR]:([^:]+):([^:]+):([^:]+):([^:]+)$')
@@ -292,3 +314,7 @@ N:On('CRAFT_CLOSE',function() N:SyncSoon() end)
 -- A peer coming online announces itself in the friends list system message;
 -- re-hello periodically as a fallback (cheap when hashes match).
 N:On('FRIENDLIST_UPDATE',function() N:SyncSoon() end)
+-- After a loading screen, retry right away if the other side has not answered.
+N:On('PLAYER_ENTERING_WORLD',function()
+ for peer in pairs(N.db.sync.peers) do if not N:SyncConnected(peer) and N.syncProbeAt then N.syncProbeAt[peer]=nil end end
+end)

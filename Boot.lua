@@ -226,7 +226,7 @@ frame:SetScript('OnEvent',function(_,event,...)
   if ...=='VoidMarkNexus' then N:Guard('initialize',function() N:Initialize() end) end
  elseif event=='PLAYER_LOGIN' then
   if not N.ready then return end
-  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:RestoreSession(); N:MinimapButton(); N:RestoreNavigation(); N:HookTooltips();if C_Timer and C_Timer.After then C_Timer.After(8,function() N:Guard('sync',function() N:SyncAll() end) end) end;if N.recording then N:Print(N:RecordingStatus()) end end)
+  N:Guard('login',function() N:ScanProfessions(); N:ScanStorage(false); N:RestoreSession(); N:MinimapButton(); N:RestoreNavigation(); N:HookTooltips();if C_Timer and C_Timer.After then C_Timer.After(8,function() N:Guard('sync',function() N:SyncTick() end) end) end;if C_Timer and C_Timer.NewTicker then C_Timer.NewTicker(30,function() N:Guard('sync',function() N:SyncTick() end) end) end;if N.recording then N:Print(N:RecordingStatus()) end end)
   if C_Timer and C_Timer.NewTicker then
    C_Timer.NewTicker(1,function() if WorldMapFrame and WorldMapFrame:IsShown() then N:Guard('map',function() N:RefreshMap() end) end end)
    -- Background work only for features that are switched on.

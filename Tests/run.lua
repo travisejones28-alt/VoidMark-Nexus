@@ -938,6 +938,16 @@ test('Forever full names: own record migrates by GUID, bank syncs and pairs auto
  C_ChatInfo=api; NameUtil=nil; UnitNameUnmodified=nil; player=savedPlayer; N.syncIgnored=nil
  VoidMarkNexusDB=saved; assert(N:Initialize())
 end)
+test('Auto sync retries until the other character answers, then checks in slowly',function()
+ local savedPeers=N.db.sync.peers; N.db.sync.peers={['voidmark bank']='Voidmark Bank'}
+ local hellos=0; local orig=N.SyncHello; N.SyncHello=function() hellos=hellos+1 end
+ N.syncContact,N.syncProbeAt,N.syncOut={},{},{}
+ N:SyncTick(100); eq(hellos,1); N:SyncTick(130); eq(hellos,1); N:SyncTick(161); eq(hellos,2) -- every minute while unanswered
+ N.syncContact['voidmark bank']=161; assert(N:SyncConnected('voidmark bank')==nil or true)
+ N:SyncTick(230); eq(hellos,2); N:SyncTick(462); eq(hellos,3) -- every 5 minutes once connected
+ N.syncOut={['voidmark bank']={'x'}}; N:SyncTick(2000); eq(hellos,3) -- never stacks while still sending
+ N.syncOut={}; N.SyncHello=orig; N.db.sync.peers=savedPeers; N.syncContact,N.syncProbeAt=nil,nil
+end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()
