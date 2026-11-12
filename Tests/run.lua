@@ -1048,7 +1048,7 @@ test('Gold: read on change, shown per character with a total, synced and exporte
   ['A1/TestRealm/Voidmark Alt']={name='Voidmark Alt',realm='TestRealm',faction='Horde',account='A1',at=now,bags={},bank={},professions={}}}
  N.handlers=N.handlers; N:ScanMoney(); eq(me.money,1234567)
  money=1300000; N:ScanMoney(); eq(me.money,1300000)
- eq(N:Gold(98765432),'9,876g 54s'); eq(N:Gold(5),'0g 0s'); eq(N:Gold(10000000000),'1,000,000g 0s')
+ eq(N:Gold(98765432),'9,876g 54s'); eq(N:Gold(5),'5c'); eq(N:Gold(10000000000),'1,000,000g 0s')
  local total,list,unknown=N:GoldSummary(); eq(total,98765432+1300000); eq(unknown,1); eq(list[1].you,true); eq(list[2].name,'Voidmark Bank')
  assert(N:GoldLine():find('Gold: 10,006g 54s on 2 characters (1 not seen yet',1,true),N:GoldLine())
  -- Characters page shows it.
@@ -1073,6 +1073,27 @@ test('Gold travels with the bank sync',function()
  local got=N.db.characters['B9/TestRealm/Voidmark Bank']; assert(got,'not stored'); eq(got.money,55550000)
  N.db.characters['B9/TestRealm/Voidmark Bank']=nil
  C_ChatInfo=api; N.db.sync.peers=savedPeers; N.syncOut,N.syncContact,N.syncHyphen,N.syncHelloForm,N.syncProbeAt={},nil,nil,nil,nil
+end)
+test('Characters: old first-name record joins its character by GUID; duplicates hidden; small gold amounts',function()
+ local savedChars,savedEx=N.db.characters,N.db.excluded
+ N.db.excluded={}
+ local me=N.character;local savedName=me.name;me.name='Voidmark Soulreaver'
+ N.db.characters={[N.characterID]=me,
+  ['old/TestRealm/Voidmark']={name='Voidmark',realm='TestRealm',faction='Horde',guid=me.guid,bags={},bank={},professions={}},
+  ['other/TestRealm/Voidmark']={name='Voidmark',realm='TestRealm',faction='Horde',guid='G-UNKNOWN',bags={},bank={},professions={}},
+  ['B9/TestRealm/Voidmark Bank']={name='Voidmark Bank',realm='TestRealm',faction='Horde',guid='G-B',synced=true,money=603900,syncedAt=now,bags={},bank={},professions={}},
+  ['B8/TestRealm/Voidmark Bank']={name='Voidmark Bank',realm='TestRealm',faction='Horde',guid='G-B',synced=true,money=603800,syncedAt=now-7200,bags={},bank={},professions={}}}
+ local pref=N:PreferredRecords()
+ assert(pref[N.characterID] and not pref['old/TestRealm/Voidmark'],'old record with my GUID merged into me')
+ assert(pref['B9/TestRealm/Voidmark Bank'] and not pref['B8/TestRealm/Voidmark Bank'],'newest bank copy wins')
+ assert(pref['other/TestRealm/Voidmark'],'unrelated old record (different GUID) is kept apart')
+ -- Even when the old record looks fresher, a full-name record wins.
+ N.db.characters['old/TestRealm/Voidmark'].bankAt=now+999
+ local who=N.characterID; N.characterID='nobody'
+ assert(N:PreferredRecords()[who] and not N:PreferredRecords()['old/TestRealm/Voidmark'],'full name beats old first-name record')
+ N.characterID=who
+ eq(N:Gold(0),'0c'); eq(N:Gold(512),'5s 12c'); eq(N:Gold(603900),'60g 39s')
+ N.db.characters,N.db.excluded=savedChars,savedEx;me.name=savedName
 end)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary

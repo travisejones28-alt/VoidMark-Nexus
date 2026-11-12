@@ -157,4 +157,5 @@ PASS Find item: every character, bags vs bank, partial names, IDs, links, misses
 PASS A character saved twice (import + old copy) is counted once, newest copy wins
 PASS Gold: read on change, shown per character with a total, synced and exported
 PASS Gold travels with the bank sync
-PASS: 159 tests; Lua 5.1 / standard interpreter
+PASS Characters: old first-name record joins its character by GUID; duplicates hidden; small gold amounts
+PASS: 160 tests; Lua 5.1 / standard interpreter

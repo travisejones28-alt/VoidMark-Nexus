@@ -12,9 +12,13 @@ function N:ScanMoney()
  if changed then self.dirty=true; if self.SyncSoon then self:SyncSoon() end end
 end
 
--- "12,345g 67s" (copper is noise at this scale).
+-- "12,345g 67s" (copper is noise at this scale); under 1g shows "45s 12c".
 function N:Gold(copper)
  copper=tonumber(copper); if not copper then return '?' end
+ if copper<10000 then
+  local s,c=math.floor(copper/100),math.floor(copper)%100
+  return s>0 and (s..'s '..c..'c') or (c..'c')
+ end
  local g=math.floor(copper/10000); local s=math.floor(copper/100)%100
  local text=tostring(g):reverse():gsub('(%d%d%d)','%1,'):reverse():gsub('^,','')
  return text..'g '..s..'s'

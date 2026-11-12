@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.10.1-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.10.2-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -113,12 +113,40 @@ function N:PhysicalKey(c)
  return tostring(c.realm or ''):gsub('%s',''):lower()..'/'..name:lower()
 end
 local function fresh(c) return math.max(tonumber(c.at) or 0,tonumber(c.bagsAt) or 0,tonumber(c.bankAt) or 0,tonumber(c.syncedAt) or 0) end
-function N:PreferredRecords()
- local best={}
+local function full(c) return tostring(c.name or ''):find(' ',1,true)~=nil end
+-- Group key per record. Old first-name-only records (saved before Forever
+-- surnames were read) join their full-name character only when the GUID
+-- matches. Not by first name: "Voidmark Soulreaver" and "Voidmark Bank" share
+-- a first name, so that would guess.
+function N:CharacterGroups()
+ local byGuid={}
+ for _,c in pairs(self.db.characters) do
+  if type(c)=='table' and full(c) and type(c.guid)=='string' and c.guid~='' then byGuid[c.guid]=self:PhysicalKey(c) end
+ end
+ local out={}
  for cid,c in pairs(self.db.characters) do
   if type(c)=='table' then
-   local k=self:PhysicalKey(c); local cur=best[k]
-   if not cur or cid==self.characterID or (cur~=self.characterID and (fresh(c)>fresh(self.db.characters[cur]) or (fresh(c)==fresh(self.db.characters[cur]) and cid<cur))) then best[k]=cid end
+   local k=self:PhysicalKey(c)
+   if not full(c) and type(c.guid)=='string' and byGuid[c.guid] then k=byGuid[c.guid] end
+   out[cid]=k
+  end
+ end
+ return out
+end
+function N:PreferredRecords()
+ local best={}
+ local groups=self:CharacterGroups()
+ local function better(cid,cur)
+  if cid==self.characterID then return true elseif cur==self.characterID then return false end
+  local a,b=self.db.characters[cid],self.db.characters[cur]
+  if full(a)~=full(b) then return full(a) end          -- a full "First Surname" record beats an old first-name one
+  if fresh(a)~=fresh(b) then return fresh(a)>fresh(b) end
+  return cid<cur
+ end
+ for cid,c in pairs(self.db.characters) do
+  if type(c)=='table' then
+   local k=groups[cid]; local cur=best[k]
+   if not cur or better(cid,cur) then best[k]=cid end
   end
  end
  local out={}; for _,cid in pairs(best) do out[cid]=true end

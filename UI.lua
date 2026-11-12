@@ -427,9 +427,10 @@ function N:RenderCharacters(u)
  local ids={}; for id in pairs(self.db.characters) do ids[#ids+1]=id end
  table.sort(ids,function(a,b) if a==self.characterID then return true elseif b==self.characterID then return false end return self.db.characters[a].name<self.db.characters[b].name end)
  local rows={}
- local preferred=self:PreferredRecords()
+ local preferred=self:PreferredRecords(); local hidden=0
  for _,id in ipairs(ids) do
   local c=self.db.characters[id]; local off=self.db.excluded[id] or not preferred[id]
+  if not preferred[id] then hidden=hidden+1 else
   local tag=id==self.characterID and ' (you)' or c.synced and ' (synced)' or c.imported and ' (imported)' or ''
   rows[#rows+1]=colorRow({text=c.name..tag..'   '..(c.money and self:Gold(c.money) or 'gold ?')..'   bank '..self:Ago(c.bankAt)..(not preferred[id] and '   older copy, ignored' or off and '   not counted' or ''),
    click=function() if IsShiftKeyDown and IsShiftKeyDown() then self:ForgetCharacter(id) else self.db.excluded[id]=not self.db.excluded[id] or nil end end,title=c.name,
@@ -439,7 +440,9 @@ function N:RenderCharacters(u)
     for _,cd in ipairs(self:CooldownList()) do if cd.character==c.name then tt:AddLine(self:CooldownText(cd),cd.ready and .3 or .8,cd.ready and 1 or .8,cd.ready and .4 or .8) end end
     for _,p in pairs(c.professions or {}) do tt:AddLine(p.name..' '..(p.skill or 0)..'/'..(p.max or 0),.8,.8,.8) end
     if c.synced then tt:AddLine('Last synced '..self:Ago(c.syncedAt),.7,.7,.7) end end},off and COLORS.gray or nil)
+  end
  end
+ if hidden>0 then u.footer:SetText('Click: count on/off. Shift-click twice: remove an old character. ('..hidden..' duplicate record'..(hidden==1 and '' or 's')..' hidden)') end
  return rows
 end
 
