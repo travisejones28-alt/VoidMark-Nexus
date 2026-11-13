@@ -145,6 +145,7 @@ PASS Zone button: build routes in a picked zone, or switch back to the current z
 PASS Find item covers the mailbox, worn gear and mail you sent that is not collected yet
 PASS Cooldowns: read from the game, shown per character, synced, announced when ready
 PASS Mail, gear and cooldowns travel with the sync
+PASS Future timestamps (wrong PC clock) are pulled back to now instead of blocking sync
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
 PASS Throttled sync messages are retried, not dropped
@@ -158,4 +159,4 @@ PASS A character saved twice (import + old copy) is counted once, newest copy wi
 PASS Gold: read on change, shown per character with a total, synced and exported
 PASS Gold travels with the bank sync
 PASS Characters: old first-name record joins its character by GUID; duplicates hidden; small gold amounts
-PASS: 160 tests; Lua 5.1 / standard interpreter
+PASS: 161 tests; Lua 5.1 / standard interpreter

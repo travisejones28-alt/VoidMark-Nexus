@@ -53,6 +53,22 @@ local function inventory(t)
  assert(type(t)=='table','Missing inventory')
  local n=0; for id,qty in pairs(t) do n=n+1; assert(n<=5000 and N:Finite(id,1,1e9) and id%1==0 and N:Finite(qty,0,1e9) and qty%1==0,'Invalid inventory') end
 end
+-- A saved time in the future means the PC clock was wrong when it was saved
+-- (new PC / BIOS clock). Pull those times back to now instead of refusing the
+-- whole character forever ("Invalid inventory timestamp" on every sync).
+function N:FixFutureTimes(c)
+ if type(c)~='table' then return 0 end
+ local now=self:Now();local fixed=0
+ local function fix(t,k) if type(t)=='table' and type(t[k])=='number' and t[k]>now+300 then t[k]=now;fixed=fixed+1 end end
+ for _,k in ipairs({'at','bagsAt','bankAt','moneyAt','mailAt','equippedAt','cooldownsAt','syncedAt'}) do fix(c,k) end
+ if type(c.professions)=='table' then
+  for _,p in pairs(c.professions) do
+   fix(p,'at')
+   if type(p)=='table' and type(p.recipes)=='table' then for _,r in pairs(p.recipes) do fix(r,'at') end end
+  end
+ end
+ return fixed
+end
 function N:ValidateCharacter(c)
  assert(type(c)=='table' and text(c.name) and text(c.realm) and text(c.faction) and text(c.account),'Invalid character identity')
  assert(self:Finite(c.at,0,self:Now()+300),'Invalid timestamp')
@@ -108,7 +124,7 @@ function N:PreviewImport(raw)
   assert(type(data)=='table' and data.schema==1 and text(data.account) and data.account~=self.db.account,'Import must come from a different account')
   assert(type(data.characters)=='table','Missing characters'); local n=0
   for id,c in pairs(data.characters) do
-   n=n+1; assert(n<=100 and text(id,600),'Character limit or invalid identity'); self:ValidateCharacter(c)
+   n=n+1; assert(n<=100 and text(id,600),'Character limit or invalid identity'); self:FixFutureTimes(c); self:ValidateCharacter(c)
    assert(c.account==data.account and id==c.account..'/'..c.realm..'/'..c.name,'Character identity mismatch')
    local existing=self.db.characters[id]; local conflict=false
    for otherID,other in pairs(self.db.characters) do

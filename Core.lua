@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.10.2-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.10.3-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -178,6 +178,8 @@ function N:Initialize()
  if not d.settings.redesign05 then d.settings.redesign05=true; d.settings.terrainLearn=false end
  d.schema=self.schema; d.account=d.account or ('VMN-'..tostring(self:Now())..'-'..tostring(math.random(100000,999999)))
  self.db=d
+ -- Repair times saved while the PC clock was ahead (they'd block sync).
+ for _,ch in pairs(d.characters) do self:FixFutureTimes(ch) end
  local realm=self:Call(GetNormalizedRealmName) or self:Call(GetRealmName) or 'Unknown'
  local name=self:UnitFullName('player') or 'Unknown'; local guid=self:Text(self:Call(UnitGUID,'player'))
  self.characterID=d.account..'/'..realm..'/'..name

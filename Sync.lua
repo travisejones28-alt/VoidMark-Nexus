@@ -253,6 +253,7 @@ function N:ApplySync(peer,key,data)
  -- Start from the last synced record so sections can arrive separately.
  local merged=existing and existing.synced and self:Copy(existing) or {professions={},bags={},bank={}}
  for k,v in pairs(pending) do merged[k]=v end
+ self:FixFutureTimes(merged)
  local ok,err=pcall(self.ValidateCharacter,self,merged)
  if not ok then return self:Print('Ignored invalid sync data: '..tostring(err)) end
  for otherID,other in pairs(self.db.characters) do
