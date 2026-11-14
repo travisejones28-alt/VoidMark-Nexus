@@ -143,14 +143,14 @@ test('Reports dropdown: herb report in the window with AH value, and the Alchemy
  local menu=N.menu; assert(menu and menu:IsShown(),'Reports menu opens')
  u.report='herbs'; u.tab='Characters'; N:Render()
  local rows={};for i,b in ipairs(u.rows) do if b:IsShown() and b.data then rows[#rows+1]=b.data.text end end
- assert(rows[1]:find('Stranglekelp  40',1,true),'most valuable first: '..tostring(rows[1]))
- assert(rows[2]:find('bank',1,true) and not rows[2]:find('ago',1,true),'one neat who-has-it line: '..tostring(rows[2]))
+ assert(rows[1]:find('Total: 75',1,true),'grand total first: '..tostring(rows[1]))
+ assert(rows[2]:find('Stranglekelp x40: ',1,true) and rows[2]:find('bank',1,true) and not rows[2]:find('ago',1,true),'one line per item: '..tostring(rows[2]))
  local all=table.concat(rows,'\n')
  assert(all:find('Peacebloom',1,true) and all:find('Silverleaf',1,true),'every herb listed')
  assert(not all:find('Linen',1,true) and not all:find('Copper',1,true),'only herbs')
  assert(u.syncInfo:GetText():find('3 kinds, 75 total',1,true),u.syncInfo:GetText())
  -- Ore report uses the class too; cloth stays out.
- u.report='ore'; N:Render(); assert(u.rows[1].data.text:find('Copper Ore',1,true))
+ u.report='ore'; N:Render(); assert(u.rows[2].data.text:find('Copper Ore',1,true))
  -- Alchemy have/need list.
  u.report='need:alch'; N:Render()
  local text={};for i,b in ipairs(u.rows) do if b:IsShown() and b.data then text[#text+1]=b.data.text end end

@@ -341,7 +341,7 @@ end
 -- Short "who has it" for reports: "Soulreaver 60 (bank)", "mail to Herbstorage 29".
 local function short(name) name=tostring(name or '?'); return name:match('(%S+)$') or name end
 function N:ReportPlace(p)
- if p.transit then return 'mail to '..short(p.name:match('In the mail to (.+)$') or p.name)..' '..(p.mail or 0) end
+ if p.transit then return short(p.name:match('In the mail to (.+)$') or p.name)..' '..(p.mail or 0)..' (in the mail)' end
  local parts={}
  if (p.bags or 0)>0 then parts[#parts+1]='bags' end
  if (p.bank or 0)>0 then parts[#parts+1]='bank' end
@@ -368,12 +368,16 @@ function N:RenderReport(u,key)
  end
  local cat=self.FIND_CATEGORIES[key];if not cat then return rows end
  local list,total,count=self:CategoryList(cat)
+ -- Grand total first, then one line per item:
+ -- "Kingsblood x120: Soulreaver 60 (bank), Herbstorage 60 (mail)  ~1g 54s"
+ if #list>0 then
+  rows[#rows+1]={text='Total: '..count..' '..cat.label:lower()..' ('..#list..' kinds), worth ~'..self:Money(total),color=gold}
+ end
  for _,item in ipairs(list) do
-  -- Two neat lines per item: "Kingsblood 120   ~1g 54s", then who has it.
-  rows[#rows+1]={text=item.name..'  '..item.total..(item.value and ('   |cff9a9a9a~'..self:Money(item.value)..'|r') or ''),item=item.id,itemName=item.name,color=item.value and nil or muted}
   local who={}
   for _,p in ipairs(item.places) do who[#who+1]=self:ReportPlace(p) end
-  rows[#rows+1]={text='     '..table.concat(who,'   '),item=item.id,itemName=item.name,color=muted}
+  rows[#rows+1]={text=item.name..' x'..item.total..': |cffd8d0e0'..table.concat(who,', ')..'|r'..(item.value and ('  |cff9a9a9a~'..self:Money(item.value)..'|r') or ''),
+   item=item.id,itemName=item.name,color=item.value and nil or muted}
  end
  if #list==0 then rows[1]={text='None in any saved bags, banks or mailboxes.',color=muted} end
  u.syncInfo:SetText(cat.label..': '..#list..' kinds, '..count..' total, worth ~'..self:Money(total)..' at AH prices (VoidMark Market).')
