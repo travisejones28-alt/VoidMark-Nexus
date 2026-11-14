@@ -25,5 +25,11 @@ function N:ScanStorage(bank)
 end
 N:On('BAG_UPDATE_DELAYED',function() N:Later('bags',function() N:ScanStorage(false); if N.bankOpen then N:ScanStorage(true) end end) end)
 N:On('BANKFRAME_OPENED',function() N.bankOpen=true; N:ScanStorage(true) end)
-N:On('BANKFRAME_CLOSED',function() N.bankOpen=false end)
+-- Taking from the bank's main slots may not fire BAG_UPDATE_DELAYED for the
+-- bank itself; rescan it so mailed-away items stop counting twice.
+for _,e in ipairs({'PLAYERBANKSLOTS_CHANGED','PLAYERBANKBAGSLOTS_CHANGED','PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED'}) do
+ N:On(e,function() if N.bankOpen then N:Later('bank',function() N:ScanStorage(true) end) end end)
+end
+-- Rescan once more as the bank closes, catching the last moves.
+N:On('BANKFRAME_CLOSED',function() if N.bankOpen then pcall(N.ScanStorage,N,true) end; N.bankOpen=false end)
 

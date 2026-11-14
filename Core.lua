@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.10.6-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.10.7-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end

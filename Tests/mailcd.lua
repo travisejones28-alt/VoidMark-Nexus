@@ -143,7 +143,8 @@ test('Reports dropdown: herb report in the window with AH value, and the Alchemy
  local menu=N.menu; assert(menu and menu:IsShown(),'Reports menu opens')
  u.report='herbs'; u.tab='Characters'; N:Render()
  local rows={};for i,b in ipairs(u.rows) do if b:IsShown() and b.data then rows[#rows+1]=b.data.text end end
- assert(rows[1]:find('Stranglekelp',1,true) and rows[1]:find('x40',1,true),'most valuable first: '..tostring(rows[1]))
+ assert(rows[1]:find('Stranglekelp  40',1,true),'most valuable first: '..tostring(rows[1]))
+ assert(rows[2]:find('bank',1,true) and not rows[2]:find('ago',1,true),'one neat who-has-it line: '..tostring(rows[2]))
  local all=table.concat(rows,'\n')
  assert(all:find('Peacebloom',1,true) and all:find('Silverleaf',1,true),'every herb listed')
  assert(not all:find('Linen',1,true) and not all:find('Copper',1,true),'only herbs')
