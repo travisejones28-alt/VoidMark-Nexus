@@ -185,3 +185,15 @@ test('Tooltip counts match Reports: other account alt and mail on its way to it'
  N:AddItemCounts(tt,3356);eq(lines[1],'Herbstorage=65 (bags+mailbox)')
  N.MailInTransit=inTransit;me.bags[3356]=mine;me.bank[3356]=mb;N.db.characters=saved
 end)
+
+test('Sync goes out ~5s after a change, at most every 15s',function()
+ local oldT,oldGT,peers=C_Timer,GetTime,N.db.sync.peers
+ local delays,now={},1000
+ GetTime=function() return now end
+ C_Timer=setmetatable({After=function(d,fn) delays[#delays+1]={d=d,fn=fn} end},{__index=oldT})
+ N.db.sync.peers={Banky=true};N.syncPending=false;N.syncLastSoon=nil
+ N:SyncSoon();eq(delays[1].d,5);delays[1].fn()
+ now=1003;N:SyncSoon();eq(delays[2].d,12) -- 15s after the last send
+ delays[2].fn()
+ N.db.sync.peers,C_Timer,GetTime=peers,oldT,oldGT;N.syncPending=false;N.syncLastSoon=nil
+end)

@@ -190,13 +190,17 @@ end
 function N:SyncAll()
  for peer in pairs(self.db.sync.peers) do self:SyncHello(peer) end
 end
--- Debounced: called after bag/bank/profession changes.
+-- Debounced: called after bag/bank/mail/profession changes. Sends about 5s
+-- after things settle, at most once every 15s (only changed parts are sent).
+local SOON,MIN_GAP=5,15
 function N:SyncSoon()
  if not next(self.db.sync and self.db.sync.peers or {}) then return end
  if self.syncPending then return end
  self.syncPending=true
- local function run() self.syncPending=false;self:Guard('sync',function() N:SyncAll() end) end
- if C_Timer and C_Timer.After then C_Timer.After(20,run) else run() end
+ local now=GetTime and GetTime() or 0
+ local wait=math.max(SOON,(self.syncLastSoon or -1e9)+MIN_GAP-now)
+ local function run() self.syncPending=false;self.syncLastSoon=GetTime and GetTime() or 0;self:Guard('sync',function() N:SyncAll() end) end
+ if C_Timer and C_Timer.After then C_Timer.After(wait,run) else run() end
 end
 
 -- Background retry so syncing never waits on a button: until the other
@@ -384,6 +388,9 @@ end
 N:On('CHAT_MSG_ADDON',function(prefix,msg,channel,sender) N:SyncReceive(prefix,msg,channel,sender) end)
 N:On('BAG_UPDATE_DELAYED',function() N:SyncSoon() end)
 N:On('BANKFRAME_CLOSED',function() N:SyncSoon() end)
+for _,e in ipairs({'MAIL_CLOSED','MAIL_SEND_SUCCESS','MERCHANT_CLOSED','AUCTION_HOUSE_CLOSED','PLAYER_EQUIPMENT_CHANGED'}) do
+ N:On(e,function() N:SyncSoon() end)
+end
 N:On('TRADE_SKILL_CLOSE',function() N:SyncSoon() end)
 N:On('CRAFT_CLOSE',function() N:SyncSoon() end)
 -- A peer coming online announces itself in the friends list system message;
