@@ -898,9 +898,9 @@ test('Item tooltips list counts per character and skip other realms and excluded
   ['x/off']={name='Hidden',realm=me.realm,faction=me.faction,bags={[2447]=7},bank={},professions={}}}
  N.db.excluded={['x/off']=true}
  local mine=me.bags[2447]; me.bags[2447]=3
- local total,list=N:ItemCounts(2447); eq(total,23); eq(#list,2); eq(list[1].own,true)
+ local total,list=N:ItemCounts(2447); eq(total,23); eq(#list,2); eq(list[1].you,true)
  local lines={}; local tt={AddLine=function(_,s) lines[#lines+1]=s end,AddDoubleLine=function(_,a,b) lines[#lines+1]=a..'='..b end,Show=function() end}
- N:AddItemCounts(tt,2447); assert(lines[2]:find('Voidmark Bank=bags 4, bank 16',1,true),lines[2]); assert(lines[3]:find('Total=23',1,true))
+ N:AddItemCounts(tt,2447); assert(lines[1]:find('Held: 23',1,true),lines[1]); assert(lines[3]:find('Bank=20 (bags+bank)',1,true),lines[3])
  local n=#lines; N:AddItemCounts(tt,2447); eq(#lines,n) -- no duplicate lines on repeated calls
  N.db.settings.tooltipCounts=false; tt.vmnItem=nil; N:AddItemCounts(tt,2447); eq(#lines,n); N.db.settings.tooltipCounts=true
  me.bags[2447]=mine; N.db.characters=saved; N.db.excluded=ex

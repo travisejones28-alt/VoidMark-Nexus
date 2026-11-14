@@ -358,10 +358,17 @@ function N:ReportPlace(p)
 end
 -- Per character, mail on its way counting as theirs: "Herbstorage 60 (mailbox)".
 function N:ReportOwners(places)
+ local out={}
+ for _,e in ipairs(self:OwnerEntries(places)) do out[#out+1]=e.who..' '..e.n..(e.where~='' and (' ('..e.where..')') or '') end
+ return out
+end
+-- Per character: {who, n, where="bags+bank"}; mail on its way is the recipient's.
+function N:OwnerEntries(places)
  local by,order={}, {}
  for _,p in ipairs(places) do
   local who=short(p.transit and (p.name:match('In the mail to (.+)$') or p.name) or p.name)
   local e=by[who];if not e then e={n=0,where={}};by[who]=e;order[#order+1]=who end
+  if p.you then e.you=true end
   local function add(n,label) if (n or 0)>0 then e.n=e.n+n;e.where[label]=true end end
   if p.transit then add(p.mail,'mailbox') else add(p.bags,'bags');add(p.bank,'bank');add(p.mail,'mailbox');add(p.equipped,'worn') end
  end
@@ -370,7 +377,7 @@ function N:ReportOwners(places)
  for _,who in ipairs(order) do
   local e=by[who];local w={}
   for _,l in ipairs({'bags','bank','mailbox','worn'}) do if e.where[l] then w[#w+1]=l end end
-  out[#out+1]=who..' '..e.n..(#w>0 and (' ('..table.concat(w,'+')..')') or '')
+  out[#out+1]={who=who,n=e.n,where=table.concat(w,'+'),you=e.you}
  end
  return out
 end

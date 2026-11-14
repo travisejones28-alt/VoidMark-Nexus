@@ -171,3 +171,17 @@ test('Reports count mail on its way as the recipient\'s',function()
   {name='Voidmark Herbstorage',bags=5,bank=0,mail=0,equipped=0}})
  eq(out[1],'Herbstorage 34 (bags+mailbox)');eq(out[2],'Soulreaver 10 (bank)')
 end)
+
+test('Tooltip counts match Reports: other account alt and mail on its way to it',function()
+ local saved,savedSent=N.db.characters,N.db.sentMail
+ local me=N.character
+ N.db.characters={[N.characterID]=me,
+  ['PEER/x/Herbstorage']={name='Voidmark Herbstorage',realm=me.realm,faction=me.faction,imported=true,synced=true,bags={[3356]=5},bank={},professions={}}}
+ local mine=me.bags[3356];me.bags[3356]=nil;local mb=me.bank[3356];me.bank[3356]=nil
+ local inTransit=N.MailInTransit
+ N.MailInTransit=function() return {{to='Voidmark Herbstorage',items={[3356]=60},at=N:Now()}} end
+ local total,list=N:ItemCounts(3356);eq(total,65);eq(#list,1)
+ local lines={};local tt={AddLine=function(_,s) lines[#lines+1]=s end,AddDoubleLine=function(_,a,b) lines[#lines+1]=a..'='..b end,Show=function() end}
+ N:AddItemCounts(tt,3356);eq(lines[1],'Herbstorage=65 (bags+mailbox)')
+ N.MailInTransit=inTransit;me.bags[3356]=mine;me.bank[3356]=mb;N.db.characters=saved
+end)
