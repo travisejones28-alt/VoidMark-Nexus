@@ -166,7 +166,16 @@ function N:SyncSections()
  local inv={bags=c.bags,bank=c.bank,bagsAt=c.bagsAt,bankAt=c.bankAt,money=c.money,moneyAt=c.moneyAt,mail=c.mail,mailAt=c.mailAt,equipped=c.equipped,equippedAt=c.equippedAt}
  local id={name=c.name,realm=c.realm,faction=c.faction,guid=c.guid,account=c.account,at=c.at}
  local out={}
- for key,value in pairs({id=id,inv=inv,prof={professions=c.professions,cooldowns=c.cooldowns}}) do
+ -- Every other character on this account rides along ("alts"), so pairing
+ -- one character per account shares the whole account.
+ local alts={}
+ for cid,o in pairs(self.db.characters) do
+  if cid~=self.characterID and not o.imported and not o.synced and type(o.name)=='string' then
+   local a=self:CleanImported(o);a.account=self.db.account;a.imported=nil;a.synced=nil;alts[#alts+1]=a
+  end
+ end
+ table.sort(alts,function(a,b) return a.name<b.name end)
+ for key,value in pairs({id=id,inv=inv,prof={professions=c.professions,cooldowns=c.cooldowns},alts=alts}) do
   local raw=self:EncodeData(value);out[key]={raw=raw,hash=hash(raw)}
  end
  return out
@@ -176,6 +185,7 @@ function N:SyncHello(peer)
  if not self.db.sync.peers[peer] or not self:PeerMaybeOnline(peer) then return end
  local s=self:SyncSections();self.syncSections=s
  self:SendSync(peer,'H:'..self.db.account..':'..s.id.hash..':'..s.inv.hash..':'..s.prof.hash)
+ self:SendSync(peer,'A:'..s.alts.hash)
 end
 function N:SyncAll()
  for peer in pairs(self.db.sync.peers) do self:SyncHello(peer) end
@@ -266,6 +276,29 @@ function N:ApplySync(peer,key,data)
  state.applied=(state.applied or 0)+1
 end
 
+-- The paired account's other characters (sent with the sync).
+function N:ApplyAlts(peer,list)
+ local state=self.syncIn[peer];if not state or not state.account or type(list)~='table' then return end
+ local n=0
+ for i=1,math.min(#list,50) do
+  local a=list[i]
+  if type(a)=='table' and type(a.name)=='string' and type(a.realm)=='string' and a.account==state.account and a.account~=self.db.account then
+   local local_=false
+   for _,o in pairs(self.db.characters) do if not o.imported and o.realm==a.realm and o.name==a.name then local_=true end end
+   if not local_ then
+    local rec=self:Copy(a);rec.imported,rec.synced=nil,nil
+    self:FixFutureTimes(rec)
+    local ok=pcall(self.ValidateCharacter,self,rec)
+    if ok then
+     local clean=self:CleanImported(rec);clean.imported=true;clean.synced=true;clean.syncedAt=self:Now();clean.via=peer
+     self.db.characters[a.account..'/'..a.realm..'/'..a.name]=clean;n=n+1
+    end
+   end
+  end
+ end
+ if n>0 then self.dirty=true;self.renderStocks=nil end
+end
+
 function N:SyncReceive(prefix,msg,channel,sender)
  if prefix~=PREFIX or channel~='WHISPER' or type(msg)~='string' then return end
  local peer=shortName(sender)
@@ -297,15 +330,22 @@ function N:SyncReceive(prefix,msg,channel,sender)
   if kind=='H:' then
    local s=self:SyncSections();self.syncSections=s
    self:SendSync(peer,'R:'..self.db.account..':'..s.id.hash..':'..s.inv.hash..':'..s.prof.hash)
+   self:SendSync(peer,'A:'..s.alts.hash)
   end
+ elseif kind=='A:' then
+  -- Separate message so older versions simply ignore it.
+  local h=msg:match('^A:([%w%-]+)$')
+  local state=self.syncIn[peer];if not h or not state or not state.account then return end
+  local known=self.syncHashes[peer] or {};self.syncHashes[peer]=known
+  if known.alts~=h then self:SendSync(peer,'Q:alts') end
  elseif kind=='Q:' then
   local list=msg:sub(3)
   -- id first so a new peer record is complete as early as possible.
-  for _,key in ipairs({'id','inv','prof'}) do if list:find(key,1,true) then self:SendSection(peer,key) end end
+  for _,key in ipairs({'id','inv','prof','alts'}) do if list:find(key,1,true) then self:SendSection(peer,key) end end
  elseif kind=='D:' then
   local seq,key,i,n,body=msg:match('^D:(%d+):(%a+):(%d+):(%d+):(.*)$')
   i,n=tonumber(i),tonumber(n)
-  if not seq or (key~='id' and key~='inv' and key~='prof') or not i or not n or n<1 or n>MAX_CHUNKS or i<1 or i>n then return end
+  if not seq or (key~='id' and key~='inv' and key~='prof' and key~='alts') or not i or not n or n<1 or n>MAX_CHUNKS or i<1 or i>n then return end
   local state=self.syncIn[peer];if not state or not state.account then return end
   local buf=state[key]
   if not buf or buf.seq~=seq or buf.n~=n then buf={seq=seq,n=n,parts={},got=0};state[key]=buf end
@@ -315,7 +355,7 @@ function N:SyncReceive(prefix,msg,channel,sender)
    local raw=unescape(table.concat(buf.parts))
    local ok,data=pcall(self.Decode,self,raw)
    if not ok or type(data)~='table' then return self:Print('Ignored damaged sync data from '..peer..'.') end
-   self:ApplySync(peer,key,data)
+   if key=='alts' then self:ApplyAlts(peer,data) else self:ApplySync(peer,key,data) end
    local known=self.syncHashes[peer] or {};self.syncHashes[peer]=known
    known[key]=hash(raw)
   end

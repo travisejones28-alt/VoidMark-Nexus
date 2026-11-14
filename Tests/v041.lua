@@ -30,7 +30,7 @@ test('Paired live sync applies a peer account character and counts its bank',fun
  N.db.sync.peers={};N.db.sync.known={};N.syncIn,N.syncHashes,N.syncOut={},N.db.sync.known,{}
  N:PairPeer('Banky-TestRealm');assert(N.db.sync.peers.banky)
  N:FlushSync()
- local hello=sent[#sent];eq(hello.target,'Banky');assert(hello.msg:find('^H:'));eq(hello.channel,'WHISPER')
+ local hello;for _,m in ipairs(sent) do if m.msg:find('^H:') then hello=m end end;eq(hello.target,'Banky');assert(hello.msg:find('^H:'));eq(hello.channel,'WHISPER')
  local now=N:Now()
  local peer={name='Banky',realm='TestRealm',faction='Horde',account='PEER-1',at=now,bags={[2770]=40},bagsAt=now,bank={[2771]=7},bankAt=now,
   professions={tailoring={name='Tailoring',skill=50,max=75,at=now,recipes={bolt={name='Bolt of Linen\nCloth',learned=true,reagents={{id=2589,qty=2}},outputMin=1,outputMax=1,at=now}}}}}
@@ -62,6 +62,40 @@ test('Paired live sync applies a peer account character and counts its bank',fun
  deliver('Banky','inv',s2.inv,9)
  eq(N.db.characters['PEER-1/TestRealm/Banky'].bags[2770],1)
  eq(N.db.characters['PEER-1/TestRealm/Banky'].professions.tailoring.skill,50)
+end)
+
+test('Pairing one character per account also brings that account\'s other characters (alts)',function()
+ N.db.sync.peers={};N.db.sync.known={};N.syncIn,N.syncHashes,N.syncOut={},N.db.sync.known,{}
+ N:PairPeer('Banky');sent={};N:FlushSync()
+ local helloA;for _,m in ipairs(sent) do if m.msg:find('^A:') then helloA=m.msg end end
+ assert(helloA,'hello carries the alts hash')
+ local now=N:Now()
+ local banky={name='Banky',realm='TestRealm',faction='Horde',account='PEER-3',at=now,bags={},bank={},professions={}}
+ local s=sections(banky);local H=function(x) return N.SyncHash(x) end
+ local herb={name='Herbstorage',realm='TestRealm',faction='Horde',account='PEER-3',at=now,bags={[785]=40},bagsAt=now,bank={[785]=59},bankAt=now,professions={}}
+ local alts=N:EncodeData({herb})
+ sent={}
+ N:SyncReceive('VMNX','H:PEER-3:'..H(s.id)..':'..H(s.inv)..':'..H(s.prof),'WHISPER','Banky')
+ N:SyncReceive('VMNX','A:'..H(alts),'WHISPER','Banky');N:FlushSync()
+ local asked;for _,m in ipairs(sent) do if m.msg=='Q:alts' then asked=true end end
+ assert(asked,'asks for the alts it has not seen')
+ deliver('Banky','alts',alts,21)
+ local c=N.db.characters['PEER-3/TestRealm/Herbstorage']
+ assert(c and c.synced,'other account alt stored');eq(c.bags[785],40);eq(c.bank[785],59)
+ -- Same hash again: not asked twice.
+ sent={};N:SyncReceive('VMNX','A:'..H(alts),'WHISPER','Banky');N:FlushSync();eq(#sent,0)
+ -- An alt claiming our own account, or a local character's identity, is ignored.
+ local evil=N:EncodeData({{name=N.character.name,realm=N.character.realm,faction='Horde',account='PEER-3',at=now,bags={[1]=1},bank={},professions={}},
+  {name='Mine',realm='TestRealm',faction='Horde',account=N.db.account,at=now,bags={},bank={},professions={}}})
+ deliver('Banky','alts',evil,22)
+ eq(N.db.characters['PEER-3/TestRealm/'..N.character.name],nil);eq(N.db.characters[N.db.account..'/TestRealm/Mine'],nil)
+ -- Our side sends our own alts (not the synced ones) when asked.
+ N.db.characters['LOCAL/TestRealm/Altie']={name='Altie',realm='TestRealm',faction='Horde',at=now,bags={[2589]=3},bank={},professions={}}
+ N.syncSections=nil;local mine=N:SyncSections()
+ local list=N:Decode(mine.alts.raw);local names={};for _,a in ipairs(list) do names[a.name]=true end
+ assert(names.Altie and not names.Herbstorage and not names[N.character.name],'own alts only')
+ N.db.characters['LOCAL/TestRealm/Altie']=nil;N.db.characters['PEER-3/TestRealm/Herbstorage']=nil
+ N:UnpairPeer('Banky')
 end)
 
 test('Sync ignores unpaired senders, own account and mismatched names',function()
