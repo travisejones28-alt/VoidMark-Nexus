@@ -33,10 +33,17 @@ local function words(query)
  for w in query:lower():gmatch('%S+') do out[#out+1]=w end
  return out
 end
-local function matches(name,ws)
+-- ws: one or more word groups ("thick leather, runecloth" = either).
+-- An empty group list ("all", "*") matches everything.
+local function matches(name,groups)
+ if #groups==0 then return true end
  local l=name:lower()
- for _,w in ipairs(ws) do if not l:find(w,1,true) then return false end end
- return true
+ for _,ws in ipairs(groups) do
+  local ok=true
+  for _,w in ipairs(ws) do if not l:find(w,1,true) then ok=false;break end end
+  if ok then return true end
+ end
+ return false
 end
 
 -- Returns items sorted by total held, each with every place it is stored.
@@ -45,7 +52,11 @@ function N:FindItems(query)
  if query=='' then return {},0 end
  local wantID=tonumber(query:match('item:(%d+)') or query:match('^#?(%d+)$'))
  local label=query:match('|h%[(.-)%]|h'); if label then query=label end
- local ws=words(query)
+ local ws={}
+ local everything=query:lower()=='all' or query=='*'
+ if not everything then
+  for part in (query..','):gmatch('([^,]*),') do local w=words(part);if #w>0 then ws[#ws+1]=w end end
+ end
  local byItem,unnamed={},{}
  local function lookup(id)
   local item=byItem[id]
@@ -167,11 +178,12 @@ end
 
 -- /vmn find NAME: the same answer in chat.
 function N:FindCommand(query)
- if query=='' then return self:Print('Usage: /vmn find NAME') end
+ if query=='' then return self:Print('Usage: /vmn find NAME  (several: /vmn find thick leather, runecloth  -  everything: /vmn find all)') end
  local list=self:FindItems(query)
  if #list==0 then return self:Print('No "'..query..'" in any saved bags or banks.') end
+ local limit=(query:find(',',1,true) or query:lower()=='all' or query=='*') and 15 or 5
  for i,item in ipairs(list) do
-  if i>5 then self:Print('...and '..(#list-5)..' more. Open /vmn and use Find for all of them.'); break end
+  if i>limit then self:Print('...and '..(#list-limit)..' more. Open /vmn and use Find for all of them.'); break end
   local places={}
   for _,p in ipairs(item.places) do places[#places+1]=self:FinderPlace(p) end
   self:Print(item.name..' x'..item.total..' - '..table.concat(places,'; '))
@@ -183,3 +195,77 @@ N:On('GET_ITEM_INFO_RECEIVED',function()
  local u=N.ui
  if u and u.find and u.find:GetText()~='' and u.frame:IsShown() then N:Later('finderNames',function() N.dirty=true end) end
 end)
+
+-- /vmn need: what you already have against a shopping list, what's short and
+-- what buying the rest costs (VoidMark Market prices).
+--   /vmn need 414 light leather, 139 medium leather
+--   /vmn need lw    (Leatherworking 1-300, step by step)
+N.NEED_PRESETS={
+ lw={name='Leatherworking',steps={
+  {'1-150',{{105,'Ruined Leather Scraps'},{414,'Light Leather'},{27,'Light Hide'},{139,'Medium Leather'},{10,'Medium Hide'},{30,'Heavy Hide'}}},
+  {'150-225',{{126,'Medium Leather'},{397,'Heavy Leather'},{16,'Iron Buckle'},{340,'Thick Leather'}}},
+  {'225-300',{{224,'Thick Leather'},{1030,'Rugged Leather'},{530,'Runecloth'}}}}},
+}
+N.NEED_PRESETS.leatherworking=N.NEED_PRESETS.lw
+-- Item ID for a name: your items, names Nexus saved, then Market's scan.
+function N:ItemIDByName(name)
+ local want=tostring(name or ''):lower()
+ for id,n in pairs(self.db.itemNames or {}) do if type(n)=='string' and n:lower()==want then return tonumber(id) end end
+ local m=VoidMarkMarketDB
+ m=type(m)=='table' and type(m.economies)=='table' and m.economies[self.economy]
+ for k,v in pairs(type(m)=='table' and type(m.market)=='table' and m.market or {}) do
+  if type(v)=='table' and type(v.name)=='string' and v.name:lower()==want and (not v.itemSuffix or v.itemSuffix==0) then return tonumber(v.itemID or k) end
+ end
+ return nil
+end
+-- How many of exactly this item you hold everywhere.
+function N:HaveCount(name)
+ for _,item in ipairs(self:FindItems(name)) do
+  if item.name:lower()==tostring(name):lower() then return item.total,item.id,item.name end
+ end
+ local id=self:ItemIDByName(name)
+ return 0,id,id and self:FinderName(id) or nil
+end
+function N:NeedLines(list)
+ local lines,shortCost,unknown={},0,0
+ for _,e in ipairs(list) do
+  local need,name=e[1],e[2]
+  local have,id,real=self:HaveCount(name)
+  name=real or name
+  local short=math.max(0,need-have)
+  local line=('%s: have %d / need %d'):format(name,have,need)
+  if short==0 then line=line..'  |cff40ff40done|r'
+  else
+   local p=id and self:Price(id)
+   if p and p.unit then
+    local c=short*p.unit;shortCost=shortCost+c
+    line=line..('  |cffffd200short %d  ~%s|r'):format(short,self:Money(c))
+   else unknown=unknown+1;line=line..('  |cffffd200short %d|r  (no AH price)'):format(short) end
+  end
+  lines[#lines+1]=line
+ end
+ return lines,shortCost,unknown
+end
+function N:NeedCommand(args)
+ args=tostring(args or ''):match('^%s*(.-)%s*$')
+ local preset=self.NEED_PRESETS[args:lower()]
+ if preset then
+  local total=0
+  self:Print(preset.name..' - what you have and what the rest costs:')
+  for _,step in ipairs(preset.steps) do
+   local lines,cost,unknown=self:NeedLines(step[2]);total=total+cost
+   self:Print('|cffc8a0ff'..step[1]..'|r  buy ~'..self:Money(cost)..(unknown>0 and ' (+'..unknown..' without an AH price)' or ''))
+   for _,l in ipairs(lines) do self:Print('  '..l) end
+  end
+  return self:Print('Total to buy: ~'..self:Money(total))
+ end
+ local list={}
+ for part in (args..','):gmatch('([^,]*),') do
+  local n,name=part:match('^%s*(%d+)%s*x?%s+(.-)%s*$')
+  if n and name~='' then list[#list+1]={tonumber(n),name} end
+ end
+ if #list==0 then return self:Print('Usage: /vmn need 414 light leather, 139 medium leather   or   /vmn need lw') end
+ local lines,cost,unknown=self:NeedLines(list)
+ for _,l in ipairs(lines) do self:Print(l) end
+ self:Print('To buy: ~'..self:Money(cost)..(unknown>0 and ' (+'..unknown..' without an AH price)' or ''))
+end

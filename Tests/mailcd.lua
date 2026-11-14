@@ -99,3 +99,28 @@ test('Mail, gear and cooldowns travel with the sync',function()
  N.db.characters['B7/TestRealm/Voidmark Bank']=nil
  C_ChatInfo=api; N.db.sync.peers=savedPeers; N.syncOut,N.syncContact,N.syncHyphen,N.syncHelloForm,N.syncProbeAt={},nil,nil,nil,nil
 end)
+
+test('Find several at once, find all, and /vmn need (have vs shopping list, cost of the rest)',function()
+ local me=N.character
+ local savedBags,savedNames=me.bags,GetItemInfo
+ local names={[4304]='Thick Leather',[4234]='Heavy Leather',[14047]='Runecloth',[2318]='Light Leather'}
+ GetItemInfo=function(id) return names[tonumber(id)] end
+ me.bags={[4304]=40,[4234]=12,[14047]=600}
+ local savedPrice=N.Price;N.Price=function(_,id) return ({[4304]={unit=550},[4234]={unit=220},[2318]={unit=50}})[id] end
+ local savedByName=N.ItemIDByName;N.ItemIDByName=function(_,n) for id,x in pairs(names) do if x:lower()==n:lower() then return id end end end
+ local printed={};local savedPrint=N.Print;N.Print=function(_,s) printed[#printed+1]=s end
+ local ok,err=pcall(function()
+  local list=N:FindItems('thick leather, runecloth');eq(#list,2)
+  assert(#N:FindItems('all')>=3,'everything')
+  N:NeedCommand('100 thick leather, 50 runecloth, 20 light leather')
+  local all=table.concat(printed,'\n')
+  assert(all:find('Thick Leather: have 40 / need 100',1,true) and all:find('short 60',1,true),all)
+  assert(all:find('Runecloth: have 600 / need 50',1,true) and all:find('done',1,true),all)
+  assert(all:find('Light Leather: have 0 / need 20',1,true),all)
+  assert(all:find('To buy: ~3g 40s 0c',1,true),all) -- 60 x 5s50c + 20 x 50c
+  printed={};N:NeedCommand('lw');all=table.concat(printed,'\n')
+  assert(all:find('Leatherworking',1,true) and all:find('150-225',1,true) and all:find('Rugged Leather',1,true) and all:find('Total to buy',1,true),all)
+ end)
+ me.bags=savedBags;GetItemInfo=savedNames;N.Price=savedPrice;N.ItemIDByName=savedByName;N.Print=savedPrint
+ assert(ok,err)
+end)
