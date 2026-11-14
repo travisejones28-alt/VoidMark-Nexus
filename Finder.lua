@@ -350,6 +350,24 @@ function N:ReportPlace(p)
  local n=(p.bags or 0)+(p.bank or 0)+(p.mail or 0)+(p.equipped or 0)
  return short(p.name)..' '..n..(#parts>0 and (' ('..table.concat(parts,'+')..')') or '')
 end
+-- Per character, mail on its way counting as theirs: "Herbstorage 60 (mailbox)".
+function N:ReportOwners(places)
+ local by,order={}, {}
+ for _,p in ipairs(places) do
+  local who=short(p.transit and (p.name:match('In the mail to (.+)$') or p.name) or p.name)
+  local e=by[who];if not e then e={n=0,where={}};by[who]=e;order[#order+1]=who end
+  local function add(n,label) if (n or 0)>0 then e.n=e.n+n;e.where[label]=true end end
+  if p.transit then add(p.mail,'mailbox') else add(p.bags,'bags');add(p.bank,'bank');add(p.mail,'mailbox');add(p.equipped,'worn') end
+ end
+ table.sort(order,function(a,b) if by[a].n~=by[b].n then return by[a].n>by[b].n end return a<b end)
+ local out={}
+ for _,who in ipairs(order) do
+  local e=by[who];local w={}
+  for _,l in ipairs({'bags','bank','mailbox','worn'}) do if e.where[l] then w[#w+1]=l end end
+  out[#out+1]=who..' '..e.n..(#w>0 and (' ('..table.concat(w,'+')..')') or '')
+ end
+ return out
+end
 function N:RenderReport(u,key)
  local rows={}
  local accent,muted,gold={.78,.6,1},{.65,.6,.72},{1,.82,0}
@@ -374,8 +392,7 @@ function N:RenderReport(u,key)
   rows[#rows+1]={text='Total: '..count..' '..cat.label:lower()..' ('..#list..' kinds), worth ~'..self:Money(total),color=gold}
  end
  for _,item in ipairs(list) do
-  local who={}
-  for _,p in ipairs(item.places) do who[#who+1]=self:ReportPlace(p) end
+  local who=self:ReportOwners(item.places)
   rows[#rows+1]={text=item.name..' x'..item.total..': |cffd8d0e0'..table.concat(who,', ')..'|r'..(item.value and ('  |cff9a9a9a~'..self:Money(item.value)..'|r') or ''),
    item=item.id,itemName=item.name,color=item.value and nil or muted}
  end

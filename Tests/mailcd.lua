@@ -163,3 +163,11 @@ test('Reports dropdown: herb report in the window with AH value, and the Alchemy
  me.bags,me.bank={}, {}
  N.db.characters,GetItemInfo,GetItemInfoInstant,N.Price=savedChars,savedGII,savedGIII,savedPrice
 end)
+
+test('Reports count mail on its way as the recipient\'s',function()
+ local out=N:ReportOwners({
+  {name='Voidmark Soulreaver',bags=0,bank=10,mail=0,equipped=0},
+  {name='In the mail to Voidmark Herbstorage',transit=true,mail=29,bags=0,bank=0,equipped=0},
+  {name='Voidmark Herbstorage',bags=5,bank=0,mail=0,equipped=0}})
+ eq(out[1],'Herbstorage 34 (bags+mailbox)');eq(out[2],'Soulreaver 10 (bank)')
+end)
