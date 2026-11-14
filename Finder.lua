@@ -46,6 +46,31 @@ local function matches(name,groups)
  return false
 end
 
+-- Category words for Find: "herbs", "ore", "leather", "cloth", "enchanting".
+-- Trade Goods subclasses, plus known names in case the client reports another.
+N.FIND_CATEGORIES={
+ herbs={label='Herbs',class=7,sub=9,names={'peacebloom','silverleaf','earthroot','mageroyal','briarthorn','swiftthistle','stranglekelp','bruiseweed','wild steelbloom','grave moss','kingsblood','liferoot','fadeleaf','goldthorn',"khadgar's whisker",'wintersbite','firebloom','purple lotus',"arthas' tears",'sungrass','blindweed','ghost mushroom','gromsblood','golden sansam','dreamfoil','mountain silversage','plaguebloom','icecap','black lotus'}},
+ ore={label='Ore, bars and stone',class=7,sub=7},
+ leather={label='Leather and hides',class=7,sub=6},
+ cloth={label='Cloth',class=7,sub=5},
+ enchanting={label='Enchanting materials',class=7,sub=12},
+}
+for word,c in pairs(N.FIND_CATEGORIES) do c.word=word end
+local CATEGORY_WORDS={herb='herbs',herbs='herbs',ore='ore',ores='ore',mining='ore',leather='leather',hides='leather',skins='leather',
+ cloth='cloth',enchanting='enchanting',enchant='enchanting',dust='enchanting'}
+function N:FindCategory(query)
+ return self.FIND_CATEGORIES[CATEGORY_WORDS[tostring(query or ''):lower():match('^%s*(.-)%s*$')] or '']
+end
+function N:InCategory(id,cat,name)
+ if type(GetItemInfoInstant)=='function' then
+  local ok,_,_,_,_,_,class,sub=pcall(GetItemInfoInstant,id)
+  if ok and class==cat.class and sub==cat.sub then return true end
+ end
+ local l=type(name)=='string' and name:lower()
+ if l and cat.names then for _,n in ipairs(cat.names) do if l==n then return true end end end
+ return false
+end
+
 -- Returns items sorted by total held, each with every place it is stored.
 function N:FindItems(query)
  query=type(query)=='string' and query:match('^%s*(.-)%s*$') or ''
@@ -57,12 +82,14 @@ function N:FindItems(query)
  if not everything then
   for part in (query..','):gmatch('([^,]*),') do local w=words(part);if #w>0 then ws[#ws+1]=w end end
  end
+ local cat=self:FindCategory(query)
  local byItem,unnamed={},{}
  local function lookup(id)
   local item=byItem[id]
   if item==nil then
    local name=self:FinderName(id)
    if wantID then item=(id==wantID) and {id=id,name=name or ('Item '..id),total=0,places={},at={}} or false
+   elseif cat then item=self:InCategory(id,cat,name) and {id=id,name=name or ('Item '..id),total=0,places={},at={}} or false
    elseif name then item=matches(name,ws) and {id=id,name=name,total=0,places={},at={}} or false
    else unnamed[id]=true; item=false end
    byItem[id]=item
@@ -178,7 +205,9 @@ end
 
 -- /vmn find NAME: the same answer in chat.
 function N:FindCommand(query)
- if query=='' then return self:Print('Usage: /vmn find NAME  (several: /vmn find thick leather, runecloth  -  everything: /vmn find all)') end
+ if query=='' then return self:Print('Usage: /vmn find NAME  (several: /vmn find thick leather, runecloth  -  everything: /vmn find all  -  a kind: /vmn find herbs | ore | leather | cloth | enchanting)') end
+ local cat=self:FindCategory(query)
+ if cat then return self:CategoryReport(cat) end
  local list=self:FindItems(query)
  if #list==0 then return self:Print('No "'..query..'" in any saved bags or banks.') end
  local limit=(query:find(',',1,true) or query:lower()=='all' or query=='*') and 15 or 5
@@ -187,6 +216,17 @@ function N:FindCommand(query)
   local places={}
   for _,p in ipairs(item.places) do places[#places+1]=self:FinderPlace(p) end
   self:Print(item.name..' x'..item.total..' - '..table.concat(places,'; '))
+ end
+end
+
+-- /vmn find herbs (or ore, leather...): every one you hold, where, and its
+-- AH value (VoidMark Market prices), most valuable first.
+function N:CategoryReport(cat)
+ local list,total,count=self:CategoryList(cat)
+ if #list==0 then return self:Print('No '..cat.label:lower()..' in any saved bags or banks.') end
+ self:Print(cat.label..': '..#list..' kinds, '..count..' total, worth ~'..self:Money(total)..' at AH prices')
+ for _,item in ipairs(list) do
+  self:Print(('  %s x%d%s'):format(item.name,item.total,item.value and ('  ~'..self:Money(item.value)) or '  (no AH price)'))
  end
 end
 
@@ -207,6 +247,13 @@ N.NEED_PRESETS={
   {'225-300',{{224,'Thick Leather'},{1030,'Rugged Leather'},{530,'Runecloth'}}}}},
 }
 N.NEED_PRESETS.leatherworking=N.NEED_PRESETS.lw
+-- Alchemy 1-300 (Wowhead Forever guide, "to be safe" counts).
+N.NEED_PRESETS.alch={name='Alchemy',steps={
+ {'1-120',{{55,'Silverleaf'},{81,'Peacebloom'},{44,'Mageroyal'},{56,'Earthroot'},{60,'Briarthorn'},{125,'Empty Vial'}}},
+ {'120-225',{{43,'Mageroyal'},{98,'Stranglekelp'},{41,'Kingsblood'},{31,'Goldthorn'},{21,"Khadgar's Whisker"},{45,'Empty Vial'},{72,'Leaded Vial'}}},
+ {'225-260',{{4,'Iron Bar'},{1,'Black Vitriol'},{4,'Purple Lotus'},{4,'Firebloom'},{25,'Goldthorn'},{25,"Khadgar's Whisker"},{25,'Leaded Vial'},{26,"Arthas' Tears"},{26,'Crystal Vial'}}},
+ {'260-300',{{20,'Sungrass'},{20,'Blindweed'},{33,'Plaguebloom'},{33,'Murloc Eye'},{43,'Crystal Vial'}}}}}
+N.NEED_PRESETS.alchemy=N.NEED_PRESETS.alch
 -- Item ID for a name: your items, names Nexus saved, then Market's scan.
 function N:ItemIDByName(name)
  local want=tostring(name or ''):lower()
@@ -264,8 +311,59 @@ function N:NeedCommand(args)
   local n,name=part:match('^%s*(%d+)%s*x?%s+(.-)%s*$')
   if n and name~='' then list[#list+1]={tonumber(n),name} end
  end
- if #list==0 then return self:Print('Usage: /vmn need 414 light leather, 139 medium leather   or   /vmn need lw') end
+ if #list==0 then return self:Print('Usage: /vmn need 414 light leather, 139 medium leather   or   /vmn need lw | alch') end
  local lines,cost,unknown=self:NeedLines(list)
  for _,l in ipairs(lines) do self:Print(l) end
  self:Print('To buy: ~'..self:Money(cost)..(unknown>0 and ' (+'..unknown..' without an AH price)' or ''))
+end
+
+-- Reports (Reports button in the window) ------------------------------------
+N.REPORTS={
+ {key='herbs',label='Herb report'},
+ {key='ore',label='Ore, bars and stone report'},
+ {key='leather',label='Leather and hides report'},
+ {key='cloth',label='Cloth report'},
+ {key='enchanting',label='Enchanting materials report'},
+ {key='need:alch',label='Alchemy 1-300: have / need'},
+ {key='need:lw',label='Leatherworking 1-300: have / need'},
+}
+-- Items of a kind you hold, most valuable first, with total AH value.
+function N:CategoryList(cat)
+ local list=self:FindItems(cat.word)
+ local total,count=0,0
+ for _,item in ipairs(list) do
+  local p=self:Price(item.id);item.value=p and p.unit and p.unit*item.total or nil
+  if item.value then total=total+item.value end;count=count+item.total
+ end
+ table.sort(list,function(a,b) if (a.value or -1)~=(b.value or -1) then return (a.value or -1)>(b.value or -1) end return a.name<b.name end)
+ return list,total,count
+end
+function N:RenderReport(u,key)
+ local rows={}
+ local accent,muted,gold={.78,.6,1},{.65,.6,.72},{1,.82,0}
+ local preset=key:match('^need:(.+)$')
+ if preset then
+  local p=self.NEED_PRESETS[preset]
+  local total=0
+  for _,step in ipairs(p.steps) do
+   local lines,cost,unknown=self:NeedLines(step[2]);total=total+cost
+   rows[#rows+1]={text=step[1]..'   buy ~'..self:Money(cost)..(unknown>0 and ('  (+'..unknown..' without an AH price)') or ''),color=accent}
+   for i,l in ipairs(lines) do rows[#rows+1]={text='     '..l,itemName=step[2][i][2]} end
+  end
+  u.syncInfo:SetText(p.name..' 1-300: what you have on every character against the leveling list.\nTotal to buy the rest: ~'..self:Money(total)..' (VoidMark Market prices).')
+  u.footer:SetText('Bags and gear update live; bank and mailbox when opened. Reports button: pick another.')
+  return rows
+ end
+ local cat=self.FIND_CATEGORIES[key];if not cat then return rows end
+ local list,total,count=self:CategoryList(cat)
+ for _,item in ipairs(list) do
+  rows[#rows+1]={text=item.name..'   x'..item.total..'   '..(item.value and ('~'..self:Money(item.value)) or 'no AH price'),item=item.id,itemName=item.name,color=item.value and nil or muted}
+  for _,p in ipairs(item.places) do
+   rows[#rows+1]={text='     '..self:FinderPlace(p),item=item.id,itemName=item.name,color=p.transit and {1,.85,.4} or (p.counted and muted or {.5,.5,.5})}
+  end
+ end
+ if #list==0 then rows[1]={text='None in any saved bags, banks or mailboxes.',color=muted} end
+ u.syncInfo:SetText(cat.label..': '..#list..' kinds, '..count..' total, worth ~'..self:Money(total)..' at AH prices (VoidMark Market).')
+ u.footer:SetText('Most valuable first. Bank and mailbox count from when you last opened them.')
+ return rows
 end

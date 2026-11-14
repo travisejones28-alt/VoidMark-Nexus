@@ -124,3 +124,41 @@ test('Find several at once, find all, and /vmn need (have vs shopping list, cost
  me.bags=savedBags;GetItemInfo=savedNames;N.Price=savedPrice;N.ItemIDByName=savedByName;N.Print=savedPrint
  assert(ok,err)
 end)
+
+test('Reports dropdown: herb report in the window with AH value, and the Alchemy have/need list',function()
+ local savedChars,savedGII,savedGIII,savedPrice=N.db.characters,GetItemInfo,GetItemInfoInstant,N.Price
+ local names={[2447]='Peacebloom',[765]='Silverleaf',[3820]='Stranglekelp',[2589]='Linen Cloth',[2770]='Copper Ore'}
+ GetItemInfo=function(id) return names[tonumber(id)] end
+ GetItemInfoInstant=function(id) id=tonumber(id)
+  if id==2447 or id==765 or id==3820 then return id,'Trade Goods','Herb','',nil,7,9 end
+  if id==2589 then return id,'Trade Goods','Cloth','',nil,7,5 end
+  if id==2770 then return id,'Trade Goods','Metal & Stone','',nil,7,7 end end
+ N.Price=function(_,id) local t={[2447]=71,[765]=20,[3820]=232};return t[id] and {unit=t[id]} or nil end
+ local me=N.character; me.bags={[2447]=30,[2589]=12,[2770]=8}; me.bank={[3820]=40,[765]=5}; me.mail=nil; me.equipped=nil
+ N.db.characters={[N.characterID]=me}
+ local u=N.ui
+ -- Pick "Herb report" from the Reports button.
+ if N.menu then N.menu:Hide() end
+ u.reports.scripts.OnClick(u.reports)
+ local menu=N.menu; assert(menu and menu:IsShown(),'Reports menu opens')
+ u.report='herbs'; u.tab='Characters'; N:Render()
+ local rows={};for i,b in ipairs(u.rows) do if b:IsShown() and b.data then rows[#rows+1]=b.data.text end end
+ assert(rows[1]:find('Stranglekelp',1,true) and rows[1]:find('x40',1,true),'most valuable first: '..tostring(rows[1]))
+ local all=table.concat(rows,'\n')
+ assert(all:find('Peacebloom',1,true) and all:find('Silverleaf',1,true),'every herb listed')
+ assert(not all:find('Linen',1,true) and not all:find('Copper',1,true),'only herbs')
+ assert(u.syncInfo:GetText():find('3 kinds, 75 total',1,true),u.syncInfo:GetText())
+ -- Ore report uses the class too; cloth stays out.
+ u.report='ore'; N:Render(); assert(u.rows[1].data.text:find('Copper Ore',1,true))
+ -- Alchemy have/need list.
+ u.report='need:alch'; N:Render()
+ local text={};for i,b in ipairs(u.rows) do if b:IsShown() and b.data then text[#text+1]=b.data.text end end
+ text=table.concat(text,'\n')
+ assert(text:find('1-120',1,true) and text:find('Peacebloom: have 30 / need 81',1,true),text)
+ -- Typing in Find closes the report.
+ u.find:SetText('peace'); u.find.scripts.OnTextChanged(u.find); eq(u.report,nil)
+ u.find:SetText(''); u.find.scripts.OnTextChanged(u.find)
+ if N.menu then N.menu:Hide() end
+ me.bags,me.bank={}, {}
+ N.db.characters,GetItemInfo,GetItemInfoInstant,N.Price=savedChars,savedGII,savedGIII,savedPrice
+end)

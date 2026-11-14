@@ -44,6 +44,7 @@ PASS Empty readable containers clear stale stock; unavailable API preserves it
 PASS A different loot source after gathering is not counted
 PASS Route performance measures active time and excludes pause
 PASS Graph storage bounds reject additional samples without deleting history
+BENCH imported-zone start-here: 0.392 CPU sec, 35 stops
 PASS Real imported-zone planning completes through the incremental queue
 PASS Exact-input route cache avoids rebuilding and invalidates on relevant changes
 PASS Progress, approximate ETA, cancel, timeout and old queued callbacks
@@ -74,6 +75,7 @@ PASS Explicit improve starts with the saved valid circuit and retains it if no b
 PASS Newer recording drafts are preserved without overwriting or discarding them
 PASS Rotating a generated loop does not split saved run comparison identities
 PASS Observed-only zones participate in zone ranking without uninitialized inputs
+BENCH saved-route reload: cold 0.3933 / warm 0.0366 CPU sec (35 stops)
 PASS Cold versus saved imported-zone planning benchmark after serialized reload
 PASS Active gathering totals survive reload while offline time is excluded
 PASS Selected Start Here strategy survives narrow routing-settings extraction
@@ -146,6 +148,7 @@ PASS Find item covers the mailbox, worn gear and mail you sent that is not colle
 PASS Cooldowns: read from the game, shown per character, synced, announced when ready
 PASS Mail, gear and cooldowns travel with the sync
 PASS Find several at once, find all, and /vmn need (have vs shopping list, cost of the rest)
+PASS Reports dropdown: herb report in the window with AH value, and the Alchemy have/need list
 PASS Future timestamps (wrong PC clock) are pulled back to now instead of blocking sync
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
@@ -160,4 +163,4 @@ PASS A character saved twice (import + old copy) is counted once, newest copy wi
 PASS Gold: read on change, shown per character with a total, synced and exported
 PASS Gold travels with the bank sync
 PASS Characters: old first-name record joins its character by GUID; duplicates hidden; small gold amounts
-PASS: 162 tests; Lua 5.1 / standard interpreter
+PASS: 163 tests; Lua 5.1 / standard interpreter
