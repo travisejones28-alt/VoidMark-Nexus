@@ -119,7 +119,7 @@ test('Find several at once, find all, and /vmn need (have vs shopping list, cost
   assert(all:find('Light Leather: have 0 / need 20',1,true),all)
   assert(all:find('To buy: ~3g 40s 0c',1,true),all) -- 60 x 5s50c + 20 x 50c
   printed={};N:NeedCommand('lw');all=table.concat(printed,'\n')
-  assert(all:find('Leatherworking',1,true) and all:find('150-225',1,true) and all:find('Rugged Leather',1,true) and all:find('Total to buy',1,true),all)
+  assert(all:find('Leatherworking',1,true) and all:find('125-200',1,true) and all:find('Rugged Leather',1,true) and all:find('Heavy Scorpid Scale',1,true) and all:find('Total to buy',1,true),all)
  end)
  me.bags=savedBags;GetItemInfo=savedNames;N.Price=savedPrice;N.ItemIDByName=savedByName;N.Print=savedPrint
  assert(ok,err)

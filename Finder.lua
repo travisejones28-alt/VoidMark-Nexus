@@ -241,10 +241,16 @@ end)
 --   /vmn need 414 light leather, 139 medium leather
 --   /vmn need lw    (Leatherworking 1-300, step by step)
 N.NEED_PRESETS={
+ -- Leatherworking 1-300 (Wowhead Forever "Tried & Tested", "to be safe"
+ -- counts, cured hides and Fine Leather Belts broken down to raw materials).
  lw={name='Leatherworking',steps={
-  {'1-150',{{105,'Ruined Leather Scraps'},{414,'Light Leather'},{27,'Light Hide'},{139,'Medium Leather'},{10,'Medium Hide'},{30,'Heavy Hide'}}},
-  {'150-225',{{126,'Medium Leather'},{397,'Heavy Leather'},{16,'Iron Buckle'},{340,'Thick Leather'}}},
-  {'225-300',{{224,'Thick Leather'},{1030,'Rugged Leather'},{530,'Runecloth'}}}}},
+  {'1-125',{{105,'Ruined Leather Scraps'},{327,'Light Leather'},{12,'Light Hide'},{232,'Medium Leather'},{7,'Medium Hide'},
+   {19,'Salt'},{140,'Coarse Thread'},{55,'Fine Thread'},{35,'Gray Dye'}}},
+  {'125-200',{{156,'Light Leather'},{144,'Medium Leather'},{98,'Medium Hide'},{308,'Heavy Leather'},{213,'Heavy Hide'},
+   {72,'Elixir of Lesser Defense'},{72,"Spider's Silk"},{62,'Iridescent Pearl'},{62,'Jade'},{31,'Citrine'},
+   {737,'Salt'},{52,'Coarse Thread'},{205,'Fine Thread'},{27,'Silken Thread'},{26,'Gray Dye'}}},
+  {'200-240',{{728,'Thick Leather'},{8,'Rugged Hide'},{8,'Refined Deeprock Salt'},{196,'Silken Thread'}}},
+  {'240-300',{{660,'Rugged Leather'},{472,'Heavy Scorpid Scale'},{11,'Rugged Hide'},{11,'Refined Deeprock Salt'},{42,'Black Dye'},{86,'Rune Thread'}}}}},
 }
 N.NEED_PRESETS.leatherworking=N.NEED_PRESETS.lw
 -- Alchemy 1-300 (Wowhead Forever guide, "to be safe" counts).
