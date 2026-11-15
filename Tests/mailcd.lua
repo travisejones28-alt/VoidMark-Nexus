@@ -374,23 +374,46 @@ test('Wrapping keeps a gold amount together',function()
  assert(table.concat(joined,' '):find('~4g 88s 16c',1,true),'gold amount broken across lines')
 end)
 
-test('Herb finder points to the nearest herb, skips spots you passed, toggles on and off',function()
- local oPos,oSize=N.Position,N.MapSize
+test('Herb finder only points at a herb seen on the minimap, drops it when reached or picked, toggles',function()
+ local oPos,oSize,oC,oCur,oOver,oLines=N.Position,N.MapSize,C_Minimap,GetCursorPosition,Minimap.IsMouseOver,GameTooltip.NumLines
  local px,py=0.5,0.5
  N.Position=function() return 1413,px,py end
  N.MapSize=function() return 1000,1000 end
- N.herbVisited={}
- N.herbFinderCache={map=1413,kind='herb',at=N:Now(),spots={
-  {x=0.52,y=0.5,name='Peacebloom',key='a'},{x=0.5,y=0.45,name='Silverleaf',key='b'},{x=0.9,y=0.9,name='Earthroot',key='c'}}}
- local s,d=N:HerbFinderTarget();eq(s.name,'Peacebloom');assert(math.abs(d-20)<0.01,d)
- -- Walk onto Peacebloom: it's skipped and the arrow moves to Silverleaf.
- px=0.515;N:HerbFinderTarget();s=N:HerbFinderTarget();eq(s.name,'Silverleaf')
- assert(N.herbVisited.a,'passed spot not remembered')
- -- Toggle.
+ N.herbSeen={}
+ local spots={{x=0.52,y=0.5,name='Peacebloom',key='a'},{x=0.5,y=0.45,name='Silverleaf',key='b'},{x=0.9,y=0.9,name='Earthroot',key='c'}}
+ N.herbFinderCache={map=1413,kind='herb',at=N:Now(),spots=spots}
+ -- Spawn data alone never makes the arrow point.
+ eq(N:HerbFinderTarget(),nil)
+ -- Mouse over a dot on the minimap 50 yd north: Silverleaf is verified there.
+ C_Minimap={GetViewRadius=function() return 100 end}
+ Minimap.IsMouseOver=function() return true end
+ GameTooltip.NumLines=function() return 1 end
+ GameTooltipTextLeft1={GetText=function() return '|cffffffffSilverleaf|r' end}
+ GetCursorPosition=function() return 500,300+300*0.5 end -- minimap centre 500,300, half-height 300
+ GameTooltip:Show();N:HerbFinderScanTooltip()
+ local s,d=N:HerbFinderTarget();eq(s.name,'Silverleaf');assert(math.abs(d-50)<0.01,d)
+ -- A player name or a herb that isn't in the tooltip does nothing.
+ GameTooltipTextLeft1={GetText=function() return 'Somebody' end};N:HerbFinderScanTooltip()
+ local n=0;for _ in pairs(N.herbSeen) do n=n+1 end;eq(n,1)
+ -- Unknown spawn spot: kept where the dot was.
+ GameTooltipTextLeft1={GetText=function() return 'Liferoot' end}
+ GetCursorPosition=function() return 500+1000*0.5*0.8,300 end;N:HerbFinderScanTooltip()
+ local live;for _,e in pairs(N.herbSeen) do if e.name=='Liferoot' then live=e end end
+ assert(live and math.abs(live.x-0.58)<1e-6 and math.abs(live.y-0.5)<1e-6,'dot position')
+ N.herbSeen[live.key]=nil
+ -- Walk onto it: dropped, arrow stops pointing.
+ py=0.452;eq(N:HerbFinderTarget(),nil);eq(next(N.herbSeen),nil)
+ -- Gathering near a seen herb clears it; old sightings expire.
+ py=0.5;N:HerbFinderSeen(1413,'Peacebloom',0.52,0.5);assert(N:HerbFinderTarget())
+ local oAt=N.herbSeen.a.at;N.herbSeen.a.at=oAt-601;eq(N:HerbFinderTarget(),nil)
+ -- Toggle and dim text when nothing seen.
+ Minimap.IsMouseOver=function() return false end;GameTooltip:Hide()
  eq(N:HerbFinderOn(),false)
  N:SetHerbFinder(true);assert(N:HerbFinderOn() and N.herbArrow:IsShown())
- N.herbFinderCache={map=1413,kind='herb',at=N:Now(),spots={{x=0.52,y=0.5,name='Peacebloom',key='a'},{x=0.5,y=0.45,name='Silverleaf',key='b'}}}
- N:UpdateHerbFinder();eq(N.herbArrow.name:GetText(),'Silverleaf');assert(N.herbArrow.dist:GetText():find('yd',1,true))
+ N.herbFinderCache={map=1413,kind='herb',at=N:Now(),spots=spots}
+ N:UpdateHerbFinder();eq(N.herbArrow.name:GetText(),'Hover a herb on minimap');eq(N.herbArrow.bearing,nil)
+ N:HerbFinderSeen(1413,'Silverleaf',0.5,0.45)
+ N:UpdateHerbFinder();eq(N.herbArrow.name:GetText(),'Silverleaf');assert(N.herbArrow.dist:GetText():find('yd',1,true));assert(N.herbArrow.bearing)
  N:SetHerbFinder(false);assert(not N:HerbFinderOn() and not N.herbArrow:IsShown())
  -- Gather tab dropdown: Off / Herbs / Ore / Both; off by default.
  eq(N:FinderKind(),nil)
@@ -398,5 +421,6 @@ test('Herb finder points to the nearest herb, skips spots you passed, toggles on
  N:Show('Gather');N:Render();eq(N.ui.finder:GetText(),'Finder: Ore')
  N:SetFinder('bogus');eq(N:FinderKind(),nil);assert(not N.herbArrow:IsShown())
  N:Render();eq(N.ui.finder:GetText(),'Finder: Off')
- N.Position,N.MapSize=oPos,oSize;N.herbFinderCache=nil;N.herbVisited={}
+ N.Position,N.MapSize,C_Minimap,GetCursorPosition,Minimap.IsMouseOver,GameTooltip.NumLines=oPos,oSize,oC,oCur,oOver,oLines
+ GameTooltipTextLeft1=nil;N.herbFinderCache=nil;N.herbSeen={}
 end)

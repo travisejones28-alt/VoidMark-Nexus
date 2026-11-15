@@ -161,7 +161,7 @@ PASS Guides tab: list of guides, then the picked one; long lines wrap
 PASS Guides: routes render, camp items show have/need, crates you can fill
 PASS Guides: pick a character and see where they are (Kitty, Leatherworking 50 of 300)
 PASS Wrapping keeps a gold amount together
-PASS Herb finder points to the nearest herb, skips spots you passed, toggles on and off
+PASS Herb finder only points at a herb seen on the minimap, drops it when reached or picked, toggles
 PASS Future timestamps (wrong PC clock) are pulled back to now instead of blocking sync
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
