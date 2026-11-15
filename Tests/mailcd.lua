@@ -373,3 +373,23 @@ test('Wrapping keeps a gold amount together',function()
  local joined={};for _,r in ipairs(out) do joined[#joined+1]=r.text end
  assert(table.concat(joined,' '):find('~4g 88s 16c',1,true),'gold amount broken across lines')
 end)
+
+test('Herb finder points to the nearest herb, skips spots you passed, toggles on and off',function()
+ local oPos,oSize=N.Position,N.MapSize
+ local px,py=0.5,0.5
+ N.Position=function() return 1413,px,py end
+ N.MapSize=function() return 1000,1000 end
+ N.herbVisited={}
+ N.herbFinderCache={map=1413,at=N:Now(),spots={
+  {x=0.52,y=0.5,name='Peacebloom',key='a'},{x=0.5,y=0.45,name='Silverleaf',key='b'},{x=0.9,y=0.9,name='Earthroot',key='c'}}}
+ local s,d=N:HerbFinderTarget();eq(s.name,'Peacebloom');assert(math.abs(d-20)<0.01,d)
+ -- Walk onto Peacebloom: it's skipped and the arrow moves to Silverleaf.
+ px=0.515;N:HerbFinderTarget();s=N:HerbFinderTarget();eq(s.name,'Silverleaf')
+ assert(N.herbVisited.a,'passed spot not remembered')
+ -- Toggle.
+ eq(N:HerbFinderOn(),false)
+ N:SetHerbFinder(true);assert(N:HerbFinderOn() and N.herbArrow:IsShown())
+ N:UpdateHerbFinder();eq(N.herbArrow.name:GetText(),'Silverleaf');assert(N.herbArrow.dist:GetText():find('yd',1,true))
+ N:SetHerbFinder(false);assert(not N:HerbFinderOn() and not N.herbArrow:IsShown())
+ N.Position,N.MapSize=oPos,oSize;N.herbFinderCache=nil;N.herbVisited={}
+end)

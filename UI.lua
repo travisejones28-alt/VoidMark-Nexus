@@ -212,12 +212,14 @@ function N:CreateUI()
   {'includeSynced','Count the other account (sync)'},{'market','Use VoidMark Market prices'},{'manualFirst','Use my own prices first'},
   {'routeVisible','Show the route arrow'},{'manualStops','Wait for me at each stop'},{'nodesVisible','Show spawn spots on the world map'},
   {'minimapRoute','Show the route on the minimap'},{'minimap','Minimap button'},{'native','Keep the normal profession window'},
-  {'learnSpots','Learn which spots are often empty'}}
+  {'learnSpots','Learn which spots are often empty'},{'herbFinder','Herb finder: arrow to the nearest herb',true}}
  u.checks={}
  for i,e in ipairs(entries) do
   local key=e[1]
-  u.checks[#u.checks+1]=check(st,e[2],14,-4-(i-1)*25,function() return s()[key]~=false end,function(v)
+  -- e[3]: off unless turned on (new options start off).
+  u.checks[#u.checks+1]=check(st,e[2],14,-4-(i-1)*25,function() if e[3] then return s()[key]==true end return s()[key]~=false end,function(v)
    s()[key]=v
+   if key=='herbFinder' then N:SetHerbFinder(v) end
    if key=='minimap' and N.minimap then N.minimap:SetShown(v) end
    if key=='routeVisible' and N.activeRoute and v then N:ShowArrow() end
   end)
