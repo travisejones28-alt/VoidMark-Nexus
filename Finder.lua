@@ -251,16 +251,11 @@ end)
 --   /vmn need 414 light leather, 139 medium leather
 --   /vmn need lw    (Leatherworking 1-300, step by step)
 N.NEED_PRESETS={
- -- Leatherworking 1-300 (Wowhead Forever "Tried & Tested", "to be safe"
- -- counts, cured hides and Fine Leather Belts broken down to raw materials).
+ -- Leatherworking 1-300 (wow-professions.com Forever guide shopping list).
  lw={name='Leatherworking',steps={
-  {'1-125',{{105,'Ruined Leather Scraps'},{327,'Light Leather'},{12,'Light Hide'},{232,'Medium Leather'},{7,'Medium Hide'},
-   {19,'Salt'},{140,'Coarse Thread'},{55,'Fine Thread'},{35,'Gray Dye'}}},
-  {'125-200',{{156,'Light Leather'},{144,'Medium Leather'},{98,'Medium Hide'},{308,'Heavy Leather'},{213,'Heavy Hide'},
-   {72,'Elixir of Lesser Defense'},{72,"Spider's Silk"},{62,'Iridescent Pearl'},{62,'Jade'},{31,'Citrine'},
-   {737,'Salt'},{52,'Coarse Thread'},{205,'Fine Thread'},{27,'Silken Thread'},{26,'Gray Dye'}}},
-  {'200-240',{{728,'Thick Leather'},{8,'Rugged Hide'},{8,'Refined Deeprock Salt'},{196,'Silken Thread'}}},
-  {'240-300',{{660,'Rugged Leather'},{472,'Heavy Scorpid Scale'},{11,'Rugged Hide'},{11,'Refined Deeprock Salt'},{42,'Black Dye'},{86,'Rune Thread'}}}}},
+  {'1-150',{{105,'Ruined Leather Scraps'},{414,'Light Leather'},{27,'Light Hide'},{139,'Medium Leather'},{10,'Medium Hide'},{30,'Heavy Hide'}}},
+  {'150-225',{{126,'Medium Leather'},{397,'Heavy Leather'},{16,'Iron Buckle'},{340,'Thick Leather'}}},
+  {'225-300',{{224,'Thick Leather'},{1030,'Rugged Leather'},{530,'Runecloth'}}}}},
 }
 N.NEED_PRESETS.leatherworking=N.NEED_PRESETS.lw
 -- Alchemy 1-300 (Wowhead Forever guide, "to be safe" counts).
@@ -277,6 +272,29 @@ N.NEED_PRESETS.cook={name='Cooking',steps={
   {85,'Hot Spices'}}},
  {'225-300',{{12,'Giant Egg'},{10,'Zesty Clam Meat'},{20,'Alterac Swiss'},{140,'Raw Spotted Yellowtail','Raw Redgill'}}}}}
 N.NEED_PRESETS.cooking=N.NEED_PRESETS.cook
+-- wow-professions.com Forever guides (shopping lists; counts are estimates).
+N.NEED_PRESETS.eng={name='Engineering',steps={
+ {'1-150',{{60,'Rough Stone'},{66,'Copper Bar'},{50,'Linen Cloth'},{60,'Coarse Stone'},{5,'Silver Bar'},{80,'Bronze Bar'},{25,'Weak Flux'},{10,'Moss Agate'},{30,'Heavy Stone'},{15,'Wool Cloth'}}},
+ {'150-225',{{30,'Bronze Bar'},{45,'Wool Cloth'},{15,'Medium Leather'},{4,'Steel Bar'},{120,'Solid Stone'},{74,'Mithril Bar'},{20,'Mageweave Cloth'}}},
+ {'225-300',{{84,'Mithril Bar'},{60,'Dense Stone'},{225,'Thorium Bar'},{35,'Runecloth'}}}}}
+N.NEED_PRESETS.engineering=N.NEED_PRESETS.eng
+N.NEED_PRESETS.bs={name='Blacksmithing',steps={
+ {'1-150',{{90,'Rough Stone'},{180,'Copper Bar'},{5,'Silver Bar'},{72,'Coarse Stone'},{290,'Bronze Bar'},{60,'Heavy Stone'},{58,'Medium Leather'},{96,'Weak Flux'},{10,'Strong Flux'}}},
+ {'150-225',{{180,'Iron Bar'},{30,'Green Dye'},{32,'Solid Stone'},{100,'Steel Bar'},{60,'Heavy Stone'},{436,'Mithril Bar'},{24,'Heavy Leather'},{12,'Citrine'}}},
+ {'225-300',{{5,'Dense Stone'},{224,'Mithril Bar'},{64,'Thick Leather'},{1910,'Thorium Bar'},{30,'Rugged Leather'},{67,'Star Ruby'},{25,'Aquamarine'}}}}}
+N.NEED_PRESETS.blacksmithing=N.NEED_PRESETS.bs
+N.NEED_PRESETS.ench={name='Enchanting',steps={
+ {'1-150',{{19,'Mote of Magic'},{1,'Copper Rod'},{275,'Strange Dust'},{1,'Silver Rod'},{1,'Shadowgem'},{4,'Lesser Magic Essence'}}},
+ {'150-225',{{64,'Soul Dust'},{1,'Golden Rod'},{1,'Iridescent Pearl'},{1,'Greater Astral Essence'},{32,'Maple Seed'},{41,'Leaded Vial'},{31,'Vision Dust'},
+  {1,'Truesilver Rod'},{1,'Black Pearl'},{1,'Greater Mystic Essence'},{50,'Stranglethorn Seed'}}},
+ {'225-300',{{37,'Vision Dust'},{260,'Dream Dust'},{20,'Purple Lotus'},{20,'Crystal Vial'},{1,'Arcanite Rod'},{1,'Golden Pearl'},{10,'Illusion Dust'},
+  {4,'Greater Eternal Essence'},{4,'Small Brilliant Shard'},{2,'Large Brilliant Shard'}}}}}
+N.NEED_PRESETS.enchanting=N.NEED_PRESETS.ench
+N.NEED_PRESETS.tail={name='Tailoring',steps={
+ {'1-150',{{60,'Linen Cloth'},{459,'Wool Cloth'},{29,'Elixir of Wisdom'},{216,'Silk Cloth'},{115,'Mageweave Cloth'}}},
+ {'150-225',{{520,'Silk Cloth'},{670,'Mageweave Cloth'},{115,'Runecloth'}}},
+ {'225-280',{{1440,'Runecloth'},{44,'Rugged Leather'},{39,'Ironweb Spider Silk'}}}}}
+N.NEED_PRESETS.tailoring=N.NEED_PRESETS.tail
 -- Item ID for a name: your items, names Nexus saved, then Market's scan.
 function N:ItemIDByName(name)
  local want=tostring(name or ''):lower()
@@ -305,7 +323,7 @@ end
 N.VENDOR_ITEMS={['coarse thread']=true,['fine thread']=true,['silken thread']=true,['heavy silken thread']=true,['rune thread']=true,
  ['salt']=true,['gray dye']=true,['black dye']=true,['blue dye']=true,['green dye']=true,['red dye']=true,['yellow dye']=true,
  ['empty vial']=true,['leaded vial']=true,['crystal vial']=true,['imbued vial']=true,['hot spices']=true,['mild spices']=true,
- ['soothing spices']=true,['alterac swiss']=true,['maple seed']=true,['stranglethorn seed']=true,['copper rod']=true,['mote of magic']=true}
+ ['soothing spices']=true,['weak flux']=true,['strong flux']=true,['alterac swiss']=true,['maple seed']=true,['stranglethorn seed']=true,['copper rod']=true,['mote of magic']=true}
 -- Made yourself from something cheaper: price it as that.
 N.MADE_FROM={['refined deeprock salt']={name='Deeprock Salt',qty=1,how='made with a Salt Shaker'}}
 function N:NeedLines(list)
@@ -379,6 +397,10 @@ N.REPORTS={
  {key='need:alch',label='Alchemy 1-300: have / need'},
  {key='need:lw',label='Leatherworking 1-300: have / need'},
  {key='need:cook',label='Cooking 1-300: have / need'},
+ {key='need:ench',label='Enchanting 1-300: have / need'},
+ {key='need:tail',label='Tailoring 1-280: have / need'},
+ {key='need:eng',label='Engineering 1-300: have / need'},
+ {key='need:bs',label='Blacksmithing 1-300: have / need'},
 }
 -- Items of a kind you hold, most valuable first, with total AH value.
 function N:CategoryList(cat)
@@ -440,7 +462,7 @@ function N:RenderReport(u,key)
    rows[#rows+1]={text=step[1]..'   buy ~'..self:Money(cost)..(unknown>0 and ('  (+'..unknown..' without an AH price)') or ''),color=accent}
    for i,l in ipairs(lines) do rows[#rows+1]={text='     '..l,itemName=step[2][i][2]} end
   end
-  u.syncInfo:SetText(p.name..' 1-300: what you have on every character against the leveling list.\nTotal to buy the rest: ~'..self:Money(total)..' (AH prices; vendor items not included).')
+  u.syncInfo:SetText(p.name..': what you have on every character against the leveling list.\nTotal to buy the rest: ~'..self:Money(total)..' (AH prices; vendor items not included).')
   u.footer:SetText('Bags and gear update live; bank and mailbox when opened. Reports button: pick another.')
   return rows
  end

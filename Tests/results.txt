@@ -44,7 +44,7 @@ PASS Empty readable containers clear stale stock; unavailable API preserves it
 PASS A different loot source after gathering is not counted
 PASS Route performance measures active time and excludes pause
 PASS Graph storage bounds reject additional samples without deleting history
-BENCH imported-zone start-here: 0.429 CPU sec, 35 stops
+BENCH imported-zone start-here: 0.410 CPU sec, 35 stops
 PASS Real imported-zone planning completes through the incremental queue
 PASS Exact-input route cache avoids rebuilding and invalidates on relevant changes
 PASS Progress, approximate ETA, cancel, timeout and old queued callbacks
@@ -75,7 +75,7 @@ PASS Explicit improve starts with the saved valid circuit and retains it if no b
 PASS Newer recording drafts are preserved without overwriting or discarding them
 PASS Rotating a generated loop does not split saved run comparison identities
 PASS Observed-only zones participate in zone ranking without uninitialized inputs
-BENCH saved-route reload: cold 0.4887 / warm 0.0302 CPU sec (35 stops)
+BENCH saved-route reload: cold 0.3902 / warm 0.0199 CPU sec (35 stops)
 PASS Cold versus saved imported-zone planning benchmark after serialized reload
 PASS Active gathering totals survive reload while offline time is excluded
 PASS Selected Start Here strategy survives narrow routing-settings extraction
@@ -156,6 +156,7 @@ PASS Sync goes out ~5s after a change, at most every 15s
 PASS Cooking report: an alternative counts toward the need and is priced if cheaper
 PASS Reports work when Forever files materials as plain Trade Goods (subclass 0)
 PASS Have/need: vendor items are marked vendor, Refined Deeprock Salt priced as Deeprock Salt
+PASS Reports list every guide: Enchanting, Tailoring, Engineering, Blacksmithing, Cooking, Alchemy, Leatherworking
 PASS Future timestamps (wrong PC clock) are pulled back to now instead of blocking sync
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
@@ -170,4 +171,4 @@ PASS A character saved twice (import + old copy) is counted once, newest copy wi
 PASS Gold: read on change, shown per character with a total, synced and exported
 PASS Gold travels with the bank sync
 PASS Characters: old first-name record joins its character by GUID; duplicates hidden; small gold amounts
-PASS: 170 tests; Lua 5.1 / standard interpreter
+PASS: 171 tests; Lua 5.1 / standard interpreter
