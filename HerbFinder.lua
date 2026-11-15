@@ -86,11 +86,13 @@ end
 
 local function tooltipLines()
  local out = {}
- local n = GameTooltip.NumLines and GameTooltip:NumLines() or 0
+ -- Forever hides some tooltip text as "secret" values addons may not read.
+ local n = GameTooltip.NumLines and N:Call(GameTooltip.NumLines, GameTooltip)
+ if not N:Finite(n, 0, 1000) then return out end
  for i = 1, math.min(n, 30) do
   local fs = _G['GameTooltipTextLeft' .. i]
-  local t = fs and fs.GetText and fs:GetText()
-  if type(t) == 'string' then
+  local t = fs and fs.GetText and N:Text(N:Call(fs.GetText, fs))
+  if t then
    t = t:gsub('|c%x%x%x%x%x%x%x%x', ''):gsub('|r', ''):gsub('|T.-|t', ''):gsub('|A.-|a', '')
    for line in (t .. '\n'):gmatch('([^\n]*)\n') do
     line = line:match('^%s*(.-)%s*$')

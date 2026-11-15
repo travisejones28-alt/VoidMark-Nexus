@@ -408,6 +408,10 @@ test('Herb finder only points at a herb seen on the minimap, drops it when reach
  -- The last one hovered wins, even if another seen herb is closer.
  N:HerbFinderSeen(1413,'Earthroot',0.9,0.9);eq(N:HerbFinderTarget().name,'Earthroot')
  N:HerbFinderSeen(1413,'Peacebloom',0.52,0.5);eq(N:HerbFinderTarget().name,'Peacebloom');N.herbSeen.c=nil
+ -- Forever's secret tooltip text is skipped, not an error.
+ local oSecret=issecretvalue;issecretvalue=function(v) return v=='Goldthorn' end
+ GameTooltipTextLeft1={GetText=function() return 'Goldthorn' end};N:HerbFinderScanTooltip();issecretvalue=oSecret
+ for _,e in pairs(N.herbSeen) do assert(e.name~='Goldthorn') end
  -- A tooltip left over after the mouse leaves the minimap marks nothing.
  Minimap.IsMouseOver=function() return false end;GameTooltipTextLeft1={GetText=function() return 'Earthroot' end}
  GameTooltip:Show();N:HerbFinderScanTooltip();eq(N.herbSeen.c,nil);Minimap.IsMouseOver=function() return true end
