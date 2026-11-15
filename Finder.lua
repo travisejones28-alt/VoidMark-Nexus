@@ -323,7 +323,7 @@ end
 N.VENDOR_ITEMS={['coarse thread']=true,['fine thread']=true,['silken thread']=true,['heavy silken thread']=true,['rune thread']=true,
  ['salt']=true,['gray dye']=true,['black dye']=true,['blue dye']=true,['green dye']=true,['red dye']=true,['yellow dye']=true,
  ['empty vial']=true,['leaded vial']=true,['crystal vial']=true,['imbued vial']=true,['hot spices']=true,['mild spices']=true,
- ['soothing spices']=true,['weak flux']=true,['strong flux']=true,['alterac swiss']=true,['maple seed']=true,['stranglethorn seed']=true,['copper rod']=true,['mote of magic']=true}
+ ['soothing spices']=true,['weak flux']=true,['simple wood']=true,['strong flux']=true,['alterac swiss']=true,['maple seed']=true,['stranglethorn seed']=true,['copper rod']=true,['mote of magic']=true}
 -- Made yourself from something cheaper: price it as that.
 N.MADE_FROM={['refined deeprock salt']={name='Deeprock Salt',qty=1,how='made with a Salt Shaker'}}
 function N:NeedLines(list)
@@ -401,6 +401,13 @@ N.REPORTS={
  {key='need:tail',label='Tailoring 1-280: have / need'},
  {key='need:eng',label='Engineering 1-300: have / need'},
  {key='need:bs',label='Blacksmithing 1-300: have / need'},
+ {key='guide:camp',label='Camping: camp items and what you can make'},
+ {key='guide:crates',label="Merchant's Favor: crates you can fill"},
+ {key='guide:favor',label="Merchant's Favor: how it works"},
+ {key='guide:herb',label='Herbalism 1-300 route'},
+ {key='guide:mine',label='Mining 1-300 route'},
+ {key='guide:fish',label='Fishing 1-300 route'},
+ {key='guide:lock',label='Lockpicking 1-300 route'},
 }
 -- Items of a kind you hold, most valuable first, with total AH value.
 function N:CategoryList(cat)
@@ -453,6 +460,12 @@ end
 function N:RenderReport(u,key)
  local rows={}
  local accent,muted,gold={.78,.6,1},{.65,.6,.72},{1,.82,0}
+ local guide=key:match('^guide:(.+)$')
+ if guide and self.GuideRows then
+  local r,info,foot=self:GuideRows(guide)
+  u.syncInfo:SetText(info);u.footer:SetText(foot)
+  return r
+ end
  local preset=key:match('^need:(.+)$')
  if preset then
   local p=self.NEED_PRESETS[preset]

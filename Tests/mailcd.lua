@@ -248,3 +248,21 @@ test('Reports list every guide: Enchanting, Tailoring, Engineering, Blacksmithin
  end
  local lines=N:NeedLines({{96,'Weak Flux'}});assert(lines[1]:find('(vendor)',1,true),'flux is a vendor item')
 end)
+
+test('Guides: routes render, camp items show have/need, crates you can fill',function()
+ local saved,sg=N.db.characters,GetItemInfo
+ local names={[2447]='Peacebloom',[765]='Silverleaf',[2589]='Linen Cloth'}
+ GetItemInfo=function(id) return names[tonumber(id)] end
+ local me=N.character;local bags=me.bags;me.bags={[2447]=25,[765]=3,[2589]=85}
+ N.db.characters={[N.characterID]=me}
+ local r=N:GuideRows('herb');assert(#r>10 and r[1].text:find('Peacebloom',1,true))
+ for _,k in ipairs({'mine','fish','lock','favor'}) do assert(#N:GuideRows(k)>5,k) end
+ local rows,info=N:GuideRows('camp');local all={};for _,x in ipairs(rows) do all[#all+1]=x.text end;all=table.concat(all,'\n')
+ assert(all:find('Incense Candle (20): Peacebloom 1/1, Silverleaf 1/1  |cff40ff40can make|r',1,true),all)
+ rows,info=N:GuideRows('crates');all={};for _,x in ipairs(rows) do all[#all+1]=x.text end;all=table.concat(all,'\n')
+ assert(all:find('Textiles (5 Favor): |cff40ff40can fill 2|r',1,true),all) -- 85 Linen = 2 x 40
+ assert(all:find('Herbs (5 Favor): |cff40ff40can fill 1|r',1,true),all) -- 25 Peacebloom = 1 x 20
+ local keys={};for _,x in ipairs(N.REPORTS) do keys[x.key]=true end
+ for _,k in ipairs({'camp','crates','favor','herb','mine','fish','lock'}) do assert(keys['guide:'..k],k) end
+ me.bags=bags;N.db.characters,GetItemInfo=saved,sg
+end)
