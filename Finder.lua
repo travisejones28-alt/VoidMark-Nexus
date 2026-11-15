@@ -263,8 +263,9 @@ N.NEED_PRESETS.alchemy=N.NEED_PRESETS.alch
 -- Cooking 1-300 (Wowhead Forever guide). Third name = alternative; either counts.
 N.NEED_PRESETS.cook={name='Cooking',steps={
  {'1-225',{{55,'Raw Brilliant Smallfish','Raw Slitherskin Mackerel'},{55,'Raw Longjaw Mud Snapper','Raw Rainbow Fin Albacore'},
-  {55,'Raw Bristle Whisker Catfish'},{30,'Tangy Clam Meat','Raptor Egg'},{55,'Raptor Flesh','Raw Mithril Head Trout'}}},
- {'225-300',{{12,'Giant Egg'},{10,'Zesty Clam Meat'},{140,'Raw Spotted Yellowtail','Raw Redgill'}}}}}
+  {55,'Raw Bristle Whisker Catfish'},{30,'Tangy Clam Meat','Raptor Egg'},{55,'Raptor Flesh','Raw Mithril Head Trout'},
+  {85,'Hot Spices'}}},
+ {'225-300',{{12,'Giant Egg'},{10,'Zesty Clam Meat'},{20,'Alterac Swiss'},{140,'Raw Spotted Yellowtail','Raw Redgill'}}}}}
 N.NEED_PRESETS.cooking=N.NEED_PRESETS.cook
 -- Item ID for a name: your items, names Nexus saved, then Market's scan.
 function N:ItemIDByName(name)
