@@ -11,7 +11,8 @@ function N:Price(id)
  if settings.manualFirst and cache and type(cache.manual)=='table' then return record(cache.manual.unit,cache.manual.at,'Manual') end
  if settings.market and type(VoidMarkMarketDB)=='table' and VoidMarkMarketDB.schemaVersion==1 then
   local economies=VoidMarkMarketDB.economies
-  local economy=type(economies)=='table' and economies[self.economy]
+  -- Market 1.23.29+ names the realm without spaces; older saves may still have them.
+  local economy=type(economies)=='table' and (economies[(tostring(self.economy):gsub('%s',''))] or economies[self.economy])
   local m=type(economy)=='table' and type(economy.market)=='table' and (economy.market[id] or economy.market[tostring(id)])
   if type(m)=='table' and (not m.itemSuffix or m.itemSuffix==0) and type(m.latest)=='table' then
    local p=record(m.fairValue or m.latest.median,m.lastSeen or m.latest.at,'VoidMark Market',m.confidenceScore)
