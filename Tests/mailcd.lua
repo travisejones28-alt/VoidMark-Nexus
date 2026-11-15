@@ -197,3 +197,16 @@ test('Sync goes out ~5s after a change, at most every 15s',function()
  delays[2].fn()
  N.db.sync.peers,C_Timer,GetTime=peers,oldT,oldGT;N.syncPending=false;N.syncLastSoon=nil
 end)
+
+test('Cooking report: an alternative counts toward the need and is priced if cheaper',function()
+ local saved,sg,sp=N.db.characters,GetItemInfo,N.Price
+ local names={[6303]='Raw Slitherskin Mackerel',[6291]='Raw Brilliant Smallfish'}
+ GetItemInfo=function(id) return names[tonumber(id)] end
+ N.Price=function(_,id) if id==6303 then return {unit=49} end end
+ local me=N.character;local bags=me.bags;me.bags={[6303]=20}
+ N.db.characters={[N.characterID]=me}
+ local lines,cost=N:NeedLines({{55,'Raw Brilliant Smallfish','Raw Slitherskin Mackerel'}})
+ assert(lines[1]:find('or Raw Slitherskin Mackerel: have 20 / need 55',1,true),lines[1])
+ eq(cost,35*49)
+ me.bags=bags;N.db.characters,GetItemInfo,N.Price=saved,sg,sp
+end)

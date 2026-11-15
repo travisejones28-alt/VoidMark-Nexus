@@ -260,6 +260,12 @@ N.NEED_PRESETS.alch={name='Alchemy',steps={
  {'225-260',{{4,'Iron Bar'},{1,'Black Vitriol'},{4,'Purple Lotus'},{4,'Firebloom'},{25,'Goldthorn'},{25,"Khadgar's Whisker"},{25,'Leaded Vial'},{26,"Arthas' Tears"},{26,'Crystal Vial'}}},
  {'260-300',{{20,'Sungrass'},{20,'Blindweed'},{33,'Plaguebloom'},{33,'Murloc Eye'},{43,'Crystal Vial'}}}}}
 N.NEED_PRESETS.alchemy=N.NEED_PRESETS.alch
+-- Cooking 1-300 (Wowhead Forever guide). Third name = alternative; either counts.
+N.NEED_PRESETS.cook={name='Cooking',steps={
+ {'1-225',{{55,'Raw Brilliant Smallfish','Raw Slitherskin Mackerel'},{55,'Raw Longjaw Mud Snapper','Raw Rainbow Fin Albacore'},
+  {55,'Raw Bristle Whisker Catfish'},{30,'Tangy Clam Meat','Raptor Egg'},{55,'Raptor Flesh','Raw Mithril Head Trout'}}},
+ {'225-300',{{12,'Giant Egg'},{10,'Zesty Clam Meat'},{140,'Raw Spotted Yellowtail','Raw Redgill'}}}}}
+N.NEED_PRESETS.cooking=N.NEED_PRESETS.cook
 -- Item ID for a name: your items, names Nexus saved, then Market's scan.
 function N:ItemIDByName(name)
  local want=tostring(name or ''):lower()
@@ -282,14 +288,20 @@ end
 function N:NeedLines(list)
  local lines,shortCost,unknown={},0,0
  for _,e in ipairs(list) do
-  local need,name=e[1],e[2]
+  local need,name,alt=e[1],e[2],e[3]
   local have,id,real=self:HaveCount(name)
   name=real or name
-  local short=math.max(0,need-have)
-  local line=('%s: have %d / need %d'):format(name,have,need)
+  -- An alternative (e[3]) does the same job: what you hold of either counts,
+  -- and the rest is priced at whichever is cheaper.
+  local altHave,altID=0,nil
+  if alt then local h,i,r=self:HaveCount(alt);altHave,altID=h,i;alt=r or alt end
+  local short=math.max(0,need-have-altHave)
+  local line=('%s: have %d / need %d'):format(alt and (name..' or '..alt) or name,have+altHave,need)
   if short==0 then line=line..'  |cff40ff40done|r'
   else
    local p=id and self:Price(id)
+   local pa=altID and self:Price(altID)
+   if pa and pa.unit and (not (p and p.unit) or pa.unit<p.unit) then p=pa end
    if p and p.unit then
     local c=short*p.unit;shortCost=shortCost+c
     line=line..('  |cffffd200short %d  ~%s|r'):format(short,self:Money(c))
@@ -332,6 +344,7 @@ N.REPORTS={
  {key='enchanting',label='Enchanting materials report'},
  {key='need:alch',label='Alchemy 1-300: have / need'},
  {key='need:lw',label='Leatherworking 1-300: have / need'},
+ {key='need:cook',label='Cooking 1-300: have / need'},
 }
 -- Items of a kind you hold, most valuable first, with total AH value.
 function N:CategoryList(cat)
