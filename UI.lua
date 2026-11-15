@@ -110,7 +110,7 @@ function N:CreateUI()
  local u={frame=f,tab='Gather',profView='level',offset=0,rows={},tabs={},pages={}}
  self.ui=u
  -- Find an item anywhere: typing jumps to Characters and lists every place it is.
- u.find=edit(f,180,-9,200,'')
+ u.find=edit(f,180,-9,150,'')
  u.findHint=u.find:CreateFontString(nil,'OVERLAY','GameFontDisable'); u.findHint:SetPoint('LEFT',4,0); u.findHint:SetText('Find item...')
  u.find:SetScript('OnTextChanged',function(e)
   local text=e:GetText(); u.findHint:SetShown(text=='')
@@ -126,7 +126,7 @@ function N:CreateUI()
   end)
  end
  -- Reports: what you hold of a kind (herbs, ore...) or a profession shopping list.
- u.reports=button(f,'Reports',386,-9,90,function()
+ u.reports=button(f,'Reports',336,-9,82,function()   -- clear of the X at the top right
   if N.menu and N.menu:IsShown() then return N.menu:Hide() end
   local choices={}
   for _,r in ipairs(N.REPORTS) do choices[#choices+1]={label=r.label,value=r.key} end

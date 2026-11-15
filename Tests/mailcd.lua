@@ -210,3 +210,33 @@ test('Cooking report: an alternative counts toward the need and is priced if che
  eq(cost,35*49)
  me.bags=bags;N.db.characters,GetItemInfo,N.Price=saved,sg,sp
 end)
+
+test('Reports work when Forever files materials as plain Trade Goods (subclass 0)',function()
+ local saved,sg,si=N.db.characters,GetItemInfo,GetItemInfoInstant
+ local names={[2318]='Light Leather',[783]='Light Hide',[4234]='Heavy Leather',[2302]='Handstitched Leather Boots',[2770]='Copper Ore',[2840]='Copper Bar',[2589]='Linen Cloth',[10940]='Strange Dust'}
+ GetItemInfo=function(id) return names[tonumber(id)] end
+ GetItemInfoInstant=function(id) id=tonumber(id);if id==2302 then return id,'Armor','Leather','',nil,4,2 end;return id,'Trade Goods','Trade Goods','',nil,7,0 end
+ local me=N.character;local bags=me.bags;me.bags={[2318]=40,[783]=3,[4234]=5,[2302]=1,[2770]=8,[2840]=2,[2589]=10,[10940]=7}
+ N.db.characters={[N.characterID]=me}
+ local function kinds(key) local l=N:CategoryList(N.FIND_CATEGORIES[key]);local t={};for _,i in ipairs(l) do t[i.name]=i.total end;return t,#l end
+ local lt,ln=kinds('leather');eq(ln,3);eq(lt['Light Leather'],40);eq(lt['Handstitched Leather Boots'],nil)
+ local ot,on=kinds('ore');eq(on,2);eq(ot['Copper Bar'],2)
+ local ct,cn=kinds('cloth');eq(cn,1)
+ local et,en=kinds('enchanting');eq(et['Strange Dust'],7)
+ me.bags=bags;N.db.characters,GetItemInfo,GetItemInfoInstant=saved,sg,si
+end)
+
+test('Have/need: vendor items are marked vendor, Refined Deeprock Salt priced as Deeprock Salt',function()
+ local sg,sp=GetItemInfo,N.Price
+ local names={[14341]='Rune Thread',[8150]='Deeprock Salt',[15409]='Refined Deeprock Salt'}
+ GetItemInfo=function(id) return names[tonumber(id)] end
+ N.Price=function(_,id) local t={[14341]=5500,[8150]=260,[15409]=300000};return t[id] and {unit=t[id]} end
+ local savedM=VoidMarkMarketDB
+ VoidMarkMarketDB={schemaVersion=1,economies={[(tostring(N.economy):gsub('%s',''))]={market={},itemNames={[8150]='Deeprock Salt',[15409]='Refined Deeprock Salt',[14341]='Rune Thread'}}}}
+ local lines,cost=N:NeedLines({{86,'Rune Thread'},{19,'Refined Deeprock Salt'}})
+ assert(lines[1]:find('(vendor)',1,true),lines[1])
+ assert(lines[2]:find('Salt Shaker from Deeprock Salt',1,true),lines[2])
+ eq(cost,19*260)
+ VoidMarkMarketDB=savedM
+ GetItemInfo,N.Price=sg,sp
+end)

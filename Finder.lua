@@ -50,10 +50,12 @@ end
 -- Trade Goods subclasses, plus known names in case the client reports another.
 N.FIND_CATEGORIES={
  herbs={label='Herbs',class=7,sub=9,names={'peacebloom','silverleaf','earthroot','mageroyal','briarthorn','swiftthistle','stranglekelp','bruiseweed','wild steelbloom','grave moss','kingsblood','liferoot','fadeleaf','goldthorn',"khadgar's whisker",'wintersbite','firebloom','purple lotus',"arthas' tears",'sungrass','blindweed','ghost mushroom','gromsblood','golden sansam','dreamfoil','mountain silversage','plaguebloom','icecap','black lotus'}},
- ore={label='Ore, bars and stone',class=7,sub=7},
- leather={label='Leather and hides',class=7,sub=6},
- cloth={label='Cloth',class=7,sub=5},
- enchanting={label='Enchanting materials',class=7,sub=12},
+ -- Forever files most materials as plain "Trade Goods", so these also match
+ -- Trade Goods by name (patterns are Lua patterns on the lower-case name).
+ ore={label='Ore, bars and stone',class=7,sub=7,patterns={' ore$',' bar$','^rough stone$','^coarse stone$','^heavy stone$','^solid stone$','^dense stone$','^copper ore$','^elemental earth$','^arcane crystal$'}},
+ leather={label='Leather and hides',class=7,sub=6,patterns={'leather$','hide$','^ruined leather scraps$','scale$','^devilsaur leather$','^core leather$','^cured .+ hide$','^rugged leather$'}},
+ cloth={label='Cloth',class=7,sub=5,patterns={'cloth$','^bolt of ','^runecloth$','^mageweave','^felcloth$','^mooncloth$','silk$'}},
+ enchanting={label='Enchanting materials',class=7,sub=12,patterns={' dust$',' essence$',' shard$','^nexus crystal$','^small brilliant shard$','^large brilliant shard$'}},
 }
 for word,c in pairs(N.FIND_CATEGORIES) do c.word=word end
 local CATEGORY_WORDS={herb='herbs',herbs='herbs',ore='ore',ores='ore',mining='ore',leather='leather',hides='leather',skins='leather',
@@ -62,12 +64,20 @@ function N:FindCategory(query)
  return self.FIND_CATEGORIES[CATEGORY_WORDS[tostring(query or ''):lower():match('^%s*(.-)%s*$')] or '']
 end
 function N:InCategory(id,cat,name)
+ local class,sub
  if type(GetItemInfoInstant)=='function' then
-  local ok,_,_,_,_,_,class,sub=pcall(GetItemInfoInstant,id)
-  if ok and class==cat.class and sub==cat.sub then return true end
+  local ok,_,_,_,_,_,c,s=pcall(GetItemInfoInstant,id)
+  if ok then class,sub=c,s end
  end
+ if class==cat.class and sub==cat.sub then return true end
  local l=type(name)=='string' and name:lower()
- if l and cat.names then for _,n in ipairs(cat.names) do if l==n then return true end end end
+ if not l then return false end
+ if cat.names then for _,n in ipairs(cat.names) do if l==n then return true end end end
+ -- Name patterns only for Trade Goods (or when the type is unknown), so
+ -- "Light Leather Pants" or a "... Shard" quest item doesn't count.
+ if cat.patterns and (class==nil or class==cat.class) then
+  for _,p in ipairs(cat.patterns) do if l:find(p) then return true end end
+ end
  return false
 end
 
@@ -272,9 +282,13 @@ function N:ItemIDByName(name)
  local want=tostring(name or ''):lower()
  for id,n in pairs(self.db.itemNames or {}) do if type(n)=='string' and n:lower()==want then return tonumber(id) end end
  local m=VoidMarkMarketDB
- m=type(m)=='table' and type(m.economies)=='table' and m.economies[self.economy]
- for k,v in pairs(type(m)=='table' and type(m.market)=='table' and m.market or {}) do
+ local e=type(m)=='table' and type(m.economies)=='table' and (m.economies[(tostring(self.economy):gsub('%s',''))] or m.economies[self.economy])
+ for k,v in pairs(type(e)=='table' and type(e.market)=='table' and e.market or {}) do
   if type(v)=='table' and type(v.name)=='string' and v.name:lower()==want and (not v.itemSuffix or v.itemSuffix==0) then return tonumber(v.itemID or k) end
+ end
+ -- Market keeps most names in a separate list.
+ for k,n in pairs(type(e)=='table' and type(e.itemNames)=='table' and e.itemNames or {}) do
+  if type(n)=='string' and n:lower()==want and tonumber(k) then return tonumber(k) end
  end
  return nil
 end
@@ -286,6 +300,14 @@ function N:HaveCount(name)
  local id=self:ItemIDByName(name)
  return 0,id,id and self:FinderName(id) or nil
 end
+-- Sold by trade/cooking suppliers: AH listings for these are often far above
+-- the vendor (Rune Thread at 55s), so they're marked "vendor", not priced.
+N.VENDOR_ITEMS={['coarse thread']=true,['fine thread']=true,['silken thread']=true,['heavy silken thread']=true,['rune thread']=true,
+ ['salt']=true,['gray dye']=true,['black dye']=true,['blue dye']=true,['green dye']=true,['red dye']=true,['yellow dye']=true,
+ ['empty vial']=true,['leaded vial']=true,['crystal vial']=true,['imbued vial']=true,['hot spices']=true,['mild spices']=true,
+ ['soothing spices']=true,['alterac swiss']=true,['maple seed']=true,['stranglethorn seed']=true,['copper rod']=true,['mote of magic']=true}
+-- Made yourself from something cheaper: price it as that.
+N.MADE_FROM={['refined deeprock salt']={name='Deeprock Salt',qty=1,how='made with a Salt Shaker'}}
 function N:NeedLines(list)
  local lines,shortCost,unknown={},0,0
  for _,e in ipairs(list) do
@@ -298,7 +320,18 @@ function N:NeedLines(list)
   if alt then local h,i,r=self:HaveCount(alt);altHave,altID=h,i;alt=r or alt end
   local short=math.max(0,need-have-altHave)
   local line=('%s: have %d / need %d'):format(alt and (name..' or '..alt) or name,have+altHave,need)
+  local lname=tostring(name):lower()
+  local made=self.MADE_FROM[lname]
   if short==0 then line=line..'  |cff40ff40done|r'
+  elseif self.VENDOR_ITEMS[lname] then
+   line=line..('  |cffffd200short %d|r  (vendor)'):format(short)
+  elseif made then
+   local _,mid=self:HaveCount(made.name)
+   local p=mid and self:Price(mid)
+   if p and p.unit then
+    local c=short*made.qty*p.unit;shortCost=shortCost+c
+    line=line..('  |cffffd200short %d  ~%s|r  (%s from %s)'):format(short,self:Money(c),made.how,made.name)
+   else unknown=unknown+1;line=line..('  |cffffd200short %d|r  (%s from %s)'):format(short,made.how,made.name) end
   else
    local p=id and self:Price(id)
    local pa=altID and self:Price(altID)
@@ -407,7 +440,7 @@ function N:RenderReport(u,key)
    rows[#rows+1]={text=step[1]..'   buy ~'..self:Money(cost)..(unknown>0 and ('  (+'..unknown..' without an AH price)') or ''),color=accent}
    for i,l in ipairs(lines) do rows[#rows+1]={text='     '..l,itemName=step[2][i][2]} end
   end
-  u.syncInfo:SetText(p.name..' 1-300: what you have on every character against the leveling list.\nTotal to buy the rest: ~'..self:Money(total)..' (VoidMark Market prices).')
+  u.syncInfo:SetText(p.name..' 1-300: what you have on every character against the leveling list.\nTotal to buy the rest: ~'..self:Money(total)..' (AH prices; vendor items not included).')
   u.footer:SetText('Bags and gear update live; bank and mailbox when opened. Reports button: pick another.')
   return rows
  end
