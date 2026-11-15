@@ -56,10 +56,12 @@ N.FIND_CATEGORIES={
  leather={label='Leather and hides',class=7,sub=6,patterns={'leather$','hide$','^ruined leather scraps$','scale$','^devilsaur leather$','^core leather$','^cured .+ hide$','^rugged leather$'}},
  cloth={label='Cloth',class=7,sub=5,patterns={'cloth$','^bolt of ','^runecloth$','^mageweave','^felcloth$','^mooncloth$','silk$'}},
  enchanting={label='Enchanting materials',class=7,sub=12,patterns={' dust$',' essence$',' shard$','^nexus crystal$','^small brilliant shard$','^large brilliant shard$'}},
+ gems={label='Gems',class=7,sub=-1,names={'malachite','tigerseye','shadowgem','lesser moonstone','moss agate','jade','citrine','aquamarine','star ruby','black vitriol','blue sapphire','large opal','huge emerald','azerothian diamond','arcane crystal','iridescent pearl','black pearl','golden pearl','small lustrous pearl'}},
+ cooking={label='Fish and meat',class=7,sub=8,patterns={'^raw ',' meat$',' flesh$','^giant egg$','^raptor egg$','clam meat$',' wing$','^tender wolf meat$','^mystery meat$'}},
 }
 for word,c in pairs(N.FIND_CATEGORIES) do c.word=word end
 local CATEGORY_WORDS={herb='herbs',herbs='herbs',ore='ore',ores='ore',mining='ore',leather='leather',hides='leather',skins='leather',
- cloth='cloth',enchanting='enchanting',enchant='enchanting',dust='enchanting'}
+ cloth='cloth',enchanting='enchanting',enchant='enchanting',dust='enchanting',gems='gems',gem='gems',fish='cooking',meat='cooking',cooking='cooking'}
 function N:FindCategory(query)
  return self.FIND_CATEGORIES[CATEGORY_WORDS[tostring(query or ''):lower():match('^%s*(.-)%s*$')] or '']
 end
@@ -389,25 +391,13 @@ end
 
 -- Reports (Reports button in the window) ------------------------------------
 N.REPORTS={
- {key='herbs',label='Herb report'},
- {key='ore',label='Ore, bars and stone report'},
- {key='leather',label='Leather and hides report'},
- {key='cloth',label='Cloth report'},
- {key='enchanting',label='Enchanting materials report'},
- {key='need:alch',label='Alchemy 1-300: have / need'},
- {key='need:lw',label='Leatherworking 1-300: have / need'},
- {key='need:cook',label='Cooking 1-300: have / need'},
- {key='need:ench',label='Enchanting 1-300: have / need'},
- {key='need:tail',label='Tailoring 1-280: have / need'},
- {key='need:eng',label='Engineering 1-300: have / need'},
- {key='need:bs',label='Blacksmithing 1-300: have / need'},
- {key='guide:camp',label='Camping: camp items and what you can make'},
- {key='guide:crates',label="Merchant's Favor: crates you can fill"},
- {key='guide:favor',label="Merchant's Favor: how it works"},
- {key='guide:herb',label='Herbalism 1-300 route'},
- {key='guide:mine',label='Mining 1-300 route'},
- {key='guide:fish',label='Fishing 1-300 route'},
- {key='guide:lock',label='Lockpicking 1-300 route'},
+ {key='herbs',label='Herbs'},
+ {key='ore',label='Ore, bars and stone'},
+ {key='leather',label='Leather and hides'},
+ {key='cloth',label='Cloth'},
+ {key='enchanting',label='Enchanting materials'},
+ {key='gems',label='Gems and pearls'},
+ {key='cooking',label='Fish and meat'},
 }
 -- Items of a kind you hold, most valuable first, with total AH value.
 function N:CategoryList(cat)

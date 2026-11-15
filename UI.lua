@@ -19,9 +19,9 @@ end
 function N:Choice(anchor,choices,fn)
  if self.menu then self.menu:Hide() end
  local menu=CreateFrame('Frame',nil,UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil); skin(menu)
- menu:SetFrameStrata('DIALOG'); menu:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT'); menu:SetSize(270,math.min(15,#choices)*25+10)
+ menu:SetFrameStrata('DIALOG'); menu:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT'); menu:SetSize(330,math.min(15,#choices)*25+10)
  local scroll=CreateFrame('ScrollFrame',nil,menu,'UIPanelScrollFrameTemplate'); scroll:SetPoint('TOPLEFT',4,-4); scroll:SetPoint('BOTTOMRIGHT',-26,4)
- local child=CreateFrame('Frame',nil,scroll); child:SetSize(235,#choices*25); scroll:SetScrollChild(child)
+ local child=CreateFrame('Frame',nil,scroll); child:SetSize(295,#choices*25); scroll:SetScrollChild(child)
  for i,c in ipairs(choices) do
   local y=-(i-1)*25
   if c.decrease and c.increase then
@@ -31,7 +31,7 @@ function N:Choice(anchor,choices,fn)
    menu.adjustments=menu.adjustments or {}
    menu.adjustments[#menu.adjustments+1]={minus=minus,plus=plus}
   else
-   button(child,c.label,0,y,230,function() menu:Hide(); fn(c.value); N.dirty=true end)
+   button(child,c.label,0,y,290,function() menu:Hide(); fn(c.value); N.dirty=true end)
   end
  end
  self.menu=menu
@@ -60,14 +60,14 @@ function N:TextDialog(title,text,import)
  f.preview:SetShown(import==true or import=='route'); f.confirm:SetShown(import==true or import=='route'); f.review:SetShown(import==true or import=='route')
  f.preview:Enable(); f.status:SetText(import and 'Paste VMN1 export, then preview and review before confirming.' or 'Ctrl+A, Ctrl+C to copy.'); f:Show()
 end
--- Compact window (0.5): Gather | Professions | Characters | Settings.
-local W,H=460,560
+-- Compact window: Gather | Professions | Characters | Guides | Settings.
+local W,H=480,560
 local TOP=176          -- list starts below each page's controls
 local ROW_H=24
-local pages={'Gather','Professions','Characters','Settings'}
+local pages={'Gather','Professions','Characters','Guides','Settings'}
 -- Older tab names open the page that replaced them.
 local alias={Dashboard='Gather',Home='Gather',Routes='Gather',Gathering='Gather',Recipes='Professions',
- Profitability='Professions',Leveling='Professions',Crafting='Professions',Inventory='Characters'}
+ Profitability='Professions',Leveling='Professions',Crafting='Professions',Inventory='Characters',Guide='Guides'}
 local COLORS={orange={1,.5,.25},yellow={1,1,0},green={.25,.75,.25},gray={.6,.6,.6},
  good={.3,.9,.3},bad={1,.35,.35},muted={.65,.6,.72},white={1,1,1},accent={.78,.6,1}}
 
@@ -110,7 +110,7 @@ function N:CreateUI()
  local u={frame=f,tab='Gather',profView='level',offset=0,rows={},tabs={},pages={}}
  self.ui=u
  -- Find an item anywhere: typing jumps to Characters and lists every place it is.
- u.find=edit(f,180,-9,150,'')
+ u.find=edit(f,180,-9,170,'')
  u.findHint=u.find:CreateFontString(nil,'OVERLAY','GameFontDisable'); u.findHint:SetPoint('LEFT',4,0); u.findHint:SetText('Find item...')
  u.find:SetScript('OnTextChanged',function(e)
   local text=e:GetText(); u.findHint:SetShown(text=='')
@@ -126,7 +126,7 @@ function N:CreateUI()
   end)
  end
  -- Reports: what you hold of a kind (herbs, ore...) or a profession shopping list.
- u.reports=button(f,'Reports',336,-9,82,function()   -- clear of the X at the top right
+ u.reports=button(f,'Reports',356,-9,82,function()   -- clear of the X at the top right
   if N.menu and N.menu:IsShown() then return N.menu:Hide() end
   local choices={}
   for _,r in ipairs(N.REPORTS) do choices[#choices+1]={label=r.label,value=r.key} end
@@ -137,7 +137,7 @@ function N:CreateUI()
   end)
  end)
  for i,name in ipairs(pages) do
-  u.tabs[name]=button(f,name,12+(i-1)*109,-40,105,function() u.tab=name; u.offset=0; if N.menu then N.menu:Hide() end; N.dirty=true end)
+  u.tabs[name]=button(f,name,12+(i-1)*92,-40,88,function() u.tab=name; u.offset=0; if N.menu then N.menu:Hide() end; N.dirty=true end)
  end
  for _,name in ipairs(pages) do
   local p=CreateFrame('Frame',nil,f); p:SetPoint('TOPLEFT',0,-72); p:SetSize(W,TOP-72); u.pages[name]=p
@@ -174,6 +174,22 @@ function N:CreateUI()
  u.pair=button(ch,'Pair',282,0,60,function() local name=u.pairName:GetText(); if name~='' then N:PairPeer(name); u.pairName:SetText('') end end)
  u.exportB=button(ch,'Export',348,0,98,function() N:Choice(u.exportB,{{label='Export (copy)',value='e'},{label='Import (paste)',value='i'}},function(v) if v=='e' then N:TextDialog('Copy to the other account',N:Export()) else N:TextDialog('Paste from the other account','',true) end end) end)
  u.syncInfo=label(ch,'',14,-36,'GameFontHighlight'); u.syncInfo:SetWidth(W-28)
+ -- Guides page: pick a guide; trainers, steps, vendors and materials below.
+ local gp=u.pages.Guides
+ u.guideKey=N.db.settings.guide
+ u.guidePick=button(gp,'Pick a guide',14,0,300,function()
+  if N.menu and N.menu:IsShown() then return N.menu:Hide() end
+  local choices={}
+  for _,g in ipairs(N.GUIDE_LIST or {}) do choices[#choices+1]={label=g.label,value=g.key} end
+  N:Choice(u.guidePick,choices,function(v) u.guideKey=v; N.db.settings.guide=v; u.offset=0 end)
+ end)
+ u.guideInfo=label(gp,'',14,-36,'GameFontHighlight'); u.guideInfo:SetWidth(W-28)
+ -- Info text sits between the controls and the list: cap its lines so it
+ -- never runs over the first rows.
+ for _,l in ipairs({{u.gatherInfo,3},{u.profInfo,3},{u.syncInfo,4},{u.guideInfo,4}}) do
+  if l[1].SetMaxLines then l[1]:SetMaxLines(l[2]) end
+  if l[1].SetWordWrap then l[1]:SetWordWrap(true) end
+ end
  -- Settings page: plain checkboxes
  local st=u.pages.Settings; st:SetHeight(H-110)
  local s=function() return N.db.settings end
@@ -204,6 +220,12 @@ function N:CreateUI()
  adjuster('Window size','scale',.1,.6,1.5,'%.1f',function() f:SetScale(s().scale) end)
  -- Shared list
  u.list=CreateFrame('Frame',nil,f); u.list:SetPoint('TOPLEFT',10,-TOP); u.list:SetSize(W-20,H-TOP-40)
+ -- Invisible copy of the row font, used to measure text so long rows wrap
+ -- onto extra rows instead of being cut off with "...".
+ u.measure=u.list:CreateFontString(nil,'OVERLAY','GameFontHighlight'); u.measure:SetPoint('TOPLEFT',0,0)
+ if u.measure.SetAlpha then u.measure:SetAlpha(0) end
+ if u.measure.SetWordWrap then u.measure:SetWordWrap(false) end
+ u.textWidth=W-64
  u.perPage=math.floor((H-TOP-40)/ROW_H)
  for i=1,u.perPage do
   local row=CreateFrame('Button',nil,u.list); row:SetSize(W-20,ROW_H-2); row:SetPoint('TOPLEFT',0,-(i-1)*ROW_H)
@@ -218,10 +240,75 @@ function N:CreateUI()
  end
  u.list:EnableMouseWheel(true)
  u.list:SetScript('OnMouseWheel',function(_,delta) u.offset=math.max(0,u.offset-delta*3); N.dirty=true end)
- u.footer=label(f,'',14,-(H-30),'GameFontDisable'); u.footer:SetWidth(W-28)
+ u.footer=label(f,'',14,-(H-36),'GameFontDisable'); u.footer:SetWidth(W-28); if u.footer.SetMaxLines then u.footer:SetMaxLines(2) end
  local elapsed=0
  f:SetScript('OnUpdate',function(_,dt) elapsed=elapsed+dt; if elapsed>.3 then elapsed=0; if N.dirty then N:Guard('UI',function() N:Render() end) end end end)
  table.insert(UISpecialFrames,'VoidMarkNexusWindow')
+end
+
+-- Guides tab: a list of guides until one is picked, then that guide.
+function N:RenderGuides(u)
+ local key=u.guideKey
+ local known=false
+ for _,g in ipairs(self.GUIDE_LIST or {}) do if g.key==key then known=g end end
+ if not known then
+  u.guidePick:SetText('Pick a guide')
+  u.guideInfo:SetText('Leveling guides for Horde: trainers, what to craft at each skill, where to buy supplies and recipes, and your materials (have / need).')
+  u.footer:SetText('Click a guide, or use the button above.')
+  local rows={}
+  for _,g in ipairs(self.GUIDE_LIST or {}) do
+   rows[#rows+1]={text=g.label,color=COLORS.accent,click=function() u.guideKey=g.key; self.db.settings.guide=g.key; u.offset=0 end}
+  end
+  return rows
+ end
+ u.guidePick:SetText(known.label)
+ local rows,info,foot=self:GuideTabRows(key)
+ u.guideInfo:SetText(info or ''); u.footer:SetText(foot or '')
+ return rows
+end
+
+-- Width of text in the row font. Falls back to a character estimate.
+local function plain(t) return (t:gsub('|c%x%x%x%x%x%x%x%x',''):gsub('|r','')) end
+function N:TextWidth(t)
+ local cache=self.widthCache; if not cache or self.widthCacheSize>3000 then cache={}; self.widthCache=cache; self.widthCacheSize=0 end
+ local w=cache[t]; if w then return w end
+ local m=self.ui and self.ui.measure
+ if m then m:SetText(t); local ok,v=pcall(m.GetStringWidth,m); if ok and type(v)=='number' and v>0 then w=v end end
+ w=w or #plain(t)*6.3
+ cache[t]=w; self.widthCacheSize=self.widthCacheSize+1
+ return w
+end
+-- Rows wider than the list are split at spaces into extra rows, indented
+-- under the first, keeping the color code open across the break.
+function N:WrapRows(rows,width)
+ local out={}
+ for _,r in ipairs(rows) do
+  local text=r.text
+  if type(text)~='string' or r.nowrap or self:TextWidth(text)<=width then out[#out+1]=r
+  else
+   local indent=text:match('^(%s*)')
+   local cont=indent..'    '
+   local lines,cur,open,active={}, '',nil,nil
+   for word in text:sub(#indent+1):gmatch('%S+') do
+    local prefix=(#lines==0 and indent or cont)..(open or '')
+    if cur~='' and self:TextWidth(prefix..cur..' '..word)>width then
+     lines[#lines+1]=prefix..cur..(active and '|r' or '')
+     open=active; cur=word
+    else cur=cur=='' and word or (cur..' '..word) end
+    for pos,kind in word:gmatch('()|([cr])') do
+     if kind=='r' then active=nil else active=word:sub(pos,pos+9) end
+    end
+   end
+   if cur~='' then lines[#lines+1]=(#lines==0 and indent or cont)..(open or '')..cur end
+   for i,l in ipairs(lines) do
+    local copy={}; for k,v in pairs(r) do copy[k]=v end
+    copy.text=l
+    if i>1 then copy.noIcon=true end
+    out[#out+1]=copy
+   end
+  end
+ end
+ return out
 end
 
 function N:RowTooltip(row)
@@ -485,19 +572,21 @@ function N:Render()
  if u.tab=='Gather' then rows=self:RenderGather(u)
  elseif u.tab=='Professions' then rows=self:RenderProfessions(u)
  elseif u.tab=='Characters' then rows=self:RenderCharacters(u)
+ elseif u.tab=='Guides' then rows=self:RenderGuides(u)
  else
   for _,cb in ipairs(u.checks) do cb:SetChecked(cb.get()) end
   for _,fn in ipairs(u.adjusters or {}) do fn() end
   u.footer:SetText('VoidMark Nexus '..self.version)
  end
  u.list:SetShown(u.tab~='Settings')
+ rows=self:WrapRows(rows,u.textWidth)
  u.offset=math.max(0,math.min(u.offset or 0,#rows-u.perPage))
  for i,b in ipairs(u.rows) do
   local r=rows[u.offset+i]; b.data=r; b:SetShown(r~=nil)
   if r then
    b.text:SetText(r.text)
    local c=r.color or COLORS.white; b.text:SetTextColor(c[1],c[2],c[3])
-   local icon=r.icon or (r.item and self:InventoryIcon(r.item))
+   local icon=not r.noIcon and (r.icon or (r.item and self:InventoryIcon(r.item))) or nil
    b.icon:SetTexture(icon); b.icon:SetShown(icon~=nil)
   end
  end

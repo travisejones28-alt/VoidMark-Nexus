@@ -2,13 +2,13 @@ local _,N=...
 N=N or VoidMarkNexus
 -- Guides from wow-professions.com (Forever): gathering routes, Lockpicking,
 -- Camping items (have/need) and Merchant's Favor crates (what you can fill).
--- Shown from the Reports button. Counts and routes are the guide's; Forever
+-- Shown in the Guides tab. Counts and routes are the guide's; Forever
 -- is new, so some may change on live.
 
 local H,T='h','t' -- heading / text line
 N.GUIDES={
  herb={name='Herbalism 1-300 route',lines={
-  {H,'1-70: Peacebloom, Silverleaf, Earthroot (15)'},{T,'Horde: Durotar, Mulgore, Tirisfal Glades, Zephras Isle. Starting-zone trainers only teach to 75.'},
+  {H,'1-70: Peacebloom, Silverleaf, Earthroot (15)'},{T,'Durotar, Mulgore, Tirisfal Glades, Zephras Isle. Starting-zone trainers only teach to 75.'},
   {H,'50: learn Journeyman at a main trainer (Mishiki, Komin Winterhoof, Faruza)'},
   {H,'70-115: Mageroyal, Briarthorn, Stranglekelp (85)'},{T,'Silverpine Forest, Loch Modan, Darkshore.'},
   {H,'125: learn Expert'},
@@ -21,9 +21,9 @@ N.GUIDES={
   {T,'Find Herbs turns off when you die. Goldthorn Tea gives +15 (Cooking 175).'}}},
  mine={name='Mining 1-300 route',lines={
   {T,'Buy a Mining Pick. Find Minerals turns off when you die. Bonuses: Enchant Gloves - Mining (+2), Goblin Mining Helmet (+5).'},
-  {H,'1-65: Copper'},{T,'Horde: Durotar (cave), smelt at Razor Hill. Or Mulgore, Tirisfal, Zephras Isle.'},
+  {H,'1-65: Copper'},{T,'Durotar (cave), smelt at Razor Hill. Or Mulgore, Tirisfal, Zephras Isle.'},
   {H,'50: learn Journeyman (Makaru in Orgrimmar; junior trainers stop at 75)'},
-  {H,'65-125: Copper, Tin (65), Silver (75)'},{T,'Horde: Silverpine Forest cave or Hillsbrad Foothills. Smelt Copper+Tin into Bronze first (stops giving points ~105).'},
+  {H,'65-125: Copper, Tin (65), Silver (75)'},{T,'Silverpine Forest cave or Hillsbrad Foothills. Smelt Copper+Tin into Bronze first (stops giving points ~105).'},
   {H,'125: learn Expert. Iron (125), Gold (155)'},{T,'125-175: Thousand Needles at low level, Arathi Highlands when mounted. Skip the 4 Arathi caves at low level.'},
   {H,'175-245: Mithril (175), Truesilver (230)'},{T,'The Hinterlands (skip the level 62 elites route) or Tanaris (skip the caves under 60). Learn Artisan at 200.'},
   {H,'245-275: Mithril, Small Thorium (245)'},{T,'Un\'Goro Crater caves (mob-heavy; good for stealth), Blasted Lands, Felwood Jaedenar cave.'},
@@ -40,7 +40,7 @@ N.GUIDES={
   {H,'225-300: Felwood, Feralas, The Hinterlands, Tanaris, Un\'Goro, Western Plaguelands'},{T,'Keep Bright Baubles on.'}}},
  lock={name='Lockpicking 1-300 route (Rogue)',lines={
   {T,'Max skill = 5 x your level (100 at 20, 150 at 30, 200 at 40, 250 at 50, 300 at 60). No items needed.'},
-  {H,'1-100: Buccaneer\'s Strongboxes on the ship near Ratchet (Barrens)'},{T,'Fast respawn. Skip the Jewel of the Southsea chest at low level (spawns a killer mob). Alliance: Practice Lockboxes, Redridge.'},
+  {H,'1-100: Buccaneer\'s Strongboxes on the ship near Ratchet (Barrens)'},{T,'Fast respawn. Skip the Jewel of the Southsea chest at low level (spawns a killer mob).'},
   {H,'100-150: Waterlogged Footlockers, Zoram Strand (Ashenvale)'},
   {H,'150-200: Angor Fortress (Badlands)'},{T,'Upstairs Battered Footlockers (150), downstairs Dented Footlockers (175). Don\'t pickpocket here.'},
   {H,'200-250: The Slag Pit (Searing Gorge)'},{T,'Footlockers, and pickpocket Sturdy Junkboxes. Stay low in the pit until 225.'},

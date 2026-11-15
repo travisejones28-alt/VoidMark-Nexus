@@ -241,12 +241,60 @@ test('Have/need: vendor items are marked vendor, Refined Deeprock Salt priced as
  GetItemInfo,N.Price=sg,sp
 end)
 
-test('Reports list every guide: Enchanting, Tailoring, Engineering, Blacksmithing, Cooking, Alchemy, Leatherworking',function()
- local keys={};for _,r in ipairs(N.REPORTS) do keys[r.key]=true end
+test('Reports are item kinds; every profession guide is in the Guides tab',function()
+ local keys={};for _,r in ipairs(N.REPORTS) do keys[r.key]=true;assert(N.FIND_CATEGORIES[r.key],'report '..r.key) end
+ for _,k in ipairs({'herbs','ore','leather','cloth','enchanting','gems','cooking'}) do assert(keys[k],k) end
+ local g={};for _,x in ipairs(N.GUIDE_LIST) do g[x.key]=true end
  for _,k in ipairs({'alch','lw','cook','ench','tail','eng','bs'}) do
-  assert(keys['need:'..k],'report '..k);assert(N.NEED_PRESETS[k] and #N.NEED_PRESETS[k].steps>=2,'preset '..k)
+  assert(g[k],'guide '..k);assert(N.CRAFT_GUIDES[k] and #N.CRAFT_GUIDES[k].steps>=8,'steps '..k)
+  assert(N.NEED_PRESETS[N.CRAFT_GUIDES[k].preset],'preset '..k)
  end
  local lines=N:NeedLines({{96,'Weak Flux'}});assert(lines[1]:find('(vendor)',1,true),'flux is a vendor item')
+end)
+
+test('Guides are Horde only: trainers, steps, vendors and materials',function()
+ local all={}
+ for _,x in ipairs(N.GUIDE_LIST) do
+  local rows,info=N:GuideTabRows(x.key);assert(#rows>3,x.key)
+  for _,r in ipairs(rows) do all[#all+1]=r.text end;all[#all+1]=info
+ end
+ all=table.concat(all,'\n')
+ for _,bad in ipairs({'Alliance','Ironforge','Stormwind','Darnassus','Theramore','Westfall','Elwynn'}) do assert(not all:find(bad,1,true),bad) end
+ local rows,info=N:GuideTabRows('lw');local t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
+ for _,want in ipairs({'Trainers (Horde)','Karolek - Orgrimmar','Una - Thunder Bluff','Hahrana Ironhide','1-30|r  Light Leather x35','Werg Thickblade','Abigail Shiel','Materials: have / need','Light Leather: have'}) do
+  assert(t:find(want,1,true),want)
+ end
+ assert(info:find('Horde only',1,true))
+ rows=N:GuideTabRows('herb');assert(rows[1].text=='Trainers' and rows[2].text:find('Jandi',1,true))
+end)
+
+test('Long rows wrap onto extra rows instead of being cut off',function()
+ local long={text='   '..('word '):rep(40)..'|cffffd200colored tail goes on and on and on and on and on|r end',color={1,1,1},itemName='X'}
+ local out=N:WrapRows({{text='short'},long},396)
+ assert(#out>=4,#out);eq(out[1].text,'short')
+ for i=2,#out do assert(N:TextWidth(out[i].text)<=396,out[i].text) end
+ assert(out[2].text:sub(1,3)=='   ' and out[3].text:sub(1,7)=='       ','continuation indented')
+ assert(out[3].noIcon and out[3].itemName=='X')
+ local joined={};for i=2,#out do joined[#joined+1]=out[i].text end;joined=table.concat(joined,' ')
+ local opens=select(2,joined:gsub('|c',''));local closes=select(2,joined:gsub('|r',''))
+ eq(opens,closes)
+ -- every word survives
+ local words=0;for _ in joined:gsub('|c%x%x%x%x%x%x%x%x',''):gsub('|r',''):gmatch('%S+') do words=words+1 end
+ eq(words,40+13)
+end)
+
+test('Guides tab: list of guides, then the picked one; long lines wrap',function()
+ N:Show('Guides');local u=N.ui
+ u.guideKey=nil;N:Render()
+ assert(u.rows[1]:IsShown() and u.rows[1].data.text=='Alchemy 1-300',u.rows[1].data.text)
+ u.rows[6].data.click();N:Render()
+ eq(u.guideKey,'lw');eq(N.db.settings.guide,'lw')
+ assert(u.guideInfo:GetText():find('Leatherworking 1-300',1,true))
+ for _,b in ipairs(u.rows) do if b:IsShown() then assert(N:TextWidth(b.data.text)<=u.textWidth+1,b.data.text) end end
+ N:Show('Lockpicking');N:Show('Guides');u.guideKey='lock';N:Render()
+ local any=false;for _,b in ipairs(u.rows) do if b:IsShown() and b.data.text:find('Southsea',1,true) then any=true end end
+ assert(any,'lock guide shows')
+ u.guideKey=nil;N.db.settings.guide=nil
 end)
 
 test('Guides: routes render, camp items show have/need, crates you can fill',function()
@@ -262,7 +310,7 @@ test('Guides: routes render, camp items show have/need, crates you can fill',fun
  rows,info=N:GuideRows('crates');all={};for _,x in ipairs(rows) do all[#all+1]=x.text end;all=table.concat(all,'\n')
  assert(all:find('Textiles (5 Favor): |cff40ff40can fill 2|r',1,true),all) -- 85 Linen = 2 x 40
  assert(all:find('Herbs (5 Favor): |cff40ff40can fill 1|r',1,true),all) -- 25 Peacebloom = 1 x 20
- local keys={};for _,x in ipairs(N.REPORTS) do keys[x.key]=true end
- for _,k in ipairs({'camp','crates','favor','herb','mine','fish','lock'}) do assert(keys['guide:'..k],k) end
+ local keys={};for _,x in ipairs(N.GUIDE_LIST) do keys[x.key]=true end
+ for _,k in ipairs({'camp','crates','favor','herb','mine','fish','lock'}) do assert(keys[k],k) end
  me.bags=bags;N.db.characters,GetItemInfo=saved,sg
 end)

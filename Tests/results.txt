@@ -154,7 +154,10 @@ PASS Sync goes out ~5s after a change, at most every 15s
 PASS Cooking report: an alternative counts toward the need and is priced if cheaper
 PASS Reports work when Forever files materials as plain Trade Goods (subclass 0)
 PASS Have/need: vendor items are marked vendor, Refined Deeprock Salt priced as Deeprock Salt
-PASS Reports list every guide: Enchanting, Tailoring, Engineering, Blacksmithing, Cooking, Alchemy, Leatherworking
+PASS Reports are item kinds; every profession guide is in the Guides tab
+PASS Guides are Horde only: trainers, steps, vendors and materials
+PASS Long rows wrap onto extra rows instead of being cut off
+PASS Guides tab: list of guides, then the picked one; long lines wrap
 PASS Guides: routes render, camp items show have/need, crates you can fill
 PASS Future timestamps (wrong PC clock) are pulled back to now instead of blocking sync
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
@@ -170,4 +173,4 @@ PASS A character saved twice (import + old copy) is counted once, newest copy wi
 PASS Gold: read on change, shown per character with a total, synced and exported
 PASS Gold travels with the bank sync
 PASS Characters: old first-name record joins its character by GUID; duplicates hidden; small gold amounts
-PASS: 172 tests; Lua 5.1 / standard interpreter
+PASS: 175 tests; Lua 5.1 / standard interpreter
