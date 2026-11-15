@@ -314,3 +314,53 @@ test('Guides: routes render, camp items show have/need, crates you can fill',fun
  for _,k in ipairs({'camp','crates','favor','herb','mine','fish','lock'}) do assert(keys[k],k) end
  me.bags=bags;N.db.characters,GetItemInfo=saved,sg
 end)
+
+test('Guides: pick a character and see where they are (Kitty, Leatherworking 50 of 300)',function()
+ local saved,sg=N.db.characters,GetItemInfo
+ local names={[783]='Light Hide',[4289]='Salt',[2318]='Light Leather',[2320]='Coarse Thread',[2447]='Peacebloom'}
+ GetItemInfo=function(id) return names[tonumber(id)] end
+ local me=N.character;local bags,profs,nm=me.bags,me.professions,me.name
+ me.name='Kitty';me.bags={[783]=4,[4289]=6,[2318]=100,[2320]=60}
+ me.professions={lw={name='Leatherworking',skill=50,max=75,recipes={
+  ['1']={name='Cured Light Hide',learned=true,reagents={{id=783,qty=1},{id=4289,qty=1}}},
+  ['2']={name='Embossed Leather Gloves',learned=true,reagents={{id=2318,qty=3},{id=2320,qty=2}}},
+  ['3']={name='Fine Leather Belt',learned=true,reagents={{id=2318,qty=6},{id=2320,qty=2}}}}}}
+ N.db.characters={[N.characterID]=me}
+ -- Recipe options are parsed out of the step text.
+ local opts,count=N:StepCrafts('Wicked Leather Gauntlets x36 (or Blue Suede Shoes x36)')
+ eq(opts[1],'Wicked Leather Gauntlets');eq(opts[2],'Blue Suede Shoes');eq(count,36)
+ opts=N:StepCrafts('Brilliant Smallfish, Slitherskin Mackerel, Charred Wolf Meat or Roasted Boar Meat x55');eq(#opts,4);eq(opts[4],'Roasted Boar Meat')
+ -- Dropdown lists the character with their skill.
+ local list=N:GuideCharacters('lw');eq(list[1].name,'Kitty');eq(list[1].p.skill,50)
+ local rows,info,_,frac=N:GuideCharacterRows('lw',N.characterID,false)
+ local t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
+ assert(info:find('Kitty: Leatherworking 50 / 75',1,true) and info:find('step 2 of 18',1,true),info)
+ assert(math.abs(frac-50/300)<1e-6)
+ assert(t:find('+ 1 step done (1-30)',1,true),t)
+ assert(t:find('Train Journeyman (Leatherworking 50, level 10)  |cffffc040train now|r',1,true),t)
+ assert(t:find('NOW|r  30-55  Cured Light Hide x27  - about 6 more',1,true),t) -- 27 * 5/25 = 5.4
+ assert(t:find('Light Hide: have 4 / need 6',1,true),t)
+ assert(t:find('Salt: have 6 / need 6',1,true),t)
+ assert(t:find('Kitty 4 (bags)',1,true),t)
+ assert(t:find('55-75  Embossed Leather Gloves x21  |cff66dd66mats ready|r',1,true),t) -- 63 leather, 42 thread
+ assert(t:find('90-100  Fine Leather Belt x19  |cffffc040short 1 item|r',1,true),t) -- 114 leather > 100
+ assert(t:find('Hillman\'s Leather Gloves x17  |cff9a8fb0not learned|r',1,true),t)
+ assert(not t:find('1-30  Light Leather x35',1,true),'done steps collapse')
+ rows=N:GuideCharacterRows('lw',N.characterID,true)
+ t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
+ assert(t:find('done|r  1-30  Light Leather x35',1,true),'done steps show')
+ -- In the window: picking the character shows the view; the current row is marked.
+ N:Show('Guides');local u=N.ui;u.guideKey='lw';u.guideChar=N.characterID;u.showDone=false;N:Render()
+ assert(u.guideInfo:GetText():find('step 2 of 18',1,true))
+ local cur=false;for _,b in ipairs(u.rows) do if b:IsShown() and b.data.current then cur=true end end;assert(cur)
+ u.rows[1].data.click();N:Render();assert(u.showDone)
+ -- Gathering guide: Herbalism at 120 is on the 115-170 range.
+ me.professions={h={name='Herbalism',skill=120,max=150}}
+ rows,info=N:GuideCharacterRows('herb',N.characterID,false)
+ t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
+ assert(t:find('NOW|r  115-170: Bruiseweed',1,true),t);assert(t:find('Hillsbrad',1,true))
+ -- Not learned.
+ rows,info=N:GuideCharacterRows('alch',N.characterID,false);assert(info:find('not learned',1,true))
+ u.guideKey=nil;u.guideChar=nil;N.db.settings.guide=nil;N.db.settings.guideChar=nil
+ me.bags,me.professions,me.name=bags,profs,nm;N.db.characters,GetItemInfo=saved,sg
+end)

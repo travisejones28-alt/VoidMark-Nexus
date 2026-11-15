@@ -10,7 +10,7 @@ N=N or VoidMarkNexus
 --   shop  = {'What', 'where'}
 
 N.CRAFT_GUIDES={
- alch={name='Alchemy 1-300',source='Wowhead Forever guide',preset='alch',
+ alch={prof='Alchemy',name='Alchemy 1-300',source='Wowhead Forever guide',preset='alch',
   train={
    {'Journeyman (Alchemy 50, level 10)','Yelmak - Orgrimmar, The Drag; Doctor Marsh - Undercity, The Apothecarium; Bena Winterhoof - Thunder Bluff, Middle Rise'},
    {'Expert (Alchemy 125, level 20, 50s)','Doctor Herbert Halsey - Undercity, The Apothecarium'},
@@ -35,7 +35,7 @@ N.CRAFT_GUIDES={
    {'Leaded and Crystal Vial','Alchemy Supply vendors. Crystal Vial also Mishta, Silithus.'},
    {'Recipes',"Philosopher's Stone: Alchemist Pestlezugg, Gadgetzan. Superior Mana Potion: Algernon, Undercity."}}},
 
- lw={name='Leatherworking 1-300',source='wow-professions.com Forever guide',preset='lw',
+ lw={prof='Leatherworking',name='Leatherworking 1-300',source='wow-professions.com Forever guide',preset='lw',
   train={
    {'Journeyman (Leatherworking 50, level 10)','Karolek - Orgrimmar, The Drag; Arthur Moore - Undercity, Rogues\' Quarter; Tarn - Thunder Bluff, Middle Rise'},
    {'Expert (Leatherworking 125, level 20, 50s)','Una - Thunder Bluff, Middle Rise'},
@@ -65,7 +65,7 @@ N.CRAFT_GUIDES={
    {'Patterns','Wicked Leather Gauntlets: Werg Thickblade, Tirisfal Glades. Runic Leather Headband: Jase Farlane, Light\'s Hope Chapel.'},
    {'Specialization','Dragonscale, Elemental or Tribal at Leatherworking 225 and level 40 (optional).'}}},
 
- cook={name='Cooking 1-300',source='wow-professions.com Forever guide',preset='cook',
+ cook={prof='Cooking',name='Cooking 1-300',source='wow-professions.com Forever guide',preset='cook',
   train={
    {'Apprentice and Journeyman (Cooking 50)','Zamja - Orgrimmar, The Drag; Eunice Burch - Undercity, Trade Quarter; Aska Mistrunner - Thunder Bluff; Cook Torka - Razor Hill; Duhng - Crossroads; William Pickman - Brill'},
    {'Expert (Cooking 125): a book, no trainer','Expert Cookbook from Wulan - Shadowprey Village, Desolace (26.1, 69.7)'},
@@ -86,7 +86,7 @@ N.CRAFT_GUIDES={
    {'More recipes','Catfish: Kilxx, Barrens; Ronald Burch, Undercity. Omelet and Roast Raptor: Keena, Arathi (Hammerfall). Trout: Shankys, Orgrimmar. Turtle Bisque: quest, Christoph Jeffcoat (Hillsbrad).'},
    {'225-300 recipes','Spotted Yellowtail and Poached Sunscale Salmon: Gikkix, Steamwheedle Port. Filet of Redgill: Kelsey Yance, Booty Bay.'}}},
 
- ench={name='Enchanting 1-300',source='wow-professions.com Forever guide (Strange Dust path)',preset='ench',
+ ench={prof='Enchanting',name='Enchanting 1-300',source='wow-professions.com Forever guide (Strange Dust path)',preset='ench',
   train={
    {'Journeyman (Enchanting 50, level 10)','Godan - Orgrimmar, The Drag; Lavinia Crowe - Undercity, The Apothecarium; Teg Dawnstrider - Thunder Bluff, Middle Rise'},
    {'Expert (Enchanting 125, level 20, 50s)','Hgarth - Sun Rock Retreat, Stonetalon Mountains (the only Horde one)'},
@@ -117,7 +117,7 @@ N.CRAFT_GUIDES={
    {'Late formulas','Lesser Mana Oil: Kania, Silithus. Shield - Greater Stamina: Daniel Bartlett, Undercity. Runed Arcanite Rod: Lorelae Wintersong, Moonglade.'},
    {'Seeds and vials','Maple / Stranglethorn Seed: reagent vendors. Leaded Vial: Alchemy Supply. Crystal Vial: Mishta (Silithus) or Alchemy Supply.'}}},
 
- tail={name='Tailoring 1-300',source='wow-professions.com Forever guide',preset='tail',
+ tail={prof='Tailoring',name='Tailoring 1-300',source='wow-professions.com Forever guide',preset='tail',
   train={
    {'Journeyman (Tailoring 50, level 10)','Magar - Orgrimmar; Rhiannon Davis - Undercity, The Magic Quarter; Tepa - Thunder Bluff; Mahani - Camp Taurajo (Barrens)'},
    {'Expert (Tailoring 125, level 20, 50s)','Josef Gregorian - Undercity, The Magic Quarter'},
@@ -147,7 +147,7 @@ N.CRAFT_GUIDES={
    {'Patterns','Runecloth Gloves: Qia, Everlook. Runecloth Cuffs: Pexmit, Mount Hyjal. Cenarion patterns: Mishta, Silithus.'},
    {'Note','280-300 is from the Forever beta and may change.'}}},
 
- eng={name='Engineering 1-300',source='wow-professions.com Forever guide',preset='eng',
+ eng={prof='Engineering',name='Engineering 1-300',source='wow-professions.com Forever guide',preset='eng',
   train={
    {'Journeyman (Engineering 50, level 10)','Nogg - Orgrimmar, Valley of Honor; Franklin Lloyd - Undercity, Rogues\' Quarter'},
    {'Expert (Engineering 125, level 20, 50s)','Roxxik - Orgrimmar, Valley of Honor'},
@@ -178,7 +178,7 @@ N.CRAFT_GUIDES={
    {'Weak Flux, Blacksmith Hammer','Engineering Supply vendor near Nogg (Orgrimmar) or Franklin Lloyd (Undercity). Hammer also Sumi, Orgrimmar.'},
    {'Schematics','Thorium Widget: Sovik, Orgrimmar. Thorium Tube: Xizzer Fizzbolt, Everlook (Winterspring).'}}},
 
- bs={name='Blacksmithing 1-300',source='wow-professions.com Forever guide',preset='bs',
+ bs={prof='Blacksmithing',name='Blacksmithing 1-300',source='wow-professions.com Forever guide',preset='bs',
   train={
    {'Journeyman (Blacksmithing 50, level 10)','Snarl - Orgrimmar, Valley of Honor; James Van Brunt - Undercity, War Quarter; Karn Stonehoof - Thunder Bluff; Traugh - Crossroads'},
    {'Expert (Blacksmithing 125, level 20)','Saru Steelfury - Orgrimmar, Valley of Honor'},
@@ -275,4 +275,222 @@ function N:GuideTabRows(key)
  end
  return rows,g.name..' ('..g.source..'). Horde only.\nMaterials still to buy: ~'..self:Money(total)..' at AH prices; vendor items not included.',
   'Scroll for steps, vendors, then your materials. Bank and mail count from when you last opened them.'
+end
+
+-- Character view -------------------------------------------------------------
+-- The profession each guide follows (crafting guides carry .prof).
+N.GUIDE_PROF={herb='Herbalism',mine='Mining',fish='Fishing',lock='Lockpicking'}
+function N:GuideProfession(key)
+ local g=self.CRAFT_GUIDES[key]
+ return g and g.prof or self.GUIDE_PROF[key]
+end
+-- A character's record for a profession, by name.
+function N:CharProfession(c,name)
+ if type(c)~='table' or not name then return nil end
+ local want=name:lower()
+ for _,p in pairs(c.professions or {}) do
+  if type(p)=='table' and type(p.name)=='string' and p.name:lower()==want then return p end
+ end
+end
+-- Characters for the dropdown: name, skill / cap, or not learned. Learned first.
+function N:GuideCharacters(key)
+ local prof=self:GuideProfession(key)
+ local preferred=self:PreferredRecords()
+ local out={}
+ for cid,c in pairs(self.db.characters or {}) do
+  if preferred[cid] and type(c)=='table' then
+   local p=prof and self:CharProfession(c,prof)
+   out[#out+1]={id=cid,name=c.name or '?',p=p}
+  end
+ end
+ table.sort(out,function(a,b)
+  if (a.p~=nil)~=(b.p~=nil) then return a.p~=nil end
+  if a.p and b.p and (a.p.skill or 0)~=(b.p.skill or 0) then return (a.p.skill or 0)>(b.p.skill or 0) end
+  return a.name<b.name end)
+ return out
+end
+
+local function range(text)
+ local a,b=tostring(text or ''):match('^(%d+)%-(%d+)')
+ return tonumber(a),tonumber(b)
+end
+-- Recipe names a step may use: "A, B or C x55 (or D x10)" -> {A,B,C,D}; first count.
+function N:StepCrafts(text)
+ local names,count={},tonumber(tostring(text):match(' x(%d+)'))
+ local text2=tostring(text):gsub('%(or ([^)]+)%)',function(alt) return ', '..alt end):gsub('%b()','')
+ for piece in (text2:gsub(' or ',',')..','):gmatch('([^,]+),') do
+  local name=piece:gsub(' x%d+.*$',''):gsub('^%s+',''):gsub('%s+$','')
+  if name~='' then names[#names+1]=name end
+ end
+ return names,count or 0
+end
+-- The character's recipe for a step: the first option they know, or any option seen.
+function N:StepRecipe(p,text)
+ if not p or type(p.recipes)~='table' then return nil end
+ local names=self:StepCrafts(text)
+ local byName={}
+ for _,r in pairs(p.recipes) do if type(r)=='table' and type(r.name)=='string' then byName[r.name:lower()]=r end end
+ local seen
+ for _,n in ipairs(names) do
+  local r=byName[n:lower()]
+  if r and r.learned~=false then return r,true end
+  seen=seen or r
+ end
+ return seen,false
+end
+local function recipeCount(p) local n=0; for _ in pairs(p and p.recipes or {}) do n=n+1 end; return n end
+-- {need,name} materials for n crafts of a recipe.
+function N:RecipeNeeds(r,n)
+ local list={}
+ for _,g in ipairs(r and r.reagents or {}) do
+  local name=g.name or (g.id and (self:FinderName(g.id) or self:ItemName(g.id)))
+  if name then list[#list+1]={(g.qty or 1)*n,name} end
+ end
+ return list
+end
+-- How many items in a list you're short of.
+function N:ShortCount(list)
+ local short=0
+ for _,e in ipairs(list) do if self:HaveCount(e[2])<e[1] then short=short+1 end end
+ return short
+end
+-- Who holds an item: "Kitty 4 (bags), Bank 4 (bank)".
+function N:HoldersText(name)
+ for _,item in ipairs(self:FindItems(name)) do
+  if item.name:lower()==tostring(name):lower() then return table.concat(self:ReportOwners(item.places),', ') end
+ end
+ return nil
+end
+
+-- Training checkpoints: index 1/2/3 of a guide's train list = Journeyman,
+-- Expert, Artisan; learn at 50/125/200, after which the cap is 150/225/300.
+local TIERS={{at=50,cap=150},{at=125,cap=225},{at=200,cap=300}}
+
+function N:GuideCharacterRows(key,cid,showDone)
+ local accent,muted,gold,green,warn,sub={.78,.6,1},{.6,.56,.68},{1,.82,0},{.4,1,.4},{1,.75,.3},{.85,.8,.95}
+ local c=self.db.characters[cid]
+ local prof=self:GuideProfession(key)
+ local p=self:CharProfession(c,prof)
+ local name=c and c.name or '?'
+ if not p then
+  local rows={{text=name..' has not learned '..tostring(prof)..'.',color=muted},{text='Pick "Whole guide" to read it, or another character.',color=muted}}
+  return rows,name..': '..tostring(prof)..' not learned (or not seen yet: log in on them once).',''
+ end
+ local skill,cap=tonumber(p.skill) or 0,tonumber(p.max) or 0
+ local g=self.CRAFT_GUIDES[key]
+ -- One ordered list of steps and checkpoints.
+ local items={}
+ if g then
+  for i,s in ipairs(g.steps) do local a,b=range(s[1]); items[#items+1]={kind='step',a=a or 0,b=b or 0,s=s,order=(a or 0)+i/1000} end
+  for i,t in ipairs(g.train) do
+   local tier=TIERS[i]
+   if tier then
+    -- Placed before the step in which you reach it.
+    local at=tier.at
+    for _,it in ipairs(items) do if it.kind=='step' and it.b>tier.at then at=it.a-0.5; break end end
+    items[#items+1]={kind='train',tier=tier,t=t,order=at}
+   end
+  end
+ else
+  local gd=self.GUIDES[key]
+  local last
+  for i,l in ipairs(gd and gd.lines or {}) do
+   local a,b=range(l[2])
+   local at=tonumber(tostring(l[2]):match('^(%d+)[%s:(]'))
+   if a and l[1]=='h' then last={kind='step',a=a,b=b,s={l[2]:match('^[%d%-]+:%s*(.*)$') and (a..'-'..b) or l[2],l[2]:match('^[%d%-]+:%s*(.*)$') or l[2]},notes={},order=a+i/1000}; items[#items+1]=last
+   elseif at and l[1]=='h' then items[#items+1]={kind='mark',at=at,text=l[2],order=at-0.5+i/1000}; last=nil
+   elseif last then last.notes[#last.notes+1]=l[2]
+   else items[#items+1]={kind='note',text=l[2],order=-1+i/1000} end
+  end
+ end
+ table.sort(items,function(x,y) return x.order<y.order end)
+ local steps=0;local curIndex
+ for _,it in ipairs(items) do if it.kind=='step' then steps=steps+1; if not curIndex and skill<it.b then curIndex=steps end end end
+ local rows={}
+ local doneRows,doneCount,firstDone,lastDone={},0,nil,nil
+ local n=0;local past=true
+ local scanned=recipeCount(p)>0
+ local flushed=false
+ local function flushDone()
+  if flushed then return end
+  flushed=true
+  if doneCount>0 then
+   rows[#rows+1]={text=(showDone and '- ' or '+ ')..doneCount..' step'..(doneCount==1 and '' or 's')..' done ('..firstDone..'-'..lastDone..')'..(showDone and '  click to hide' or '  click to show'),color=green,toggleDone=true}
+   if showDone then for _,r in ipairs(doneRows) do rows[#rows+1]=r end end
+  end
+ end
+ for _,it in ipairs(items) do
+  if it.kind=='step' then
+   n=n+1
+   local s=it.s
+   local done=skill>=it.b
+   if done and past then
+    doneCount=doneCount+1;firstDone=firstDone or it.a;lastDone=it.b
+    doneRows[#doneRows+1]={text='   |cff66dd66done|r  '..s[1]..'  '..s[2],color=muted}
+   else
+    if past then past=false; flushDone() end
+    local _,count=self:StepCrafts(s[2])
+    if n==curIndex then
+     local more=count
+     if it.b>it.a and skill>=it.a then more=math.ceil(count*(it.b-skill)/(it.b-it.a)) end
+     local what=g and ('|cffffd200NOW|r  '..s[1]..'  '..s[2]..(count>0 and ('  - about '..more..' more') or '')) or ('|cffffd200NOW|r  '..s[1]..': '..s[2])
+     rows[#rows+1]={text=what,color={1,1,1},current=true,itemName=s[2]:match('^(.-) x%d')}
+     if skill<it.a then rows[#rows+1]={text='      Your skill is '..skill..'; this step starts at '..it.a..'.',color=warn} end
+     if g then
+      local r,known=self:StepRecipe(p,s[2])
+      if r and known then
+       local list=self:RecipeNeeds(r,more)
+       local lines=self:NeedLines(list)
+       for i,l in ipairs(lines) do
+        rows[#rows+1]={text='      '..l,itemName=list[i][2]}
+        local who=self:HoldersText(list[i][2])
+        if who and who~='' then rows[#rows+1]={text='         '..who,color=muted} end
+       end
+       if #list==0 then rows[#rows+1]={text='      No materials recorded for '..r.name..'.',color=muted} end
+      elseif r then rows[#rows+1]={text='      Not learned yet: '..r.name..'.',color=warn}
+      elseif scanned then rows[#rows+1]={text='      Not learned yet (see the note below).',color=warn}
+      else rows[#rows+1]={text='      Open '..prof..' on '..name..' once to load the materials.',color=muted} end
+      if s[3] then rows[#rows+1]={text='      '..s[3],color=sub} end
+     else
+      for _,t in ipairs(it.notes or {}) do rows[#rows+1]={text='      '..t,color=sub} end
+     end
+    else
+     local tag=''
+     if g then
+      local r,known=self:StepRecipe(p,s[2])
+      if r and known then
+       local short=self:ShortCount(self:RecipeNeeds(r,count))
+       tag=short==0 and '  |cff66dd66mats ready|r' or ('  |cffffc040short '..short..' item'..(short==1 and '' or 's')..'|r')
+      elseif scanned then tag='  |cff9a8fb0not learned|r' end
+     end
+     rows[#rows+1]={text='   '..s[1]..'  '..s[2]..tag,itemName=g and s[2]:match('^(.-) x%d') or nil}
+    end
+   end
+  elseif it.kind=='train' then
+   local learned=cap>=it.tier.cap
+   local due=not learned and skill>=it.tier.at
+   if not (learned and past) then
+    flushDone()
+    local state=learned and '|cff66dd66learned|r' or due and '|cffffc040train now|r' or ('at '..it.tier.at)
+    rows[#rows+1]={text=(due and '|cffffc040>|r ' or '   ')..'Train '..it.t[1]..'  '..state,color=due and warn or gold}
+    rows[#rows+1]={text='      '..it.t[2],color=sub}
+   end
+  elseif it.kind=='mark' then
+   if not (skill>=it.at and past) then flushDone(); rows[#rows+1]={text='   '..it.text,color=skill>=it.at and muted or gold} end
+  elseif it.kind=='note' then
+   rows[#rows+1]={text=it.text,color=muted}
+  end
+ end
+ flushDone()
+ if past and doneCount>0 then
+  rows[#rows+1]={text='All '..doneCount..' steps done.',color=green}
+ end
+ if g then
+  rows[#rows+1]={text='Where to buy (Horde)',color=accent}
+  for _,sh in ipairs(g.shop) do rows[#rows+1]={text='   '..sh[1]..': |cffd8d0e0'..sh[2]..'|r',color=gold} end
+ end
+ local info=('%s: %s %d / %d'):format(name,prof,skill,cap>0 and cap or 300)
+ if curIndex then info=info..('  -  step %d of %d'):format(curIndex,steps) end
+ if g and not scanned then info=info..'\nOpen '..prof..' on '..name..' once so Nexus knows the recipes.' end
+ return rows,info,'Skill updates on that character; materials update from bags (bank and mail when opened).',skill/300
 end

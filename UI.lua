@@ -177,12 +177,26 @@ function N:CreateUI()
  -- Guides page: pick a guide; trainers, steps, vendors and materials below.
  local gp=u.pages.Guides
  u.guideKey=N.db.settings.guide
- u.guidePick=button(gp,'Pick a guide',14,0,300,function()
+ u.guideChar=N.db.settings.guideChar
+ u.guidePick=button(gp,'Pick a guide',14,0,230,function()
   if N.menu and N.menu:IsShown() then return N.menu:Hide() end
   local choices={}
   for _,g in ipairs(N.GUIDE_LIST or {}) do choices[#choices+1]={label=g.label,value=g.key} end
   N:Choice(u.guidePick,choices,function(v) u.guideKey=v; N.db.settings.guide=v; u.offset=0 end)
  end)
+ -- Whose progress to show: "Whole guide" or one of your characters.
+ u.charPick=button(gp,'Whole guide',250,0,216,function()
+  if N.menu and N.menu:IsShown() then return N.menu:Hide() end
+  local choices={{label='Whole guide',value=false}}
+  for _,ch in ipairs(N:GuideCharacters(u.guideKey)) do
+   local tag=ch.p and ((ch.p.skill or 0)..' / '..(ch.p.max or 0)) or 'not learned'
+   choices[#choices+1]={label=ch.name..'  ('..tag..')',value=ch.id}
+  end
+  N:Choice(u.charPick,choices,function(v) u.guideChar=v or nil; N.db.settings.guideChar=u.guideChar; u.offset=0 end)
+ end)
+ -- Progress bar under the two buttons.
+ u.guideBarBg=gp:CreateTexture(nil,'ARTWORK'); u.guideBarBg:SetPoint('TOPLEFT',14,-28); u.guideBarBg:SetSize(W-28,4); u.guideBarBg:SetColorTexture(.2,.15,.28,1)
+ u.guideBar=gp:CreateTexture(nil,'OVERLAY'); u.guideBar:SetPoint('TOPLEFT',14,-28); u.guideBar:SetSize(1,4); u.guideBar:SetColorTexture(.6,.35,1,1)
  u.guideInfo=label(gp,'',14,-36,'GameFontHighlight'); u.guideInfo:SetWidth(W-28)
  -- Info text sits between the controls and the list: cap its lines so it
  -- never runs over the first rows.
@@ -251,9 +265,16 @@ function N:RenderGuides(u)
  local key=u.guideKey
  local known=false
  for _,g in ipairs(self.GUIDE_LIST or {}) do if g.key==key then known=g end end
+ local function bar(frac)
+  local show=frac~=nil
+  u.guideBar:SetShown(show); u.guideBarBg:SetShown(show)
+  if show then u.guideBar:SetWidth(math.max(1,(W-28)*math.min(1,math.max(0,frac)))) end
+ end
+ local hasProf=known and self:GuideProfession(key)~=nil
+ u.charPick:SetShown(hasProf and true or false)
  if not known then
-  u.guidePick:SetText('Pick a guide')
-  u.guideInfo:SetText('Leveling guides for Horde: trainers, what to craft at each skill, where to buy supplies and recipes, and your materials (have / need).')
+  u.guidePick:SetText('Pick a guide'); bar(nil)
+  u.guideInfo:SetText('Leveling guides for Horde: trainers, what to craft at each skill, where to buy supplies and recipes. Pick a character to see where they are.')
   u.footer:SetText('Click a guide, or use the button above.')
   local rows={}
   for _,g in ipairs(self.GUIDE_LIST or {}) do
@@ -262,7 +283,21 @@ function N:RenderGuides(u)
   return rows
  end
  u.guidePick:SetText(known.label)
- local rows,info,foot=self:GuideTabRows(key)
+ local cid=hasProf and u.guideChar
+ if cid and not self.db.characters[cid] then cid=nil; u.guideChar=nil; self.db.settings.guideChar=nil end
+ local rows,info,foot,frac
+ if cid then
+  u.charPick:SetText(self.db.characters[cid].name or '?')
+  rows,info,foot,frac=self:GuideCharacterRows(key,cid,u.showDone)
+  for _,r in ipairs(rows) do
+   if r.toggleDone then r.click=function() u.showDone=not u.showDone end end
+   if r.current and not r.color then r.color=COLORS.white end
+  end
+  bar(frac or 0)
+ else
+  u.charPick:SetText('Whole guide'); bar(nil)
+  rows,info,foot=self:GuideTabRows(key)
+ end
  u.guideInfo:SetText(info or ''); u.footer:SetText(foot or '')
  return rows
 end
@@ -585,6 +620,8 @@ function N:Render()
   local r=rows[u.offset+i]; b.data=r; b:SetShown(r~=nil)
   if r then
    b.text:SetText(r.text)
+   -- The step you're on gets a gold band; other rows keep the striped look.
+   if r.current then b.bg:SetColorTexture(.32,.22,.04,.95) else b.bg:SetColorTexture(.1,.07,.15,i%2==0 and .85 or .45) end
    local c=r.color or COLORS.white; b.text:SetTextColor(c[1],c[2],c[3])
    local icon=not r.noIcon and (r.icon or (r.item and self:InventoryIcon(r.item))) or nil
    b.icon:SetTexture(icon); b.icon:SetShown(icon~=nil)
