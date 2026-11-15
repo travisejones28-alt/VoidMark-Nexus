@@ -380,7 +380,7 @@ test('Herb finder points to the nearest herb, skips spots you passed, toggles on
  N.Position=function() return 1413,px,py end
  N.MapSize=function() return 1000,1000 end
  N.herbVisited={}
- N.herbFinderCache={map=1413,at=N:Now(),spots={
+ N.herbFinderCache={map=1413,kind='herb',at=N:Now(),spots={
   {x=0.52,y=0.5,name='Peacebloom',key='a'},{x=0.5,y=0.45,name='Silverleaf',key='b'},{x=0.9,y=0.9,name='Earthroot',key='c'}}}
  local s,d=N:HerbFinderTarget();eq(s.name,'Peacebloom');assert(math.abs(d-20)<0.01,d)
  -- Walk onto Peacebloom: it's skipped and the arrow moves to Silverleaf.
@@ -389,7 +389,14 @@ test('Herb finder points to the nearest herb, skips spots you passed, toggles on
  -- Toggle.
  eq(N:HerbFinderOn(),false)
  N:SetHerbFinder(true);assert(N:HerbFinderOn() and N.herbArrow:IsShown())
+ N.herbFinderCache={map=1413,kind='herb',at=N:Now(),spots={{x=0.52,y=0.5,name='Peacebloom',key='a'},{x=0.5,y=0.45,name='Silverleaf',key='b'}}}
  N:UpdateHerbFinder();eq(N.herbArrow.name:GetText(),'Silverleaf');assert(N.herbArrow.dist:GetText():find('yd',1,true))
  N:SetHerbFinder(false);assert(not N:HerbFinderOn() and not N.herbArrow:IsShown())
+ -- Gather tab dropdown: Off / Herbs / Ore / Both; off by default.
+ eq(N:FinderKind(),nil)
+ N:SetFinder('ore');eq(N:FinderKind(),'ore');assert(N.herbArrow:IsShown())
+ N:Show('Gather');N:Render();eq(N.ui.finder:GetText(),'Finder: Ore')
+ N:SetFinder('bogus');eq(N:FinderKind(),nil);assert(not N.herbArrow:IsShown())
+ N:Render();eq(N.ui.finder:GetText(),'Finder: Off')
  N.Position,N.MapSize=oPos,oSize;N.herbFinderCache=nil;N.herbVisited={}
 end)

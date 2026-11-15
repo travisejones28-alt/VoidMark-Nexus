@@ -1,9 +1,9 @@
 local _, N = ...
--- Herb finder: a small arrow that points to the nearest herb spot you can pick
--- (your Herbalism skill), with its name and distance. Spots come from Nexus's
+-- Finder: a small arrow that points to the nearest herb or ore spot you can
+-- gather (your Herbalism / Mining skill), with its name and distance. Spots come from Nexus's
 -- spawn data and the herbs you've picked. Addons can't see whether a herb is up
 -- right now, so a spot you've walked past (within 15 yards) is skipped for
--- 5 minutes and the arrow moves on. Toggle: Settings tab.
+-- 5 minutes and the arrow moves on. Off by default; the Finder dropdown on the Gather tab turns it on.
 
 local VISIT_YARDS = 15
 local SKIP_SECONDS = 300
@@ -18,20 +18,29 @@ local function angle(y, x)
 end
 local function delta(a, b) return (b - a + math.pi) % (2 * math.pi) - math.pi end
 
-function N:HerbFinderOn() return self.db and self.db.settings and self.db.settings.herbFinder == true end
+-- 'herb', 'ore', 'all', or nil (off, the default).
+function N:FinderKind()
+ local s = self.db and self.db.settings
+ if not s then return nil end
+ if s.finderKind == 'herb' or s.finderKind == 'ore' or s.finderKind == 'all' then return s.finderKind end
+ return nil
+end
+function N:HerbFinderOn() return self:FinderKind() ~= nil end
 
--- Herb spots on this map you have the skill to pick (cached for 30 seconds).
+-- Spots on this map you have the skill to gather (cached for 30 seconds).
 function N:HerbFinderSpots(map)
+ local kind = self:FinderKind() or 'herb'
  local c = self.herbFinderCache
- if c and c.map == map and self:Now() - c.at < LIST_SECONDS then return c.spots end
- local skill = (self:GatheringSkills().herb or {}).skill
+ if c and c.map == map and c.kind == kind and self:Now() - c.at < LIST_SECONDS then return c.spots end
+ local skills = self:GatheringSkills()
  local spots = {}
- for _, n in ipairs(self:ZoneNodes(map, 'herb', '') or {}) do
+ for _, n in ipairs(self:ZoneNodes(map, kind, '') or {}) do
+  local skill = (skills[n.kind] or {}).skill
   if not skill or not self:Finite(n.skill, 0, 1000) or n.skill <= skill then
    spots[#spots + 1] = { x = n.x, y = n.y, name = n.name, key = map .. ':' .. math.floor(n.x * 2000 + .5) .. ':' .. math.floor(n.y * 2000 + .5) }
   end
  end
- self.herbFinderCache = { map = map, at = self:Now(), spots = spots }
+ self.herbFinderCache = { map = map, kind = kind, at = self:Now(), spots = spots }
  return spots
 end
 
@@ -115,7 +124,7 @@ function N:UpdateHerbFinder()
  local spot, d, dx, dy = self:HerbFinderTarget()
  if not spot then
   f.bearing = nil; f.texture:SetAlpha(.3)
-  f.name:SetText('No herbs here'); f.dist:SetText('')
+  f.name:SetText(({ ore = 'No ore here', all = 'Nothing to gather here' })[self:FinderKind()] or 'No herbs here'); f.dist:SetText('')
   return
  end
  f.texture:SetAlpha(1)
@@ -124,15 +133,23 @@ function N:UpdateHerbFinder()
  f.dist:SetText(math.floor(d + .5) .. ' yd')
 end
 
-function N:SetHerbFinder(on)
- self.db.settings.herbFinder = on and true or false
- if on then
-  local f = self:HerbFinderFrame(); f.refresh = 0; f:Show()
+function N:SetFinder(kind)
+ if kind ~= 'herb' and kind ~= 'ore' and kind ~= 'all' then kind = nil end
+ self.db.settings.finderKind = kind
+ self.herbFinderCache = nil
+ self.dirty = true
+ if kind then
+  local f = self:HerbFinderFrame(); f.refresh = 0
+  f.texture:SetVertexColor(kind == 'ore' and 1 or .45, kind == 'ore' and .8 or 1, kind == 'ore' and .4 or .45)
+  f.name:SetTextColor(kind == 'ore' and 1 or .55, kind == 'ore' and .82 or 1, kind == 'ore' and .45 or .55)
+  f:Show()
  elseif self.herbArrow then
   self.herbArrow:Hide()
  end
 end
-
+function N:SetHerbFinder(on)
+ self:SetFinder(on and 'herb' or nil)
+end
 -- Picking a herb skips that spot too (you may gather from a little way off).
 N:On('LOOT_CLOSED', function()
  if not N:HerbFinderOn() then return end
@@ -145,4 +162,4 @@ N:On('LOOT_CLOSED', function()
   if math.sqrt(((s.x - x) * w) ^ 2 + ((s.y - y) * h) ^ 2) <= 25 then N.herbVisited[s.key] = N:Now() end
  end
 end)
-N:On('PLAYER_LOGIN', function() if N:HerbFinderOn() then N:SetHerbFinder(true) end end)
+N:On('PLAYER_LOGIN', function() if N:FinderKind() then N:SetFinder(N:FinderKind()) end end)
