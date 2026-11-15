@@ -160,6 +160,7 @@ PASS Long rows wrap onto extra rows instead of being cut off
 PASS Guides tab: list of guides, then the picked one; long lines wrap
 PASS Guides: routes render, camp items show have/need, crates you can fill
 PASS Guides: pick a character and see where they are (Kitty, Leatherworking 50 of 300)
+PASS Wrapping keeps a gold amount together
 PASS Future timestamps (wrong PC clock) are pulled back to now instead of blocking sync
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
@@ -174,4 +175,4 @@ PASS A character saved twice (import + old copy) is counted once, newest copy wi
 PASS Gold: read on change, shown per character with a total, synced and exported
 PASS Gold travels with the bank sync
 PASS Characters: old first-name record joins its character by GUID; duplicates hidden; small gold amounts
-PASS: 176 tests; Lua 5.1 / standard interpreter
+PASS: 177 tests; Lua 5.1 / standard interpreter

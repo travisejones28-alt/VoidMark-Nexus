@@ -324,7 +324,15 @@ function N:WrapRows(rows,width)
    local indent=text:match('^(%s*)')
    local cont=indent..'    '
    local lines,cur,open,active={}, '',nil,nil
-   for word in text:sub(#indent+1):gmatch('%S+') do
+   -- Gold amounts ("~4g 88s 16c") stay together on one line.
+   local words={}
+   for w in text:sub(#indent+1):gmatch('%S+') do
+    local plainW=plain(w)
+    local prev=words[#words]
+    if prev and plainW:match('^%d+[sc]%p*$') and plain(prev):match('%d+[gs]$') then words[#words]=prev..' '..w
+    else words[#words+1]=w end
+   end
+   for _,word in ipairs(words) do
     local prefix=(#lines==0 and indent or cont)..(open or '')
     if cur~='' and self:TextWidth(prefix..cur..' '..word)>width then
      lines[#lines+1]=prefix..cur..(active and '|r' or '')

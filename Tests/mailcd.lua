@@ -364,3 +364,12 @@ test('Guides: pick a character and see where they are (Kitty, Leatherworking 50 
  u.guideKey=nil;u.guideChar=nil;N.db.settings.guide=nil;N.db.settings.guideChar=nil
  me.bags,me.professions,me.name=bags,profs,nm;N.db.characters,GetItemInfo=saved,sg
 end)
+
+test('Wrapping keeps a gold amount together',function()
+ local row={text='Heavy Leather x226: Kitty 205 (bags), Soulreaver 21 (bags), Bankalt 40 (bank)  ~4g 88s 16c'}
+ local out=N:WrapRows({row},300)
+ assert(#out>=2)
+ for _,r in ipairs(out) do assert(not r.text:match('^%s*16c'),'copper split from gold: '..r.text) end
+ local joined={};for _,r in ipairs(out) do joined[#joined+1]=r.text end
+ assert(table.concat(joined,' '):find('~4g 88s 16c',1,true),'gold amount broken across lines')
+end)
