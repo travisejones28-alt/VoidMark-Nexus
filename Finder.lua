@@ -265,7 +265,10 @@ N.NEED_PRESETS.cook={name='Cooking',steps={
  {'1-225',{{55,'Raw Brilliant Smallfish','Raw Slitherskin Mackerel'},{55,'Raw Longjaw Mud Snapper','Raw Rainbow Fin Albacore'},
   {55,'Raw Bristle Whisker Catfish'},{30,'Tangy Clam Meat','Raptor Egg'},{55,'Raptor Flesh','Raw Mithril Head Trout'},
   {85,'Hot Spices'}}},
- {'225-300',{{12,'Giant Egg'},{10,'Zesty Clam Meat'},{20,'Alterac Swiss'},{140,'Raw Spotted Yellowtail','Raw Redgill'}}}}}
+ {'225-300',{{12,'Giant Egg'},{10,'Zesty Clam Meat'},{20,'Alterac Swiss'},{80,'Raw Spotted Yellowtail','Raw Redgill'},{35,'Raw Sunscale Salmon'}}}}}
+-- 225-300 note: Spotted Yellowtail / Filet of Redgill turn gray at 275 (classic
+-- recipe colors), so the guide's 140 can't reach 300: ~80 to 275, then ~35
+-- Poached Sunscale Salmon (recipe from Gikkix, Tanaris).
 N.NEED_PRESETS.cooking=N.NEED_PRESETS.cook
 -- Item ID for a name: your items, names Nexus saved, then Market's scan.
 function N:ItemIDByName(name)
