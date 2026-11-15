@@ -146,11 +146,6 @@ function N:CreateUI()
  local g=u.pages.Gather
  label(g,'Gather',14,-6,'GameFontNormal')
  u.what=button(g,'Herbs',70,0,150,function() N:ChooseResource(u.what) end)
- -- Finder arrow: off, or point to the nearest herb / ore / either.
- u.finder=button(g,'Finder: Off',344,0,122,function()
-  local choices={{label='Finder: Off',value='off'},{label='Finder: Herbs',value='herb'},{label='Finder: Ore',value='ore'},{label='Finder: Herbs and ore',value='all'}}
-  N:Choice(u.finder,choices,function(v) N:SetFinder(v) end)
- end)
  u.travel=button(g,'Foot',226,0,112,function()
   local options={}; for i,m in ipairs(N.travelModes) do if m[1]~='Custom' then options[#options+1]={label=m[1],value=i} end end
   N:Choice(u.travel,options,function(i) local m=N.travelModes[i]; local s=N.db.settings; s.travel,s.speed,s.mountDelay=m[1],m[2],m[3] end)
@@ -424,7 +419,6 @@ local function colorRow(row,c) row.color=c; return row end
 function N:RenderGather(u)
  local s=self.db.settings
  u.what:SetText(self:ResourceLabel()); u.travel:SetText(s.travel or 'Foot')
- if u.finder then u.finder:SetText(({herb='Finder: Herbs',ore='Finder: Ore',all='Finder: Both'})[self:FinderKind()] or 'Finder: Off') end
  u.start:SetText(self.activeRoute and 'Stop route' or 'Start route'); u.next:SetShown(self.activeRoute~=nil)
  local zmap,zhere,zcur=self:RouteZone()
  local zlabel=zhere and 'Current' or self:RouteZoneName(zmap)
