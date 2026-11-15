@@ -1,16 +1,16 @@
 local _, N = ...
 -- Finder: a small arrow that points to a herb or ore node you have actually
 -- seen up, with its name and distance. Addons can't read the minimap's
--- tracking dots directly, so a node counts as seen when its name shows in
--- the game's tooltip: mouse over the dot on the minimap (or the node in the
--- world). The arrow then points there until you gather it, walk up to it, or
--- 10 minutes pass. With nothing seen it stays dim and doesn't point.
+-- tracking dots directly, so a node counts as seen when you mouse over its
+-- dot on the minimap and the game's tooltip names it. The arrow points at
+-- the dot you hovered last until you gather it, walk up to it, or 10 minutes
+-- pass. With nothing seen it stays dim and doesn't point.
 -- Off by default; the Finder dropdown on the Gather tab turns it on.
 
 local VISIT_YARDS = 15
 local SEEN_SECONDS = 600
 local LIST_SECONDS = 30
-local SNAP_YARDS = 40
+local SNAP_YARDS = 15
 
 local function angle(y, x)
  if math.atan2 then return math.atan2(y, x) end
@@ -77,8 +77,9 @@ function N:HerbFinderSeen(map, name, x, y, range)
  best = best or { x = x, y = y, name = name, key = map .. ':seen:' .. math.floor(x * 2000 + .5) .. ':' .. math.floor(y * 2000 + .5) }
  self.herbSeen = self.herbSeen or {}
  local old = self.herbSeen[best.key]
- if old then old.at = self:Now(); return old end
- local e = { key = best.key, map = map, x = best.x, y = best.y, name = best.name or name, at = self:Now() }
+ self.herbSeenOrder = (self.herbSeenOrder or 0) + 1
+ if old then old.at = self:Now(); old.order = self.herbSeenOrder; return old end
+ local e = { key = best.key, map = map, x = best.x, y = best.y, name = best.name or name, at = self:Now(), order = self.herbSeenOrder }
  self.herbSeen[best.key] = e
  return e
 end
@@ -90,7 +91,7 @@ local function tooltipLines()
   local fs = _G['GameTooltipTextLeft' .. i]
   local t = fs and fs.GetText and fs:GetText()
   if type(t) == 'string' then
-   t = t:gsub('|c%x%x%x%x%x%x%x%x', ''):gsub('|r', ''):gsub('|T.-|t', '')
+   t = t:gsub('|c%x%x%x%x%x%x%x%x', ''):gsub('|r', ''):gsub('|T.-|t', ''):gsub('|A.-|a', '')
    for line in (t .. '\n'):gmatch('([^\n]*)\n') do
     line = line:match('^%s*(.-)%s*$')
     if line ~= '' then out[#out + 1] = line end
@@ -100,8 +101,9 @@ local function tooltipLines()
  return out
 end
 
--- Read the game tooltip: the minimap's dot tooltip (names under the cursor)
--- or a node you are mousing over in the world.
+-- Read the minimap's dot tooltip: names under the cursor, placed where the
+-- cursor is. Only while the mouse is on the minimap, so a tooltip that lingers
+-- after you move off it can't mark a different herb.
 function N:HerbFinderScanTooltip()
  if not GameTooltip or not GameTooltip:IsShown() then return end
  local map, px, py = self:Position()
@@ -128,17 +130,13 @@ function N:HerbFinderScanTooltip()
   end
   for _, line in ipairs(tooltipLines()) do
    local name = names[line:lower()]
-   if name then self:HerbFinderSeen(map, name, mx, my, 250) end
+   if name and mx then self:HerbFinderSeen(map, name, mx, my) end
   end
- elseif not (UnitExists and UnitExists('mouseover')) then
-  local line = tooltipLines()[1]
-  local name = line and names[line:lower()]
-  if name then self:HerbFinderSeen(map, name, nil, nil, 60) end
  end
 end
 
--- Nearest node seen up: spot, distance, dx, dy (yards). Reaching one (within
--- 15 yards) or seen more than 10 minutes ago drops it.
+-- The node you hovered most recently: spot, distance, dx, dy (yards).
+-- Reaching one (within 15 yards) or seen more than 10 minutes ago drops it.
 function N:HerbFinderTarget()
  local map, x, y = self:Position()
  if not map then return nil end
@@ -152,7 +150,7 @@ function N:HerbFinderTarget()
    local dx, dy = (s.x - x) * w, (s.y - y) * h
    local d = math.sqrt(dx * dx + dy * dy)
    if d <= VISIT_YARDS then self.herbSeen[key] = nil
-   elseif not bestD or d < bestD then best, bestD, bdx, bdy = s, d, dx, dy end
+   elseif not best or (s.order or 0) > (best.order or 0) then best, bestD, bdx, bdy = s, d, dx, dy end
   end
  end
  return best, bestD, bdx, bdy

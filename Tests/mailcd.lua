@@ -405,6 +405,12 @@ test('Herb finder only points at a herb seen on the minimap, drops it when reach
  py=0.452;eq(N:HerbFinderTarget(),nil);eq(next(N.herbSeen),nil)
  -- Gathering near a seen herb clears it; old sightings expire.
  py=0.5;N:HerbFinderSeen(1413,'Peacebloom',0.52,0.5);assert(N:HerbFinderTarget())
+ -- The last one hovered wins, even if another seen herb is closer.
+ N:HerbFinderSeen(1413,'Earthroot',0.9,0.9);eq(N:HerbFinderTarget().name,'Earthroot')
+ N:HerbFinderSeen(1413,'Peacebloom',0.52,0.5);eq(N:HerbFinderTarget().name,'Peacebloom');N.herbSeen.c=nil
+ -- A tooltip left over after the mouse leaves the minimap marks nothing.
+ Minimap.IsMouseOver=function() return false end;GameTooltipTextLeft1={GetText=function() return 'Earthroot' end}
+ GameTooltip:Show();N:HerbFinderScanTooltip();eq(N.herbSeen.c,nil);Minimap.IsMouseOver=function() return true end
  local oAt=N.herbSeen.a.at;N.herbSeen.a.at=oAt-601;eq(N:HerbFinderTarget(),nil)
  -- Toggle and dim text when nothing seen.
  Minimap.IsMouseOver=function() return false end;GameTooltip:Hide()
