@@ -197,4 +197,16 @@ PASS 0.11 learning: best routes list ranks by results and runs one again
 PASS 0.11 value: herbs vs ore comparison builds a loop for each with gold/hr or unknown
 PASS 0.11 value: gold routes rank route options by gold/hr
 PASS 0.11 value: Gather page shows the loop record and best routes, shift-click opens Market
-PASS: 199 tests; Lua 5.1 / standard interpreter
+PASS 0.11 leveling: next step says what to craft now and how many your bags allow
+PASS 0.11 leveling: steps appear in the text plan; methods compare crafts and cost
+PASS 0.11 leveling: missing prices make totals unknown, never free
+PASS 0.11 leveling: shopping list says what to buy and what to collect from whom
+PASS 0.11 leveling: Professions page highlights the current step and lists methods
+PASS 0.11 skinning: a skin records place, beast, level and leather; session counts it
+PASS 0.11 skinning: loot from a non-creature after a skin cast is not counted
+PASS 0.11 skinning: level limit, zones in range and the guide page
+PASS 0.11 fishing: a catch from a pool records the pool; open water does not; bobber ignored
+PASS 0.11 fishing: named pools, pool loop, sessions with gold/hr and the guide rows
+PASS 0.11 fishing: pool markers draw on the world map and can be hidden
+PASS 0.11 wild data: a newer saved format is left untouched
+PASS: 211 tests; Lua 5.1 / standard interpreter

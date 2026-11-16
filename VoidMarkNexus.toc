@@ -39,5 +39,7 @@ Mail.lua
 Cooldowns.lua
 Tooltip.lua
 RouteLearning.lua
+LevelingPlus.lua
+WildGather.lua
 Boot.lua
 AutoInvite.lua
