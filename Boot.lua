@@ -89,7 +89,7 @@ end
 function N:ToggleMapFilterMenu(anchor)
  if not self.mapFilterMenu then
   local f=CreateFrame('Frame','VoidMarkNexusMapFilterMenu',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
-  f:SetSize(218,276)
+  f:SetSize(218,336)
   f:SetFrameStrata('FULLSCREEN_DIALOG')
   f:SetFrameLevel(60)
   f:SetClampedToScreen(true)
@@ -109,7 +109,7 @@ function N:ToggleMapFilterMenu(anchor)
   local close=CreateFrame('Button',nil,f,'UIPanelButtonTemplate')
   close:SetSize(24,22);close:SetPoint('TOPRIGHT',-8,-7);close:SetText('X')
   close:SetScript('OnClick',function() f:Hide() end)
-  local entries={{'nodesVisible','Show gathering nodes'},{'mapShowHerbs','Herbs'},{'mapShowOre','Ore'},{'mapShowOther','Other nodes'},{'routeVisible','Show routes'},{'mapButton','Button on world map'}}
+  local entries={{'nodesVisible','Show gathering nodes'},{'mapShowHerbs','Herbs'},{'mapShowOre','Ore'},{'mapShowOther','Other nodes'},{'mapShowPools','Fishing pools you found'},{'hideGray','Hide grey (no skill-ups)'},{'routeVisible','Show routes'},{'mapButton','Button on world map'}}
   f.checks={}
   for i,entry in ipairs(entries) do
    local key=entry[1]
@@ -131,7 +131,7 @@ function N:ToggleMapFilterMenu(anchor)
    f.checks[key]=cb
   end
   local size=f:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
-  size:SetPoint('TOPLEFT',12,-224)
+  size:SetPoint('TOPLEFT',12,-284)
   f.sizeLabel=size
   local function resize(delta)
    local s=N.db.settings
@@ -140,10 +140,10 @@ function N:ToggleMapFilterMenu(anchor)
    N:RefreshMap()
   end
   local smaller=CreateFrame('Button',nil,f,'UIPanelButtonTemplate')
-  smaller:SetSize(36,22);smaller:SetPoint('TOPLEFT',110,-219);smaller:SetText('-')
+  smaller:SetSize(36,22);smaller:SetPoint('TOPLEFT',110,-279);smaller:SetText('-')
   smaller:SetScript('OnClick',function() resize(-1) end)
   local larger=CreateFrame('Button',nil,f,'UIPanelButtonTemplate')
-  larger:SetSize(36,22);larger:SetPoint('TOPLEFT',152,-219);larger:SetText('+')
+  larger:SetSize(36,22);larger:SetPoint('TOPLEFT',152,-279);larger:SetText('+')
   larger:SetScript('OnClick',function() resize(1) end)
   local hint=f:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall')
   hint:SetPoint('BOTTOMLEFT',12,11);hint:SetText('Drag to move. /vmn mapcontrols')
@@ -152,7 +152,7 @@ function N:ToggleMapFilterMenu(anchor)
  end
  local f=self.mapFilterMenu
  if f:IsShown() then f:Hide();return end
- for key,cb in pairs(f.checks) do cb:SetChecked(self.db.settings[key]~=false) end
+ for key,cb in pairs(f.checks) do if key=='hideGray' then cb:SetChecked(self.db.settings[key]==true) else cb:SetChecked(self.db.settings[key]~=false) end end
  f.sizeLabel:SetText('Icon size: '..(tonumber(self.db.settings.mapIconSize) or 7))
  f:ClearAllPoints()
  f.anchoredToMap=anchor~=nil and anchor==self.mapControls

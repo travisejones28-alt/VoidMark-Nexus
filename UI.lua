@@ -62,6 +62,7 @@ function N:TextDialog(title,text,import)
 end
 -- Compact window: Gather | Professions | Characters | Guides | Settings.
 local W,H=480,560
+local MAX_W,MAX_H=1100,1000  -- 0.11: the window can be resized between W,H and these
 local TOP=176          -- list starts below each page's controls
 local ROW_H=24
 local pages={'Gather','Professions','Characters','Guides','Settings'}
@@ -103,7 +104,28 @@ function N:CreateUI()
  if type(position)=='table' then f:SetPoint('CENTER',UIParent,'CENTER',position[1],position[2]) else f:SetPoint('CENTER') end
  f:SetScale(self.db.settings.scale)
  f:SetScript('OnDragStart',function() f:StartMoving() end)
- f:SetScript('OnDragStop',function() f:StopMovingOrSizing(); local x,y=f:GetCenter(); local ux,uy=UIParent:GetCenter(); if x and ux then N.db.settings.position={x-ux,y-uy} end end)
+ local function savePlace() local x,y=f:GetCenter(); local ux,uy=UIParent:GetCenter(); if x and ux then N.db.settings.position={x-ux,y-uy} end end
+ f:SetScript('OnDragStop',function() f:StopMovingOrSizing(); savePlace() end)
+ -- 0.11: genuine resizing. Size is kept between sessions; scale still applies.
+ local size=self:WindowSize()
+ f:SetSize(size[1],size[2])
+ if f.SetResizable then f:SetResizable(true) end
+ if f.SetResizeBounds then f:SetResizeBounds(W,H,MAX_W,MAX_H)
+ else if f.SetMinResize then f:SetMinResize(W,H) end; if f.SetMaxResize then f:SetMaxResize(MAX_W,MAX_H) end end
+ local grip=CreateFrame('Button',nil,f); grip:SetSize(16,16); grip:SetPoint('BOTTOMRIGHT',-2,2)
+ if grip.SetNormalTexture then
+  grip:SetNormalTexture('Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up')
+  grip:SetHighlightTexture('Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight')
+  grip:SetPushedTexture('Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down')
+ end
+ grip:SetScript('OnMouseDown',function() if f.StartSizing then f:StartSizing('BOTTOMRIGHT') end end)
+ grip:SetScript('OnMouseUp',function()
+  f:StopMovingOrSizing()
+  local w,h=f:GetWidth(),f:GetHeight()
+  if N:Finite(w,W,MAX_W+1) and N:Finite(h,H,MAX_H+1) then N.db.settings.windowSize={math.floor(w+.5),math.floor(h+.5)} end
+  savePlace(); N:LayoutUI(); N.dirty=true
+ end)
+ f.grip=grip
  label(f,'VoidMark Nexus',14,-13,'GameFontNormalLarge')
  local close=button(f,'X',0,0,28,function() f:Hide(); if N.menu then N.menu:Hide() end end)
  close:ClearAllPoints(); close:SetPoint('TOPRIGHT',f,'TOPRIGHT',-8,-8)
@@ -242,7 +264,8 @@ function N:CreateUI()
  if u.measure.SetWordWrap then u.measure:SetWordWrap(false) end
  u.textWidth=W-64
  u.perPage=math.floor((H-TOP-40)/ROW_H)
- for i=1,u.perPage do
+ -- Enough rows for the tallest window; LayoutUI shows as many as fit.
+ for i=1,math.floor((MAX_H-TOP-40)/ROW_H) do
   local row=CreateFrame('Button',nil,u.list); row:SetSize(W-20,ROW_H-2); row:SetPoint('TOPLEFT',0,-(i-1)*ROW_H)
   row.bg=row:CreateTexture(nil,'BACKGROUND'); row.bg:SetAllPoints(); row.bg:SetColorTexture(.1,.07,.15,i%2==0 and .85 or .45)
   row.icon=row:CreateTexture(nil,'ARTWORK'); row.icon:SetSize(18,18); row.icon:SetPoint('LEFT',4,0)
@@ -256,6 +279,8 @@ function N:CreateUI()
  u.list:EnableMouseWheel(true)
  u.list:SetScript('OnMouseWheel',function(_,delta) u.offset=math.max(0,u.offset-delta*3); N.dirty=true end)
  u.footer=label(f,'',14,-(H-36),'GameFontDisable'); u.footer:SetWidth(W-28); if u.footer.SetMaxLines then u.footer:SetMaxLines(2) end
+ f:SetScript('OnSizeChanged',function() N:Guard('layout',function() N:LayoutUI() end); N.dirty=true end)
+ self:LayoutUI()
  local elapsed=0
  f:SetScript('OnUpdate',function(_,dt) elapsed=elapsed+dt; if elapsed>.3 then elapsed=0; if N.dirty then N:Guard('UI',function() N:Render() end) end end end)
  table.insert(UISpecialFrames,'VoidMarkNexusWindow')
@@ -269,7 +294,7 @@ function N:RenderGuides(u)
  local function bar(frac)
   local show=frac~=nil
   u.guideBar:SetShown(show); u.guideBarBg:SetShown(show)
-  if show then u.guideBar:SetWidth(math.max(1,(W-28)*math.min(1,math.max(0,frac)))) end
+  if show then u.guideBar:SetWidth(math.max(1,((u.width or W)-28)*math.min(1,math.max(0,frac)))) end
  end
  local hasProf=known and self:GuideProfession(key)~=nil
  u.charPick:SetShown(hasProf and true or false)
@@ -556,8 +581,12 @@ function N:RenderCharacters(u)
  local peers={}; for peer in pairs(self.db.sync and self.db.sync.peers or {}) do peers[#peers+1]=peer end
  if #peers==0 then lines[#lines+1]='Not paired. Type the other character\'s full name (e.g. Voidmark Bank) and press Pair. Do it on both accounts.'
  else
-  local names={}; for _,p in ipairs(peers) do names[#names+1]=(self.db.sync.peers[p] or p)..(self:SyncConnected(p) and ' (connected, auto-syncing)' or ' (waiting for them to log in)') end
-  lines[#lines+1]='Paired with: '..table.concat(names,', ')..'.'
+  local names={}
+  for _,p in ipairs(peers) do
+   local st=type(self.db.sync.status)=='table' and self.db.sync.status[p]
+   names[#names+1]=(self.db.sync.peers[p] or p)..' ('..(self.PeerState and self:PeerState(p) or '?')..(st and st.lastOk and ('; synced '..self:Ago(st.lastOk)) or '')..')'
+  end
+  lines[#lines+1]='Paired with: '..table.concat(names,', ')..'. /vmn sync for details.'
   local st=self.syncStats
   if st then local waiting=0; for _,q in pairs(self.syncOut or {}) do waiting=waiting+#q end
    lines[#lines+1]=string.format('Sent %d messages, %d waiting%s.',st.sent,waiting,st.failed>0 and (', '..st.failed..' failed') or '') end
@@ -575,7 +604,7 @@ function N:RenderCharacters(u)
   local c=self.db.characters[id]; local off=self.db.excluded[id] or not preferred[id]
   if not preferred[id] then hidden=hidden+1 else
   local tag=id==self.characterID and ' (you)' or c.synced and ' (synced)' or c.imported and ' (imported)' or ''
-  rows[#rows+1]=colorRow({text=c.name..tag..'   '..(c.money and self:Gold(c.money) or 'gold ?')..'   bank '..self:Ago(c.bankAt)..(not preferred[id] and '   older copy, ignored' or off and '   not counted' or ''),
+  rows[#rows+1]=colorRow({text=c.name..tag..'   '..(c.money and self:Gold(c.money) or 'gold ?')..'   bank '..self:Ago(c.bankAt)..((c.synced and c.bagsAt and self:Now()-c.bagsAt>self.db.settings.inventoryAge) and '   STALE' or '')..(not preferred[id] and '   older copy, ignored' or off and '   not counted' or ''),
    click=function() if IsShiftKeyDown and IsShiftKeyDown() then self:ForgetCharacter(id) else self.db.excluded[id]=not self.db.excluded[id] or nil end end,title=c.name,
    tip=function(tt) tt:AddLine(c.realm..' / '..c.faction,1,1,1)
     tt:AddLine('Gold '..(c.money and self:Gold(c.money)..' (seen '..self:Ago(c.moneyAt)..')' or 'not seen yet: log in once'),1,.82,0)
@@ -626,7 +655,7 @@ function N:Render()
  rows=self:WrapRows(rows,u.textWidth)
  u.offset=math.max(0,math.min(u.offset or 0,#rows-u.perPage))
  for i,b in ipairs(u.rows) do
-  local r=rows[u.offset+i]; b.data=r; b:SetShown(r~=nil)
+  local r=i<=u.perPage and rows[u.offset+i] or nil; b.data=r; b:SetShown(r~=nil)
   if r then
    b.text:SetText(r.text)
    -- The step you're on gets a gold band; other rows keep the striped look.
@@ -638,6 +667,40 @@ function N:Render()
  end
  u.rowCount=#rows
  self.renderStocks=nil
+end
+
+-- 0.11 resizable window: saved size within bounds, or the original size.
+function N:WindowSize()
+ local s=self.db.settings.windowSize
+ if type(s)=='table' and self:Finite(s[1],W,MAX_W) and self:Finite(s[2],H,MAX_H) then return s end
+ self.db.settings.windowSize=nil
+ return {W,H}
+end
+-- Fits pages, list rows, info text and footer to the current window size.
+function N:LayoutUI()
+ local u=self.ui;if not u then return end
+ local f=u.frame
+ local w,h=f:GetWidth(),f:GetHeight()
+ if not self:Finite(w,1,1e5) or not self:Finite(h,1,1e5) then local s=self:WindowSize();w,h=s[1],s[2] end
+ w,h=math.max(W,math.min(MAX_W,w)),math.max(H,math.min(MAX_H,h))
+ u.width,u.height=w,h
+ for name,p in pairs(u.pages) do p:SetWidth(w);if name=='Settings' then p:SetHeight(h-110) end end
+ for _,l in ipairs({u.gatherInfo,u.profInfo,u.syncInfo,u.guideInfo}) do if l then l:SetWidth(w-28) end end
+ if u.guideBarBg then u.guideBarBg:SetWidth(w-28) end
+ u.list:SetSize(w-20,h-TOP-40)
+ u.textWidth=w-64
+ u.perPage=math.max(1,math.min(#u.rows,math.floor((h-TOP-40)/ROW_H)))
+ for i,row in ipairs(u.rows) do
+  row:SetWidth(w-20);row.text:SetWidth(w-60)
+  if i>u.perPage then row:Hide() end
+ end
+ u.footer:ClearAllPoints();u.footer:SetPoint('TOPLEFT',f,'TOPLEFT',14,-(h-36));u.footer:SetWidth(w-48)
+end
+function N:ResetWindow()
+ self.db.settings.windowSize=nil;self.db.settings.position=nil;self.db.settings.scale=1
+ local u=self.ui
+ if u then u.frame:ClearAllPoints();u.frame:SetPoint('CENTER');u.frame:SetSize(W,H);u.frame:SetScale(1);self:LayoutUI() end
+ self.dirty=true
 end
 
 -- Prefer the client's direct item-icon APIs, which work before item cache is populated.

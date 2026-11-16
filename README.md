@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.5.0 beta
+# VoidMark Nexus 0.11.0 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -15,6 +15,16 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.11.0
+- **Terrain-aware loops.** When you have walked a zone (trail learning is on again; saved trails were kept) or marked obstacles (`/vmn block 90`), the loop is ordered by those trails: a corridor you walked replaces the straight line when it is not much longer (1.5x after one walk, 2.5x when walked repeatedly), and a marked obstacle is always walked around. The arrow follows the trail points of the leg you are on; the world map, minimap and preview draw walked legs **cyan** (verified) and everything else **purple** (estimated). Map artwork is never treated as collision. `/vmn terrain on|off|use|ignore|clear`.
+- **Every route learns separately.** Each distinct loop (same stops, any start or direction) records laps, stops visited, found and empty, items and quantities, skill gained, gathering versus travel time, nodes/hr and gold/hr, including the part of a lap you stopped after a minute. Options are ranked by an estimate pulled toward your real results (worth 3 laps against them), with a confidence label. `/vmn routes` compares your routes; `/vmn runroute N` runs one again; `/vmn routereset N|current|zone|all` clears learned performance without touching sessions, spots or other zones.
+- **Gold per hour from VoidMark Market.** Routes show estimated gold/hr (your loot on that loop, or before you run it, prices x your observed yield per node, at least 1). Missing prices make figures partial and are never counted as zero; stale, unverified and developing Market prices are flagged (Market's read-only `GetPriceInfo` status is used when present). Gold routes rank by gold/hr. `/vmn compare` (herbs vs ore here), `/vmn prices`, `/vmn market ITEM` (opens Market's search; nothing is bought, posted or cancelled). Shift-click a stop to open its resource in Market.
+- **Leveling while you play.** The step for your current skill is highlighted with crafts left and how many your bags allow; materials show who holds them; the four methods are compared side by side (click to switch); a shopping list says what to buy and what to collect from each character. `/vmn level PROFESSION [target]`, `/vmn levelshop`, `/vmn transfers` (for queued crafts).
+- **Skinning and fishing.** Learned from what you do: where you skinned (beast, level, leather), where you fished and caught, and fishing pools (from the loot source, or `/vmn pool NAME`). Sessions show skins or catches per hour, items/hr, gold/hr and skill gained. Guides gets a Skinning page (beast level you can skin, Classic level-range zones, your spots, leather held); the Fishing guide adds your data. `/vmn poolroute` loops through a zone's pools; pools show on the world map. Spots are where beasts or pools were, not guarantees.
+- **Window.** Drag the bottom-right corner to resize; size and position are kept (`/vmn resetwindow`). Pick several herbs/ore one by one, and hide grey resources (no skill-ups) from routes and the map (`/vmn grey`, or the map filter menu).
+- **Sync.** Newer data always wins: an older bag, bank, mail, gold or profession snapshot can no longer overwrite a newer one. `/vmn sync` shows the last successful sync, when the other character was last heard from, whether it looks offline or is not answering, stale inventory, waiting messages and refused older snapshots.
+- **Dashboard and notices.** `/vmn dash` opens a small farming dashboard (session time, items, skill gained, value, nodes/hr, gold/hr, route expected vs this lap, last 10 sessions). One chat line when a profession nears or reaches its rank cap, and once per route when stops need more skill than you have (`/vmn notify off`).
 
 ## What changed in 0.10.31
 - **Fishing guide expanded** (Guides > Fishing 1-300): zones by fishing skill (minimum / 100% catch), poles, lures and gear with their bonuses and how many you hold, rare fish and the pools they come from, and Forever extras (Find Fish, camp items, Fishing Extravaganza). Pick a character and each zone tier shows *100% catch*, *some get away* or the skill you still need.
@@ -68,6 +78,12 @@ Gathering routes, profession leveling and your items across both accounts, for W
 | `/vmn skillroute herb\|ore` | Skill-up loop for the current zone |
 | `/vmn pair NAME`, `/vmn sync` | Pair with the other account, sync status |
 | `/vmn price ITEM_ID GOLD` | Set your own price for an item |
+| `/vmn routes [zone]`, `/vmn runroute N`, `/vmn routereset N\|current\|zone\|all` | Compare, rerun and reset learned routes |
+| `/vmn compare`, `/vmn prices`, `/vmn market ITEM` | Herbs vs ore gold/hr, resource prices, open in Market |
+| `/vmn terrain on\|off\|use\|ignore\|clear`, `/vmn block [yards]`, `/vmn clearblocks` | Learned trails and obstacle marks |
+| `/vmn level PROFESSION [target]`, `/vmn levelshop`, `/vmn transfers` | Leveling step, shopping list, what to mail |
+| `/vmn skinning`, `/vmn fishing`, `/vmn pool NAME`, `/vmn poolroute`, `/vmn pools on\|off` | Skinning and fishing |
+| `/vmn dash`, `/vmn notify on\|off`, `/vmn grey`, `/vmn resetwindow` | Dashboard, notices, grey filter, window |
 | `/vmn help`, `/vmn debug` | Command list, diagnostics |
 
 ## Install
@@ -77,6 +93,8 @@ Install the repository root as **VoidMarkNexus** (it directly contains `VoidMark
 ## Integration contract v1
 
 Nexus reads `VoidMarkMarketDB.schemaVersion == 1`, `economies[normalizedRealm .. '|' .. faction].market[itemID]`, unsuffixed records only, `fairValue`/`latest.median`, and `lastSeen`/`latest.at`. It does not mutate Market records or infer ages for missing timestamps. Unknown schemas fail closed. `VoidMarkNexus.integrationVersion == 1`; `:Price(itemID)` returns `unit`, `source`, `at`, `stale`, optional `confidence`. `:Shopping()` returns per-plan materials with allocations and missing quantities. This is a Nexus API, not an undocumented promise that Market implements a new API. Market source remains unchanged.
+
+0.11: when Market is loaded and exposes `VoidMarkMarket:GetPriceInfo(itemID)` with `apiVersion == 1` (Market 1.23+), Nexus reads its `status` and marks the price stale when it is not `current`; `cacheUntrusted`/`analysisIncomplete` mark it stale and `developingMarket` is shown. The price value itself still comes from the record above. `VoidMarkNexus.API` (version 1) gives other addons read-only copies: `GetSessionStats()`, `GetGatheringSkills()`, `GetBestRoutes(limit)`.
 
 ## Licensing
 

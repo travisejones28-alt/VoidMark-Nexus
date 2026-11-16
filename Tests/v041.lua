@@ -150,7 +150,7 @@ end)
 
 test('List scrolls with the mouse wheel and never past the end',function()
  N:Show('Recipes');N:Render()
- eq(#N.ui.rows,N.ui.perPage)
+ local shown=0; for _,b in ipairs(N.ui.rows) do if b:IsShown() then shown=shown+1 end end; assert(shown<=N.ui.perPage and #N.ui.rows>=N.ui.perPage)
  N.ui.list.scripts.OnMouseWheel(N.ui.list,-50);N:Render()
  assert(N.ui.offset<=math.max(0,N.ui.rowCount-N.ui.perPage))
  N.ui.list.scripts.OnMouseWheel(N.ui.list,50);N:Render();eq(N.ui.offset,0)

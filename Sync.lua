@@ -184,6 +184,7 @@ end
 function N:SyncHello(peer)
  if not self.db.sync.peers[peer] or not self:PeerMaybeOnline(peer) then return end
  local s=self:SyncSections();self.syncSections=s
+ self:SyncNote(peer,'hello')
  self:SendSync(peer,'H:'..self.db.account..':'..s.id.hash..':'..s.inv.hash..':'..s.prof.hash)
  self:SendSync(peer,'A:'..s.alts.hash)
 end
@@ -251,14 +252,34 @@ function N:ApplySync(peer,key,data)
   end
   state.record=pending
  end
+ -- 0.11: newer wins, per part. A delayed or replayed message can never put an
+ -- older bag, bank, mail, gold or profession snapshot over a newer one.
+ local function newer(incoming,current)
+  local a,b=tonumber(incoming),tonumber(current)
+  if not b then return true end
+  if not a then return false end
+  return a>=b
+ end
+ local older=0
  if key=='id' then
   for _,k in ipairs({'name','realm','faction','guid','account','at'}) do pending[k]=data[k] end
  elseif key=='inv' then
-  pending.bags,pending.bank,pending.bagsAt,pending.bankAt=data.bags or {},data.bank or {},data.bagsAt,data.bankAt
-  if data.money~=nil then pending.money,pending.moneyAt=data.money,data.moneyAt end
-  if data.mail~=nil then pending.mail,pending.mailAt=data.mail,data.mailAt end
-  if data.equipped~=nil then pending.equipped,pending.equippedAt=data.equipped,data.equippedAt end
- elseif key=='prof' then pending.professions=data.professions or {}; if data.cooldowns~=nil then pending.cooldowns=data.cooldowns end end
+  if newer(data.bagsAt,pending.bagsAt) then pending.bags,pending.bagsAt=data.bags or {},data.bagsAt else older=older+1 end
+  if newer(data.bankAt,pending.bankAt) then pending.bank,pending.bankAt=data.bank or {},data.bankAt else older=older+1 end
+  if data.money~=nil then if newer(data.moneyAt,pending.moneyAt) then pending.money,pending.moneyAt=data.money,data.moneyAt else older=older+1 end end
+  if data.mail~=nil then if newer(data.mailAt,pending.mailAt) then pending.mail,pending.mailAt=data.mail,data.mailAt else older=older+1 end end
+  if data.equipped~=nil then if newer(data.equippedAt,pending.equippedAt) then pending.equipped,pending.equippedAt=data.equipped,data.equippedAt else older=older+1 end end
+ elseif key=='prof' then
+  local merged={}
+  for pid,p in pairs(pending.professions or {}) do merged[pid]=p end
+  for pid,p in pairs(data.professions or {}) do
+   local cur=merged[pid]
+   if type(cur)~='table' or type(p)~='table' or newer(p.at,cur.at) then merged[pid]=p else older=older+1 end
+  end
+  pending.professions=merged
+  if data.cooldowns~=nil then pending.cooldowns=data.cooldowns end
+ end
+ if older>0 then self:SyncNote(peer,'older',older) end
  if not pending.name then return end
  if shortName(pending.name)~=peer then return self:Print('Ignored sync: sender name does not match its data.') end
  if pending.account~=state.account or pending.account==self.db.account then return end
@@ -278,6 +299,19 @@ function N:ApplySync(peer,key,data)
  local clean=self:CleanImported(merged);clean.imported=true;clean.synced=true;clean.syncedAt=self:Now()
  self.db.characters[id]=clean;self.dirty=true;self.renderStocks=nil
  state.applied=(state.applied or 0)+1
+ self:SyncNote(peer,'ok')
+end
+
+-- 0.11 diagnostics kept across reloads: last successful apply, last contact,
+-- how many older snapshots were refused.
+function N:SyncNote(peer,what,n)
+ local d=self.db.sync;if type(d.status)~='table' then d.status={} end
+ local st=type(d.status[peer])=='table' and d.status[peer] or {};d.status[peer]=st
+ if what=='ok' then st.lastOk=self:Now();st.applied=(st.applied or 0)+1
+ elseif what=='contact' then st.lastContact=self:Now()
+ elseif what=='hello' then st.lastHello=self:Now();st.hellos=(st.hellos or 0)+1
+ elseif what=='older' then st.olderRefused=(st.olderRefused or 0)+(n or 1);st.lastOlder=self:Now() end
+ return st
 end
 
 -- The paired account's other characters (sent with the sync).
@@ -289,6 +323,10 @@ function N:ApplyAlts(peer,list)
   if type(a)=='table' and type(a.name)=='string' and type(a.realm)=='string' and a.account==state.account and a.account~=self.db.account then
    local local_=false
    for _,o in pairs(self.db.characters) do if not o.imported and o.realm==a.realm and o.name==a.name then local_=true end end
+   local key=a.account..'/'..a.realm..'/'..a.name
+   local have=self.db.characters[key]
+   local function stamp(c) return math.max(tonumber(c.at) or 0,tonumber(c.bagsAt) or 0,tonumber(c.bankAt) or 0) end
+   if have and have.synced and stamp(have)>stamp(a) then local_=true;self:SyncNote(peer,'older') end
    if not local_ then
     local rec=self:Copy(a);rec.imported,rec.synced=nil,nil
     self:FixFutureTimes(rec)
@@ -315,6 +353,7 @@ function N:SyncReceive(prefix,msg,channel,sender)
   self.syncHyphen=self.syncHyphen or {}; self.syncHyphen[peer]=self.syncHelloForm[peer] -- keep the form that got through
  end
  self.syncContact[peer]=GetTime and GetTime() or 0
+ self:SyncNote(peer,'contact')
  local kind=msg:sub(1,2)
  if kind=='H:' or kind=='R:' then
   local account,idh,invh,profh=msg:match('^[HR]:([^:]+):([^:]+):([^:]+):([^:]+)$')
@@ -367,22 +406,51 @@ function N:SyncReceive(prefix,msg,channel,sender)
 end
 
 function N:SyncStatus()
- local lines={'Live sync (addon whisper; same realm and faction; both characters online).'}
+ local lines={'Live sync (addon whisper; same realm and faction; both characters online at the same time).'}
  local any=false
- for peer in pairs(self.db.sync.peers) do
+ local now=self:Now()
+ for peer,display in pairs(self.db.sync.peers) do
   any=true
-  local last
-  for _,c in pairs(self.db.characters) do if c.synced and shortName(c.name)==peer then last=c.syncedAt end end
-  lines[#lines+1]=peer..': '..(last and ('last received '..self:Age(last)) or 'nothing received yet')
+  local st=type(self.db.sync.status)=='table' and self.db.sync.status[peer] or {}
+  local rec
+  for _,c in pairs(self.db.characters) do if c.synced and shortName(c.name)==peer and (not rec or (c.syncedAt or 0)>(rec.syncedAt or 0)) then rec=c end end
+  local name=type(display)=='string' and display or peer
+  lines[#lines+1]=''
+  lines[#lines+1]=name..': '..self:PeerState(peer)
+  lines[#lines+1]='  Last successful sync: '..(st.lastOk and self:Ago(st.lastOk) or rec and rec.syncedAt and self:Ago(rec.syncedAt) or 'never')
+  lines[#lines+1]='  Last heard from: '..(st.lastContact and self:Ago(st.lastContact) or 'never')..'; last hello sent: '..(st.lastHello and self:Ago(st.lastHello) or 'never')
+  if rec then
+   local age=self.db.settings.inventoryAge
+   local function part(label,at) return label..' '..(at and self:Ago(at) or 'never')..((at and now-at>age) and ' (STALE: not counted unless you allow stale data)' or '') end
+   lines[#lines+1]='  Their data: '..part('bags',rec.bagsAt)..', '..part('bank',rec.bankAt)
+  end
+  if (st.olderRefused or 0)>0 then lines[#lines+1]='  Older snapshots refused (newer data kept): '..st.olderRefused end
+  local q=self.syncOut and self.syncOut[peer]
+  if q and #q>0 then lines[#lines+1]='  Outstanding: '..#q..' message'..(#q==1 and '' or 's')..' waiting to send' end
+  local inbound=self.syncIn and self.syncIn[peer]
+  if inbound then for _,k in ipairs({'id','inv','prof','alts'}) do local b=inbound[k];if type(b)=='table' and b.n then lines[#lines+1]=string.format('  Receiving %s: %d of %d parts',k,b.got or 0,b.n) end end end
  end
  if not any then lines[#lines+1]='No paired characters. On each account type /vmn pair OTHERNAME.' end
  local st=self.syncStats
  if st then
   local waiting=0;for _,q in pairs(self.syncOut or {}) do waiting=waiting+#q end
-  lines[#lines+1]=string.format('Messages sent %d, waiting %d, slowed down %d times, failed %d.',st.sent,waiting,st.throttled,st.failed)
+  lines[#lines+1]=''
+  lines[#lines+1]=string.format('This session: sent %d, waiting %d, slowed down %d times, failed %d.',st.sent,waiting,st.throttled,st.failed)
  end
- lines[#lines+1]='Synced characters count as your inventory when "Use synced characters" is on in Settings.'
+ local dups=0;local pref=self:PreferredRecords();for id in pairs(self.db.characters) do if not pref[id] then dups=dups+1 end end
+ if dups>0 then lines[#lines+1]=dups..' duplicate character record'..(dups==1 and '' or 's')..' ignored (the newest copy of each character counts).' end
+ lines[#lines+1]='Sync only works while both characters are logged in; nothing is exchanged offline. Export/Import works any time.'
  return table.concat(lines,'\n')
+end
+-- Plain state of the other character, for the Characters page and diagnostics.
+function N:PeerState(peer)
+ if self:SyncConnected(peer) then return 'connected, syncing automatically' end
+ if not self:PeerMaybeOnline(peer) then return 'offline (friends list); will sync when both are online' end
+ local st=type(self.db.sync.status)=='table' and self.db.sync.status[peer]
+ if st and st.lastHello and (not st.lastContact or st.lastContact<st.lastHello) and (st.hellos or 0)>=2 then
+  return 'not answering: not logged in, other realm/faction, or not paired back'
+ end
+ return 'waiting for them to log in'
 end
 
 N:On('CHAT_MSG_ADDON',function(prefix,msg,channel,sender) N:SyncReceive(prefix,msg,channel,sender) end)
