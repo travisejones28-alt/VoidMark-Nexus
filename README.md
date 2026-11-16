@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.11.0 beta
+# VoidMark Nexus 0.11.1 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -15,6 +15,9 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.11.1
+- **Help & commands** window: Settings > Help & commands (or `/vmn help`). A short FAQ and every `/vmn` command, with a search box. A test fails if a command is added without a help line.
 
 ## What changed in 0.11.0
 - **Terrain-aware loops.** When you have walked a zone (trail learning is on again; saved trails were kept) or marked obstacles (`/vmn block 90`), the loop is ordered by those trails: a corridor you walked replaces the straight line when it is not much longer (1.5x after one walk, 2.5x when walked repeatedly), and a marked obstacle is always walked around. The arrow follows the trail points of the leg you are on; the world map, minimap and preview draw walked legs **cyan** (verified) and everything else **purple** (estimated). Map artwork is never treated as collision. `/vmn terrain on|off|use|ignore|clear`.
@@ -84,7 +87,7 @@ Gathering routes, profession leveling and your items across both accounts, for W
 | `/vmn level PROFESSION [target]`, `/vmn levelshop`, `/vmn transfers` | Leveling step, shopping list, what to mail |
 | `/vmn skinning`, `/vmn fishing`, `/vmn pool NAME`, `/vmn poolroute`, `/vmn pools on\|off` | Skinning and fishing |
 | `/vmn dash`, `/vmn notify on\|off`, `/vmn grey`, `/vmn resetwindow` | Dashboard, notices, grey filter, window |
-| `/vmn help`, `/vmn debug` | Command list, diagnostics |
+| `/vmn help [word]`, `/vmn debug` | Help & commands window (FAQ, search), diagnostics |
 
 ## Install
 

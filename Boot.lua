@@ -62,7 +62,8 @@ function N:Slash(msg)
   if not self.lastLap and not self.lapStats then self:Print('No laps yet.') end
  elseif command=='target' then if args=='' then self:SelectResource('kind:all') else self:SelectResource('name:'..args) end; self:Print('Gathering: '..self:ResourceLabel())
  elseif command=='kind' then if args=='herb' or args=='ore' or args=='all' then self:SelectResource('kind:'..args) end
- elseif command=='help' then
+ elseif command=='help' or command=='faq' or command=='commands' then
+  if self.ShowHelp then self:ShowHelp(args~='' and args or nil); return end
   self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn laps, /vmn spots, /vmn route (options), /vmn route now, /vmn routelog, /vmn find NAME (or a, b, c / all / herbs / ore / leather / cloth / enchanting), /vmn need lw | alch (or 414 light leather, ...), /vmn gold, /vmn cd, /vmn pair First Surname, /vmn unpair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
   for _,h in ipairs(self.commandHelp or {}) do self:Print(h) end
  elseif command=='mapcontrols' or command=='mapfilters' then

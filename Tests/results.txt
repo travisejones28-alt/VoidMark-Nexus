@@ -218,4 +218,6 @@ PASS 0.11 transfers: queued crafts list what to mail from which character
 PASS 0.11 dashboard: session figures, comparison with past sessions, window toggles
 PASS 0.11 notifications: near and at rank cap once each; never with notify off
 PASS 0.11 API: other addons get read-only copies of gathering figures
-PASS: 220 tests; Lua 5.1 / standard interpreter
+PASS Help: every /vmn command is in the Help window
+PASS Help: opens from Settings and /vmn help, and search filters it
+PASS: 222 tests; Lua 5.1 / standard interpreter

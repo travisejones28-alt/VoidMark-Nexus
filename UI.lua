@@ -255,6 +255,7 @@ function N:CreateUI()
  end
  adjuster('Route lap length (minutes)','routeMinutes',5,5,60,'%d')
  adjuster('Window size','scale',.1,.6,1.5,'%.1f',function() f:SetScale(s().scale) end)
+ u.helpButton=button(st,'Help & commands',20,y-4,160,function() N:ShowHelp() end)
  -- Shared list
  u.list=CreateFrame('Frame',nil,f); u.list:SetPoint('TOPLEFT',10,-TOP); u.list:SetSize(W-20,H-TOP-40)
  -- Invisible copy of the row font, used to measure text so long rows wrap
