@@ -248,8 +248,6 @@ do
   else self.loopLeg=nil end
   return a,b
  end
- local start=N.StartRoute
- N.StartRoute=function(self,...) self.loopLeg=nil;return start(self,...) end
 end
 
 -- The rest of a loop from stop w0, with trail points between stops, closing

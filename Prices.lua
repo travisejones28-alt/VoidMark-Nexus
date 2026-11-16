@@ -16,7 +16,22 @@ function N:Price(id)
   local m=type(economy)=='table' and type(economy.market)=='table' and (economy.market[id] or economy.market[tostring(id)])
   if type(m)=='table' and (not m.itemSuffix or m.itemSuffix==0) and type(m.latest)=='table' then
    local p=record(m.fairValue or m.latest.median,m.lastSeen or m.latest.at,'VoidMark Market',m.confidenceScore)
-   if p then self.prices[id]=cache or {}; self.prices[id].cached={unit=p.unit,at=p.at}; return p end
+   if p then
+    self.prices[id]=cache or {}; self.prices[id].cached={unit=p.unit,at=p.at}
+    -- Market's own read-only status (1.23+): stale snapshots, untrusted caches and
+    -- developing markets are flagged rather than trusted. Never changes the price.
+    if m.cacheUntrusted or m.analysisIncomplete then p.stale=true; p.untrusted=true end
+    if m.developingMarket then p.developing=true end
+    local api=VoidMarkMarket
+    if type(api)=='table' and type(api.GetPriceInfo)=='function' and api.db then
+     local info=self:Call(api.GetPriceInfo,api,id)
+     if type(info)=='table' and info.apiVersion==1 and type(info.status)=='string' then
+      p.marketStatus=info.status
+      if info.status~='current' then p.stale=true end
+     end
+    end
+    return p
+   end
   end
  end
  if settings.auctionator and Auctionator and Auctionator.API and Auctionator.API.v1 then
@@ -36,6 +51,8 @@ function N:PriceLabel(p)
  if self:Finite(p.confidence,0,100) then
   parts[#parts+1]=string.format('confidence %d/100%s',p.confidence,p.confidence<40 and ' (low - sparse data)' or '')
  end
+ if p.developing then parts[#parts+1]='developing market' end
+ if p.untrusted then parts[#parts+1]='unverified scan' end
  if p.stale then parts[#parts+1]='STALE' end
  return table.concat(parts,' / ')
 end
@@ -47,8 +64,10 @@ end
 function N:OpenMarket(item)
  local m=VoidMarkMarket
  if not (m and m.ToggleUI and m.db) then return self:Print('Compatible VoidMark Market is not loaded.') end
- m.db.settings.filter=self:ItemName(item); m.view='opportunities'
- if m.SetView then m:SetView('opportunities') elseif m.window and not m.window:IsShown() then m:ToggleUI() end
+ -- 0.11: open Market's search (browse) view filtered to this item. Read-only:
+ -- nothing is bought, posted or cancelled.
+ m.db.settings.filter=self:ItemName(item); m.view='browse'
+ if m.SetView then m:SetView('browse') elseif m.window and not m.window:IsShown() then m:ToggleUI() end
  if m.filter then m.filter:SetText(m.db.settings.filter) end
  if m.RefreshUI then m:RefreshUI() end
 end

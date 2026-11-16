@@ -184,4 +184,17 @@ PASS 0.11 terrain: the arrow follows trail points of the current leg, then the s
 PASS 0.11 terrain: world map ring draws trail points between stops without extra pins
 PASS 0.11 terrain: trail learning is switched back on once, and stays off if you turn it off
 PASS 0.11 terrain: full-size trail graph on real Durotar herbs stays fast
-PASS: 186 tests; Lua 5.1 / standard interpreter
+PASS 0.11 learning: the same stops make the same route whatever the start or direction
+PASS 0.11 learning: each lap records stops, finds, empties, items, gathering and travel time
+PASS 0.11 learning: different loops in one zone keep separate statistics
+PASS 0.11 learning: stopping mid-lap keeps the part after a minute, not before
+PASS 0.11 learning: one lucky lap only nudges the estimate; many laps move it
+PASS 0.11 value: gold/hr uses your loot and prices; missing prices are partial, never zero
+PASS 0.11 value: an unrun route is estimated from its stops at no less than 1 item per node
+PASS 0.11 value: Market status marks stale and developing prices without changing them
+PASS 0.11 learning: resetting one zone keeps other zones, sessions and spots
+PASS 0.11 learning: best routes list ranks by results and runs one again
+PASS 0.11 value: herbs vs ore comparison builds a loop for each with gold/hr or unknown
+PASS 0.11 value: gold routes rank route options by gold/hr
+PASS 0.11 value: Gather page shows the loop record and best routes, shift-click opens Market
+PASS: 199 tests; Lua 5.1 / standard interpreter

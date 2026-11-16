@@ -157,12 +157,14 @@ N:On('UNIT_SPELLCAST_SENT',function(unit,target,cast,spell)
  local map,x,y=N:Position(); if not map then return end
  local object
  for id,kind in pairs(N.nodeTypes) do if kind.name:lower()==tostring(target):lower() then object=id; break end end
- N.gatherCast={cast=cast,spell=spell,kind=spells[spell],object=object,map=map,x=x,y=y,started=N:Now()}
+ N.gatherCast={cast=cast,spell=spell,kind=spells[spell],object=object,map=map,x=x,y=y,started=N:Now(),startedT=N:Call(GetTime),target=N:Text(target)}
 end)
 N:On('UNIT_SPELLCAST_SUCCEEDED',function(unit,cast,spell)
  local g=N.gatherCast
  if N:Text(unit)=='player' and g and g.cast==cast and g.spell==spell then
   g.at=N:Now(); if g.object then N:LearnNode(g.object,g.map,g.x,g.y) end
+  local t=N:Call(GetTime); if g.startedT and t and N:Finite(t-g.startedT,0,60) then g.castSeconds=t-g.startedT end
+  if N.NoteGatherCast then N:Guard('gatherCast',function() N:NoteGatherCast(g) end) end
  end
 end)
 for _,event in ipairs({'UNIT_SPELLCAST_FAILED','UNIT_SPELLCAST_INTERRUPTED'}) do
@@ -207,6 +209,7 @@ N:On('LOOT_SLOT_CLEARED',function(slot)
  if g.object then N:RecordHarvest(g,item.qty) end
  s.zones[g.map]=(s.zones[g.map] or 0)+item.qty; s.kinds[g.kind]=(s.kinds[g.kind] or 0)+item.qty
  N.db.itemNames[item.id]=item.name; N.dirty=true
+ if N.NoteGatherLoot then N:Guard('gatherLoot',function() N:NoteGatherLoot(item.id,item.qty,g) end) end
 end)
 N:On('LOOT_CLOSED',function()
  if N.gatherCast==N.lootGather then N.gatherCast=nil end

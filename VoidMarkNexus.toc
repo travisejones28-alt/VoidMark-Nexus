@@ -38,5 +38,6 @@ Gold.lua
 Mail.lua
 Cooldowns.lua
 Tooltip.lua
+RouteLearning.lua
 Boot.lua
 AutoInvite.lua
