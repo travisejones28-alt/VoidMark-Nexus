@@ -16,6 +16,9 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.10.31
+- **Fishing guide expanded** (Guides > Fishing 1-300): zones by fishing skill (minimum / 100% catch), poles, lures and gear with their bonuses and how many you hold, rare fish and the pools they come from, and Forever extras (Find Fish, camp items, Fishing Extravaganza). Pick a character and each zone tier shows *100% catch*, *some get away* or the skill you still need.
+
 ## What changed in 0.10.1
 - **Zone button** on Gather (replaces Best zones): *Current zone* follows you, or pick any zone with matching spots (best first) and Start route / `/vmn route now` build the loop there. The arrow says which zone to go to.
 

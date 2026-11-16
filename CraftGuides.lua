@@ -248,6 +248,7 @@ function N:GuideTabRows(key)
    for _,r in ipairs(rows) do top[#top+1]=r end
    rows=top
   end
+  if key=='fish' then for _,r in ipairs(self:FishExtraRows()) do rows[#rows+1]=r end end
   return rows,info,foot
  end
  local rows={}
@@ -485,6 +486,7 @@ function N:GuideCharacterRows(key,cid,showDone)
  if past and doneCount>0 then
   rows[#rows+1]={text='All '..doneCount..' steps done.',color=green}
  end
+ if key=='fish' then for _,r in ipairs(self:FishExtraRows(skill)) do rows[#rows+1]=r end end
  if g then
   rows[#rows+1]={text='Where to buy (Horde)',color=accent}
   for _,sh in ipairs(g.shop) do rows[#rows+1]={text='   '..sh[1]..': |cffd8d0e0'..sh[2]..'|r',color=gold} end

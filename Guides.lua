@@ -37,7 +37,7 @@ N.GUIDES={
   {H,'125 (level 20): Expert Fishing - The Bass and You'},{T,'Old Man Heming, Booty Bay (or the AH). Buy Bright Baubles from him.'},
   {H,'150-225: Dustwallow Marsh with Bright Baubles'},{T,'Or Arathi, Desolace, Stranglethorn, Swamp of Sorrows, Thousand Needles.'},
   {H,'225 (level 35): Artisan quest "Nat Pagle, Angler Extreme"'},{T,'Nat Pagle, Tidefury Cove (Dustwallow). One fish each: Feralas Ahi (Feralas), Misty Reed Mahi Mahi (Swamp of Sorrows), Sar\'theris Striker (Desolace), Savage Coast Blue Sailfin (Stranglethorn).'},
-  {H,'225-300: Felwood, Feralas, The Hinterlands, Tanaris, Un\'Goro, Western Plaguelands'},{T,'Keep Bright Baubles on.'}}},
+  {H,'225-300: Felwood, Feralas, The Hinterlands, Tanaris, Un\'Goro, Western Plaguelands'},{T,'Tanaris is the easiest. Keep Bright Baubles (+75) on.'}}},
  lock={name='Lockpicking 1-300 route (Rogue)',lines={
   {T,'Max skill = 5 x your level (100 at 20, 150 at 30, 200 at 40, 250 at 50, 300 at 60). No items needed.'},
   {H,'1-100: Buccaneer\'s Strongboxes on the ship near Ratchet (Barrens)'},{T,'Fast respawn. Skip the Jewel of the Southsea chest at low level (spawns a killer mob).'},
@@ -55,6 +55,70 @@ N.GUIDES={
   {H,'Recipes for Favor (same at both camps)'},{T,'Alchemy 45-240, Cooking 30-90, Blacksmithing 30-120, Enchanting 45-240 Favor. Crafted armor and weapons bind on pickup.'},
   {T,'See "Merchant\'s Favor: crates you can fill" for what you hold now.'}}},
 }
+
+-- Fishing extras (WoW Forever fishing guide, Nov 2026): where you can fish
+-- by skill, gear and lures, rare fish and pools, Forever extras.
+-- Zone tiers: {min skill, skill for 100% catch, zones}.
+N.FISH_ZONES={
+ {1,25,'Durotar, Mulgore, Tirisfal Glades, Zephras Isle'},
+ {1,75,'The Barrens, Silverpine Forest, capital cities, Wailing Caverns, Blackfathom Deeps'},
+ {55,150,'Ashenvale, Duskwood, Hillsbrad Foothills, Redridge Mountains, Stonetalon Mountains, Wetlands'},
+ {130,225,'Stranglethorn Vale, Desolace, Dustwallow Marsh, Arathi Highlands, Alterac Mountains, Swamp of Sorrows, Thousand Needles, Scarlet Monastery'},
+ {205,300,'Azshara, Felwood, Feralas, Tanaris, The Hinterlands, Moonglade, Un\'Goro Crater, Western Plaguelands, Maraudon, Sunken Temple'},
+ {330,425,'Winterspring, Silithus, Eastern Plaguelands, Burning Steppes, Deadwind Pass, Zul\'Gurub, Stratholme, Scholomance'},
+}
+-- {name, bonus}; poles, lures, other gear.
+N.FISH_GEAR={
+ {'Poles',{{'Strong Fishing Pole',5},{'Big Iron Fishing Pole',20},{'Arcanite Fishing Pole',35}}},
+ {'Lures',{{'Shiny Bauble',25},{'Nightcrawlers',50},{'Bright Baubles',75},{'Aquadynamic Fish Attractor',100}}},
+ {'Other gear',{{'Lucky Fishing Hat',5},{'Nat Pagle\'s Extreme Anglin\' Boots',5},{'High Test Eternium Fishing Line',5},{'Enchant Gloves - Fishing',2}}},
+}
+N.FISH_RARE={
+ {'Oily Blackmouth, Firefin Snapper','coastal water; their schools'},
+ {'Stonescale Eel','higher-level coastal water; Stonescale Eel Swarm'},
+ {'Deviate Fish','Wailing Caverns / The Barrens; School of Deviate Fish'},
+ {'Raw Sagefish','inland water'},
+ {'Raw Sunscale Salmon, Raw Nightfin Snapper','higher-level inland water'},
+ {'Raw Summer Bass','seasonal'},
+ {'Floating Wreckage','pool with special loot; keep an eye out'},
+}
+N.FISH_TIPS={
+ 'Find Fish (Forever) shows nearby pools on the minimap. Cast into pools when hunting a specific fish.',
+ 'Camp items: Fish Bowl at 20, Fishing Rack at 140, Fishing Hut at 300 (Bait and Tackle window). See "Camping: camp items".',
+ 'Fishing Extravaganza: updated rewards, several winners.',
+ 'Check AH prices before selling; pair with Cooking. Some fish are seasonal.',
+}
+
+-- Extra Fishing rows. With a skill: which zones catch 100%, some, or not yet.
+function N:FishExtraRows(skill)
+ local accent,muted,gold,green,warn,sub={.78,.6,1},{.6,.56,.68},{1,.82,0},{.4,1,.4},{1,.75,.3},{.85,.8,.95}
+ local rows={{text='Where you can fish (min skill / 100% catch)',color=accent}}
+ for _,z in ipairs(self.FISH_ZONES) do
+  local tag,col='',gold
+  if skill then
+   if skill>=z[2] then tag,col='  |cff66dd66100% catch|r',muted
+   elseif skill>=z[1] then tag,col='  |cffffc040some get away|r',nil
+   else tag,col=('  |cff9a8fb0need %d|r'):format(z[1]),muted end
+  end
+  rows[#rows+1]={text=('   %d-%d%s'):format(z[1],z[2],tag),color=col or gold}
+  rows[#rows+1]={text='      '..z[3],color=sub}
+ end
+ rows[#rows+1]={text='   Poles, lures and gear add to your skill for these numbers.',color=muted}
+ rows[#rows+1]={text='Poles, lures and gear (have = every character)',color=accent}
+ for _,grp in ipairs(self.FISH_GEAR) do
+  local parts={}
+  for _,g in ipairs(grp[2]) do
+   local have=grp[1]~='Other gear' and self:HaveCount(g[1]) or 0
+   parts[#parts+1]=g[1]..' +'..g[2]..(have>0 and (' |cff66dd66('..have..')|r') or '')
+  end
+  rows[#rows+1]={text='   '..grp[1]..': |cffd8d0e0'..table.concat(parts,', ')..'|r',color=gold}
+ end
+ rows[#rows+1]={text='Rare fish and pools',color=accent}
+ for _,r in ipairs(self.FISH_RARE) do rows[#rows+1]={text='   '..r[1]..': |cffd8d0e0'..r[2]..'|r',color=gold,itemName=r[1]:match('^([^,]+)')} end
+ rows[#rows+1]={text='Forever extras and gold',color=accent}
+ for _,t in ipairs(self.FISH_TIPS) do rows[#rows+1]={text='   '..t,color=sub} end
+ return rows
+end
 
 -- Camping: every camp item with its materials (counts per item).
 N.CAMP_ITEMS={

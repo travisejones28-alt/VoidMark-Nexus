@@ -359,6 +359,14 @@ test('Guides: pick a character and see where they are (Kitty, Leatherworking 50 
  rows,info=N:GuideCharacterRows('herb',N.characterID,false)
  t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
  assert(t:find('NOW|r  115-170: Bruiseweed',1,true),t);assert(t:find('Hillsbrad',1,true))
+ -- Fishing at 160: zones up to 150 are 100%, 130-225 some get away, 205+ not yet.
+ me.professions={f={name='Fishing',skill=160,max=225}}
+ rows=N:GuideCharacterRows('fish',N.characterID,false)
+ t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
+ assert(t:find('55-150  |cff66dd66100% catch',1,true),t);assert(t:find('130-225  |cffffc040some get away',1,true),t)
+ assert(t:find('205-300  |cff9a8fb0need 205',1,true),t);assert(t:find('Bright Baubles +75',1,true));assert(t:find('Find Fish',1,true))
+ rows=N:GuideTabRows('fish');t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
+ assert(t:find('330-425',1,true) and t:find('Stonescale Eel',1,true) and not t:find('|cff66dd66100% catch',1,true),t)
  -- Not learned.
  rows,info=N:GuideCharacterRows('alch',N.characterID,false);assert(info:find('not learned',1,true))
  u.guideKey=nil;u.guideChar=nil;N.db.settings.guide=nil;N.db.settings.guideChar=nil
