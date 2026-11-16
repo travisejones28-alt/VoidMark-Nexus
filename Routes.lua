@@ -798,6 +798,8 @@ function N:UpdateArrow()
  end
  local node=route and route.points[self.waypoint or 1]
  local transit=route and route.travelPoints and route.travelPoints[self.terrainIndex or 1]
+ -- 0.11: zone loops follow the learned trail / detour points of the current leg.
+ if not transit and route and route.loop and self.LoopViaTarget then transit=self:LoopViaTarget(route) end
  local point=transit or node
  if not point or not self.db.settings.routeVisible then arrow:Hide(); return end
  local map,x,y=self:Position()
@@ -813,10 +815,12 @@ function N:UpdateArrow()
  arrow.bearing=nexusAngle(-dx,-dy)
  arrow.texture:Show()
  arrow.texture:SetAlpha(1)
- arrow.status:SetText(point.transit and (point.closing and 'Return to start' or 'Following route') or (point.name or 'Gathering stop'))
+ arrow.status:SetText(point.transit and (point.closing and 'Return to start' or point.loopVia and point.name or 'Following route') or (point.name or 'Gathering stop'))
  arrow.label:SetText(string.format('%.0f yd',distance))
  arrow.eta:SetText(string.format('~%.0f sec',distance/(self.TravelSpeed and self:TravelSpeed(route) or math.max(1,route.speed or self.db.settings.speed))))
- if distance<(route.arriveRadius or 8) or (point.transit and self:PassedTransit(route,self.terrainIndex or 1,{x=x,y=y})) then
+ if point.loopVia then
+  if self:LoopViaUpdate(route,x,y) then self.dirty=true;arrow.refreshAt=0 end
+ elseif distance<(route.arriveRadius or 8) or (point.transit and self:PassedTransit(route,self.terrainIndex or 1,{x=x,y=y})) then
   if point.transit then
    self.terrainIndex=(self.terrainIndex or 1)+1
    if route.recorded then
@@ -1056,8 +1060,17 @@ function N:RefreshMap()
   local n=#route.points
   local w0=math.max(1,math.min(n,self.waypoint or 1))
   local prev
-  if loop then
+  if loop and self.LoopRing then
    -- Stops already reached this lap disappear; the ring closes back to stop 1.
+   -- Learned-trail and detour points sit between stops (lines only, no pins).
+   local ring=self:LoopRing(route,w0)
+   for _,r in ipairs(ring) do
+    if r.stop then points[#points+1]={n=r.n,label=r.closing and 'S' or tostring(r.stop),route=true} end
+    if prev then segments[#segments+1]={a=prev,b=r.n,validated=r.validated==true} end
+    prev=r.n
+   end
+   geometry={}
+  elseif loop then
    geometry={}; for k=w0,n do geometry[#geometry+1]=route.points[k] end
    if w0>1 then geometry[#geometry+1]=route.points[1] end
    current=1; prev=nil

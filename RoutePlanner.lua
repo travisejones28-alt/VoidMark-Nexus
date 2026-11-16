@@ -234,6 +234,8 @@ function N:RouteOptionWhy(o)
  lines[#lines+1]=o.zone..' - '..o.note
  lines[#lines+1]=string.format('%.1f km loop, %d stops', (r.length or 0)*0.9144/1000, #r.points)
  if r.offLand and r.offLand>=.01 then lines[#lines+1]=string.format('%d%% of the loop crosses water or leaves the zone',math.floor(r.offLand*100+.5)) end
+ local terrain=self.LoopTerrainSummary and self:LoopTerrainSummary(r)
+ if terrain then lines[#lines+1]=terrain..' (cyan = walked before, purple = estimated)' end
  if o.real then lines[#lines+1]=string.format('You got %d nodes/hr over %d lap%s on this kind of route here',math.floor(o.real+.5),o.laps,o.laps==1 and '' or 's')
  else lines[#lines+1]='Estimate (no laps logged on this kind of route here yet)' end
  if o.recommended then lines[#lines+1]='Recommended: best expected nodes per hour' end
@@ -396,14 +398,26 @@ function N:DrawRoutePreview()
  f.source:SetText(c.source and ('Map: '..c.source) or 'No map art here')
  -- Route: the loop as lines, stops as dots (brighter where you found something before).
  local n=#r.points
- for i=1,math.max(#c.lines,n) do local l=c.lines[i]; if l then l:Hide() end end
+ for i=1,#c.lines do local l=c.lines[i]; if l then l:Hide() end end
  for i=1,#c.dots do c.dots[i]:Hide() end
+ -- Lines: cyan where you have walked the corridor, purple where it is estimated.
+ local used=0
  for i,p in ipairs(r.points) do
   local q=r.points[i%n+1]
-  local l=line(c,i)
-  if l then
-   l:SetThickness(2); l:SetColorTexture(.78,.6,1,.95)
-   l:SetStartPoint('TOPLEFT',c,p.x*CW,-p.y*CH); l:SetEndPoint('TOPLEFT',c,q.x*CW,-q.y*CH); l:Show()
+  local chain={p}
+  local leg=r.legs and r.legs[i]
+  for _,v in ipairs(leg and leg.via or {}) do chain[#chain+1]=v end
+  chain[#chain+1]=q
+  for k=2,#chain do
+   if used>=400 then break end
+   used=used+1
+   local l=line(c,used)
+   if l then
+    local a,b=chain[k-1],chain[k]
+    l:SetThickness(2)
+    if b.validated then l:SetColorTexture(.4,.9,1,.95) else l:SetColorTexture(.78,.6,1,.95) end
+    l:SetStartPoint('TOPLEFT',c,a.x*CW,-a.y*CH); l:SetEndPoint('TOPLEFT',c,b.x*CW,-b.y*CH); l:Show()
+   end
   end
   local d=dot(c,i); local size=i==1 and 9 or 5
   d:SetSize(size,size); d:ClearAllPoints(); d:SetPoint('CENTER',c,'TOPLEFT',p.x*CW,-p.y*CH)

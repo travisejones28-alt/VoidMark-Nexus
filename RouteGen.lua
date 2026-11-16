@@ -77,6 +77,9 @@ end
 local function tourLength(t)
  local total=0; for i=1,#t do total=total+dist(t[i],t[i%#t+1]) end; return total
 end
+local function tourCost(t)
+ local total=0; for i=1,#t do total=total+cost(t[i],t[i%#t+1]) end; return total
+end
 N.LoopLength=tourLength
 
 local function nearestTour(stops,start)
@@ -189,7 +192,13 @@ function N:BuildZoneLoop(map,nodes,here,settings,opts)
  local perStop=math.max(0,settings.gatherDelay or 3)+math.max(0,settings.mountDelay or 0)
  local maxStops=math.max(3,math.min(150,opts.nodeLimit or settings.nodeLimit or 100))
  local budget=math.max(60,(opts.minutes or settings.routeMinutes or 20)*60)
- if opts.landPenalty and self.LegOffLand and self:HasLand(map) then
+ -- 0.11: learned trails and obstacle marks drive the cost when the zone has them.
+ local terrain
+ if self.LoopCostFunction then
+  local fn,g=self:LoopCostFunction(map,w,h,speed,opts)
+  if fn then cost,terrain=fn,g end
+ end
+ if not terrain and opts.landPenalty and self.LegOffLand and self:HasLand(map) then
   local memo,pen=setmetatable({},{__mode='k'}),opts.landPenalty
   cost=function(a,b)
    local row=memo[a]; if not row then row={}; memo[a]=row end
@@ -204,6 +213,16 @@ function N:BuildZoneLoop(map,nodes,here,settings,opts)
   twoOpt(t,#t>250 and 6 or 30)
   t=bestWindow(t,maxStops,maxYards)
   twoOpt(t,40); orOpt(t,10); twoOpt(t,10)
+  -- 0.11: also try two other seeds for small loops and keep the shortest.
+  if #t>=6 and #t<=60 then
+   local best,bestLen=t,tourCost(t)
+   local far,fd=t[1],-1; for _,s in ipairs(t) do local d=dist(start,s); if d>fd then far,fd=s,d end end
+   for _,seed in ipairs({far,t[math.floor(#t/2)+1]}) do
+    local alt=nearestTour(t,seed); twoOpt(alt,40); orOpt(alt,10); twoOpt(alt,10)
+    local len=tourCost(alt); if len<bestLen-1 then best,bestLen=alt,len end
+   end
+   t=best
+  end
   return t
  end)
  cost=dist
@@ -217,6 +236,8 @@ function N:BuildZoneLoop(map,nodes,here,settings,opts)
  if n>2 and dist(start,ordered[n])<dist(start,ordered[2]) then
   local r={ordered[1]}; for k=n,2,-1 do r[#r+1]=ordered[k] end; ordered=r
  end
+ local legs
+ if terrain then ordered,legs=self:AnnotateLoopLegs(terrain,ordered) end
  local length=tourLength(ordered)
  local offLand
  if self.LegOffLand and self:HasLand(map) then
@@ -228,9 +249,16 @@ function N:BuildZoneLoop(map,nodes,here,settings,opts)
   points[i]={x=s.x/w,y=s.y/h,map=map,name=s.name,kind=s.kind,object=s.object,spawns=s.count,
    source=s.observed and 'Observed' or 'Potential spawn',skillPriority=s.skillPriority,skillColor=s.skillColor,picked=s.picked,empty=s.empty}
  end
- local route={points=points,map=map,width=w,height=h,loop=true,strategy='zoneloop',optimizer='zoneloop-v1',
+ local travelSeconds=length/speed
+ local verified=0
+ if legs then
+  length,travelSeconds=0,0
+  for _,l in ipairs(legs) do length=length+l.length; travelSeconds=travelSeconds+l.seconds; verified=verified+(l.verified or 0) end
+ end
+ local route={points=points,map=map,width=w,height=h,loop=true,strategy='zoneloop',optimizer=legs and 'zoneloop-terrain-v2' or 'zoneloop-v2',
+  legs=legs,verifiedShare=legs and length>0 and verified/length or 0,
   speed=speed,mountDelay=settings.mountDelay,gatherDelay=settings.gatherDelay,mode=settings.travel,created=self:Now(),
-  length=length,offLand=offLand,minutes=opts.minutes,seconds=length/speed+perStop*#points,arriveRadius=ARRIVE_RADIUS,origin=self:Copy(points[1]),
+  length=length,offLand=offLand,minutes=opts.minutes,seconds=travelSeconds+perStop*#points,arriveRadius=ARRIVE_RADIUS,origin=self:Copy(points[1]),
   skillup=settings.routeSelectionMode=='skillup' or nil,gold=settings.routeSelectionMode=='gold' or nil}
  return route
 end

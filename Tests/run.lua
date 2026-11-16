@@ -38,7 +38,7 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Data/Nodes','Data/Spawns','Data/ZoneLand','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','Laps','RoutePlanner','Recording','MinimapRoute','UI','Finder','Guides','CraftGuides','Gold','Mail','Cooldowns','Tooltip','Boot'}
+local files={'Core','Data/Nodes','Data/Spawns','Data/ZoneLand','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','RouteTerrain','Laps','RoutePlanner','Recording','MinimapRoute','UI','Finder','Guides','CraftGuides','Gold','Mail','Cooldowns','Tooltip','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
@@ -1096,6 +1096,7 @@ test('Characters: old first-name record joins its character by GUID; duplicates 
  eq(N:Gold(0),'0c'); eq(N:Gold(512),'5s 12c'); eq(N:Gold(603900),'60g 39s')
  N.db.characters,N.db.excluded=savedChars,savedEx;me.name=savedName
 end)
+assert(loadfile(root..'/Tests/v011_terrain.lua'))(N,test,eq,widget)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()

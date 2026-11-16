@@ -89,7 +89,10 @@ function N:UpdateMinimapRoute()
  local ring=route.loop and not route.travelPoints and ringN>1
  local w0=math.max(1,math.min(ringN,self.waypoint or 1))
  -- Stops already reached this lap are dropped; the ring closes back to stop 1.
- if ring then
+ if ring and self.LoopRing then
+  geometry={}; for _,r in ipairs(self:LoopRing(route,w0)) do geometry[#geometry+1]=r.n end
+  current=1; previous=nil
+ elseif ring then
   geometry={}; for k=w0,ringN do geometry[#geometry+1]=route.points[k] end
   if w0>1 then geometry[#geometry+1]=route.points[1] end
   current=1; previous=nil

@@ -175,4 +175,13 @@ PASS A character saved twice (import + old copy) is counted once, newest copy wi
 PASS Gold: read on change, shown per character with a total, synced and exported
 PASS Gold travels with the bank sync
 PASS Characters: old first-name record joins its character by GUID; duplicates hidden; small gold amounts
-PASS: 177 tests; Lua 5.1 / standard interpreter
+PASS 0.11 terrain: a zone with no trails or marks builds the same plain loop
+PASS 0.11 terrain: a corridor walked repeatedly replaces the straight leg and is marked verified
+PASS 0.11 terrain: a long corridor walked once is not trusted over the straight line
+PASS 0.11 terrain: a corridor close to straight is used even after one walk
+PASS 0.11 terrain: a marked obstacle forces an estimated detour, never a straight line through it
+PASS 0.11 terrain: the arrow follows trail points of the current leg, then the stop
+PASS 0.11 terrain: world map ring draws trail points between stops without extra pins
+PASS 0.11 terrain: trail learning is switched back on once, and stays off if you turn it off
+PASS 0.11 terrain: full-size trail graph on real Durotar herbs stays fast
+PASS: 186 tests; Lua 5.1 / standard interpreter

@@ -26,6 +26,9 @@ end
 function N:Slash(msg)
  if not self.ready then return self:Print('Nexus is not initialized.') end
  local command,args=tostring(msg or ''):match('^(%S*)%s*(.-)$'); command=command:lower()
+ -- 0.11 modules register their own commands here.
+ local extra=self.commands and self.commands[command]
+ if extra then extra(self,args); self.dirty=true; return end
  if command=='price' then local id,gold=args:match('^(%d+)%s+([%d%.]+)$'); self:SetPrice(id,gold)
  elseif command=='export' then self:TextDialog('Cross-account export',self:Export())
  elseif command=='import' then self:TextDialog('Cross-account import','',true)
@@ -61,6 +64,7 @@ function N:Slash(msg)
  elseif command=='kind' then if args=='herb' or args=='ore' or args=='all' then self:SelectResource('kind:'..args) end
  elseif command=='help' then
   self:Print('/vmn opens the window. /vmn start | stop | next (route), /vmn kind herb|ore|all, /vmn target NAME, /vmn skillroute herb|ore, /vmn laps, /vmn spots, /vmn route (options), /vmn route now, /vmn routelog, /vmn find NAME (or a, b, c / all / herbs / ore / leather / cloth / enchanting), /vmn need lw | alch (or 414 light leather, ...), /vmn gold, /vmn cd, /vmn pair First Surname, /vmn unpair NAME, /vmn sync, /vmn price ITEM_ID GOLD, /vmn debug')
+  for _,h in ipairs(self.commandHelp or {}) do self:Print(h) end
  elseif command=='mapcontrols' or command=='mapfilters' then
   self.db.settings.mapButton=true
   if args=='reset' then self.db.settings.mapButtonPos=nil end

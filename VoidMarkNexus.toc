@@ -25,6 +25,7 @@ Planner.lua
 Terrain.lua
 Routes.lua
 RouteGen.lua
+RouteTerrain.lua
 Laps.lua
 RoutePlanner.lua
 Recording.lua

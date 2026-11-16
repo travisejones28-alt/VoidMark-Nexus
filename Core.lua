@@ -176,6 +176,10 @@ function N:Initialize()
  -- 0.5 redesign: the new route builder does not use learned trails, so stop
  -- recording them in the background (saved trails are kept).
  if not d.settings.redesign05 then d.settings.redesign05=true; d.settings.terrainLearn=false end
+ -- 0.11: zone loops use learned trails again, so record them again (once;
+ -- /vmn terrain off still turns it off). Saved trails were never deleted.
+ if not d.settings.terrain011 then d.settings.terrain011=true; d.settings.terrainLearn=true end
+ if type(d.settings.terrainRouting)~='boolean' then d.settings.terrainRouting=true end
  d.schema=self.schema; d.account=d.account or ('VMN-'..tostring(self:Now())..'-'..tostring(math.random(100000,999999)))
  self.db=d
  -- Repair times saved while the PC clock was ahead (they'd block sync).
