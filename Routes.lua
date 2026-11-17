@@ -897,7 +897,7 @@ function N:UpdateArrow()
   arrow.refreshAt=0
  elseif route.loop and self.lingerAt==(self.waypoint or 1) and not point.transit then
   arrow.status:SetText((point.name or 'Gathering stop')..' - look around')
-  if distance>(route.arriveRadius or 8)+LEAVE_YARDS then self:SkipWaypoint('left');self.dirty=true;arrow.refreshAt=0 end
+  if distance>math.max(route.arriveRadius or 8,point.spread or 0)+LEAVE_YARDS then self:SkipWaypoint('left');self.dirty=true;arrow.refreshAt=0 end
  end
 end
 -- Item IDs are the gathered resources, not world object/spawn IDs.

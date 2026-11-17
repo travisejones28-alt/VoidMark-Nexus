@@ -117,7 +117,9 @@ function N:ClaimGather()
  local map,x,y=self:Position(); local w,h=self:MapSize(v.map)
  if map~=v.map or not x or not w then return false end
  local dx,dy=(v.x-x)*w,(v.y-y)*h
- if dx*dx+dy*dy>PICK_RADIUS*PICK_RADIUS then return false end
+ local stop=self.activeRoute and self.activeRoute.points and self.activeRoute.points[v.index]
+ local pick=math.max(PICK_RADIUS,((stop and stop.spread) or 0)+20)
+ if dx*dx+dy*dy>pick*pick then return false end
  local route=self.activeRoute; local cur=route and route.map==v.map and route.points[self.waypoint or 1]
  if cur and cur~=route.points[v.index] then
   local cx,cy=(cur.x-x)*w,(cur.y-y)*h

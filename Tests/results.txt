@@ -164,6 +164,7 @@ PASS Wrapping keeps a gold amount together
 PASS 0.13.5 route summary: counts what you gather on a route and prices it on Stop
 PASS 0.13.5 loops: reaching a later stop moves the route on to it
 PASS 0.13.6 loops: a detour to a far stop keeps the route; that stop is skipped later this lap
+PASS 0.13.8 stops: spawns within 60 yd become one stop with a spread; Settings changes it
 PASS Future timestamps (wrong PC clock) are pulled back to now instead of blocking sync
 PASS Compact window: old tab names open the page that replaced them; settings are checkboxes
 PASS Duplicate profession records merge without losing recipes or queued crafts
@@ -214,8 +215,9 @@ PASS 0.11 fishing: pool markers draw on the world map and can be hidden
 PASS 0.11 wild data: a newer saved format is left untouched
 PASS 0.11 window: resizes within bounds, keeps size, and shows rows to fit
 PASS 0.13.3 filters: toggle list of every herb and ore; ticks stay open and move the zone
-PASS 0.11 filters: hiding grey drops resources 100+ below your skill from routes and map
-PASS 0.11 sync: an older ters: toggle list of every herb and ore; ticks stay open and move the zone
+PASS 0.11 filters: hidin
+PASS 0.11 window: resizes within bounds, keeps size, and shows rows to fit
+PASS 0.13.3 filters: toggle list of every herb and ore; ticks stay open and move the zone
 PASS 0.11 filters: hiding grey drops resources 100+ below your skill from routes and map
 PASS 0.11 sync: an older bag, bank or profession snapshot never replaces newer data
 PASS 0.11 sync: status says plainly when the other account is unavailable or stale
@@ -242,4 +244,4 @@ PASS 0.13 recipes: recorded sources sync automatically between paired accounts
 PASS 0.13 recipes: manual export and import of recipe sources
 PASS Help: every /vmn command is in the Help window
 PASS Help: opens from Settings and /vmn help, and search filters it
-PASS: 242 tests; Lua 5.1 / standard interpreter
+PASS: 243 tests; Lua 5.1 / standard interpreter

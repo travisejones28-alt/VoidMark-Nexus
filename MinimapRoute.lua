@@ -190,7 +190,8 @@ function N:UpdateMinimapRoute()
     self.minimapRoutePins[shown]=pin
    end
    local current=index==(self.waypoint or 1)
-   local r=RING_RADIUS/math.max(.25,scale)
+   -- A grouped stop's ring covers its spawns (spread in yards -> minimap pixels), capped.
+   local r=math.max(RING_RADIUS/math.max(.25,scale),math.min(30,(stop.spread or 0)/radius*width))
    pin:SetSize(r*2+4,r*2+4)
    pin:SetFrameLevel(overlay:GetFrameLevel()+2)
    pin:ClearAllPoints();pin:SetPoint('CENTER',Minimap,'CENTER',px*width,py*height)

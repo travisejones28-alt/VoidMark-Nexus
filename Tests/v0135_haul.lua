@@ -42,3 +42,14 @@ test('0.13.6 loops: a detour to a far stop keeps the route; that stop is skipped
  N.waypoint=10; N.lingerAt=nil; assert(N:LoopCatchUp(route,.5,.95)); eq(N.waypoint,11)
  local td=N.TextDialog; N.TextDialog=function() end; N:StopRoute(); N.TextDialog=td
 end)
+test('0.13.8 stops: spawns within 60 yd become one stop with a spread; Settings changes it',function()
+ local nodes={}
+ -- 7 spawns spread over ~100 yd (5000 yd wide map: .002 = 10 yd)
+ for i=0,6 do nodes[#nodes+1]={x=.5+i*.003,y=.5+(i%2)*.004,name='Fadeleaf',kind='herb'} end
+ local s=N.db.settings; local keep=s.stopRadius
+ s.stopRadius=60; local a=N:ClusterStops(nodes,5000,3000)
+ s.stopRadius=30; local b=N:ClusterStops(nodes,5000,3000)
+ assert(#a<#b,'bigger radius = fewer stops ('..#a..' vs '..#b..')')
+ assert(a[1].spread and a[1].spread>0,'spread recorded')
+ s.stopRadius=keep
+end)

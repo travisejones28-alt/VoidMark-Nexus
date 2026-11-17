@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.13.7 beta
+# VoidMark Nexus 0.13.8 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -15,6 +15,10 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.13.8
+
+- Fewer, bigger stops: spawns within 60 yd now group into one stop (was 35), so tight clusters like 8-14 become one point. The minimap ring is sized to cover the group, and the route waits while you pick around inside it. Settings > "Group spawns within (yards)" changes it (30-120). Press Rebuild / Start route again to regroup an existing route.
 
 ## What changed in 0.13.7
 

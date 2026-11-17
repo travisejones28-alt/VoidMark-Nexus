@@ -1,12 +1,14 @@
 local _, N = ...
 -- Zone loop generator (0.5): one smooth loop through the zone's spawn points.
---  1. Spawns within STOP_RADIUS yards become one stop (you will see the node).
+--  1. Spawns within the stop radius become one stop (Settings: group nearby spawns, default 60 yd;
+--     you see them all on the minimap from the middle).
 --  2. Lonely outlier stops far from everything else are dropped.
 --  3. All stops are ordered: nearest-neighbour start, then 2-opt and or-opt.
 --  4. If the loop is longer than the stop/time limit, the best stretch of the
 --     loop (most spawns per yard) is kept and closed into a smaller loop.
 -- Runs synchronously in well under a second; no planning window, no cache.
-local STOP_RADIUS=35
+local STOP_RADIUS=60 -- 0.13.8: was 35; tight clusters were many tiny stops
+function N:StopRadius() return math.max(25,math.min(120,tonumber(self.db and self.db.settings.stopRadius) or STOP_RADIUS)) end
 local ARRIVE_RADIUS=25
 N.loopArriveRadius=ARRIVE_RADIUS
 
@@ -17,7 +19,7 @@ local cost=dist
 
 -- Groups spawn points (map coords 0-1) into stops in yard space.
 function N:ClusterStops(nodes,w,h,radius)
- radius=radius or STOP_RADIUS
+ radius=radius or self:StopRadius()
  local r2=radius*radius
  local grid,stops={},{}
  for _,n in ipairs(nodes) do
@@ -35,20 +37,24 @@ function N:ClusterStops(nodes,w,h,radius)
    local weight=n.skillPriority or 1
    if best then
     best.count=best.count+1; best.weight=best.weight+weight
-    best.sx=best.sx+x; best.sy=best.sy+y
+    best.sx=best.sx+x; best.sy=best.sy+y; best.pts[#best.pts+1]={x,y}
     best.names[n.name or '?']=(best.names[n.name or '?'] or 0)+1
     if n.source=='Observed' then best.observed=true end
     if (n.skillPriority or 0)>(best.skillPriority or 0) then best.skillPriority,best.skillColor=n.skillPriority,n.skillColor end
    else
     local s={ax=x,ay=y,sx=x,sy=y,count=1,weight=weight,names={[n.name or '?']=1},kind=n.kind,object=n.object,
-     observed=n.source=='Observed',skillPriority=n.skillPriority,skillColor=n.skillColor}
+     observed=n.source=='Observed',skillPriority=n.skillPriority,skillColor=n.skillColor,pts={{x,y}}}
     local key=gx..':'..gy; grid[key]=grid[key] or {}; table.insert(grid[key],s)
     stops[#stops+1]=s
    end
   end
  end
  for _,s in ipairs(stops) do
-  s.x,s.y=s.sx/s.count,s.sy/s.count
+  local cx,cy=s.sx/s.count,s.sy/s.count
+  -- spread: how far the furthest grouped spawn is from the middle (yards).
+  local spread=0; for _,p in ipairs(s.pts) do local d=math.sqrt((p[1]-cx)^2+(p[2]-cy)^2); if d>spread then spread=d end end
+  s.spread=math.floor(spread+.5); s.pts=nil
+  s.x,s.y=cx,cy
   local top,topN,kinds=nil,0,0
   for name,c in pairs(s.names) do kinds=kinds+1; if c>topN or (c==topN and name<top) then top,topN=name,c end end
   s.name=kinds>1 and (top..' +'..(kinds-1)) or top
@@ -246,7 +252,7 @@ function N:BuildZoneLoop(map,nodes,here,settings,opts)
  end
  local points={}
  for i,s in ipairs(ordered) do
-  points[i]={x=s.x/w,y=s.y/h,map=map,name=s.name,kind=s.kind,object=s.object,spawns=s.count,
+  points[i]={x=s.x/w,y=s.y/h,map=map,name=s.name,kind=s.kind,object=s.object,spawns=s.count,spread=s.spread,
    source=s.observed and 'Observed' or 'Potential spawn',skillPriority=s.skillPriority,skillColor=s.skillColor,picked=s.picked,empty=s.empty}
  end
  local travelSeconds=length/speed
@@ -327,7 +333,8 @@ N:On('UNIT_SPELLCAST_SUCCEEDED',function(unit,_,spell)
  local p=route.points[N.waypoint or 1]; local map,x,y=N:Position()
  if p and map==route.map and x then
   local dx,dy=(p.x-x)*route.width,(p.y-y)*route.height
-  if dx*dx+dy*dy<=(STOP_RADIUS+15)^2 then N:SkipWaypoint('picked')
+  local reach=math.max(N:StopRadius(),(p.spread or 0)+15)+15
+  if dx*dx+dy*dy<=reach*reach then N:SkipWaypoint('picked')
   elseif N.MarkOffRoutePick then N:MarkOffRoutePick(route,x,y) end
  end
 end)
