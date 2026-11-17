@@ -416,20 +416,7 @@ function N:RowTooltip(row)
  GameTooltip:Show()
 end
 
--- Resource picker: kinds, skill-ups, then the names found in this zone.
-function N:ChooseResource(anchor)
- local options={{label='Herbs',value='kind:herb'},{label='Ore',value='kind:ore'},{label='Herbs and ore',value='kind:all'},
-  {label='Herbalism skill-ups',value='skill:herb'},{label='Mining skill-ups',value='skill:ore'},
-  {label='Herbs for gold',value='gold:herb'},{label='Ore for gold',value='gold:ore'}}
- local map=self:Position()
- if map then
-  local names,seen={},{}
-  for _,n in ipairs(self:ZoneNodes(map,'all','')) do if not seen[n.name] then seen[n.name]=true; names[#names+1]=n.name end end
-  table.sort(names)
-  for _,name in ipairs(names) do options[#options+1]={label='Only '..name,value='name:'..name} end
- end
- self:Choice(anchor,options,function(v) self:SelectResource(v) end)
-end
+-- Resource picker: see Interface.lua (ChooseResource / ChooseOneResource).
 function N:SelectResource(v)
  local s=self.db.settings
  local how,arg=tostring(v):match('^(%a+):(.*)$')

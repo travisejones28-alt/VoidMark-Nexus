@@ -19,44 +19,72 @@ do
  end
 end
 
--- Resource menu: presets, then "Pick several..." which toggles single resources.
-function N:ChooseResources(anchor)
- local s=self.db.settings
- local picked=type(s.routeResources)=='table' and s.routeResources or {}
+-- Resource menu (0.13.2): presets, grey toggle, then "One herb..." / "One ore..."
+-- which list EVERY herb or ore in the game (not just this zone). Picking one
+-- that isn't in the route zone moves the Zone to where it grows most.
+function N:AllResourceNames(kind)
+ local seen,out={},{}
+ for _,t in pairs(self.nodeTypes or {}) do
+  if t.kind==kind and t.name and not seen[t.name] then seen[t.name]=t.skill or 0; out[#out+1]=t.name end
+ end
+ table.sort(out,function(a,b) if seen[a]~=seen[b] then return seen[a]<seen[b] end return a<b end)
+ return out,seen
+end
+function N:ChooseResource(anchor)
+ local grey=self.db.settings.hideGray
+ local options={{label='Herbs',value='kind:herb'},{label='Ore',value='kind:ore'},{label='Herbs and ore',value='kind:all'},
+  {label='One herb...',value='list:herb'},{label='One ore...',value='list:ore'},
+  {label='Herbalism skill-ups',value='skill:herb'},{label='Mining skill-ups',value='skill:ore'},
+  {label='Herbs for gold',value='gold:herb'},{label='Ore for gold',value='gold:ore'},
+  {label=(grey and 'Show' or 'Hide')..' grey (no skill-ups)',value='gray:toggle'}}
+ self:Choice(anchor,options,function(v) self:SelectResource(v) end)
+end
+function N:ChooseOneResource(anchor,kind)
+ local names,skill=self:AllResourceNames(kind)
  local map=self.RouteZone and (self:RouteZone()) or self:Position()
- local names,seen={},{}
- local skills=self:GatheringSkills()
- for _,n in ipairs(map and self:ZoneNodes(map,'all','') or {}) do
-  if not seen[n.name] then seen[n.name]={kind=n.kind,gray=self:IsGrayNode(n,skills)};names[#names+1]=n.name end
- end
- table.sort(names,function(a,b) if seen[a].kind~=seen[b].kind then return seen[a].kind<seen[b].kind end return a<b end)
- local options={{label='Done',value='done'}}
+ local here={}
+ for _,n in ipairs(map and self:ZoneNodes(map,kind,'') or {}) do here[n.name]=true end
+ local skills=self:GatheringSkills() or {}
+ local p=skills[kind]
+ local options={{label='< Back',value='back'}}
  for _,name in ipairs(names) do
-  options[#options+1]={label=(picked[name] and '[x] ' or '[ ] ')..name..(seen[name].gray and ' (grey)' or ''),value=name}
+  local tag=''
+  if p and p.skill and skill[name]>p.skill then tag=' (need '..skill[name]..')'
+  elseif p and p.skill and p.skill-skill[name]>=100 then tag=' (grey)' end
+  options[#options+1]={label=name..tag..(here[name] and ' - here' or ''),value='name:'..name}
  end
- if #names==0 then options[#options+1]={label='Nothing gatherable in this zone',value='done'} end
  self:Choice(anchor,options,function(v)
-  if v=='done' then return end
-  local list=type(s.routeResources)=='table' and s.routeResources or {}
-  list[v]=not list[v] or nil
-  s.routeResources=next(list) and list or nil
-  s.kind,s.target,s.routeSelectionMode='all','',s.routeResources and 'multi' or 'all'
-  if self.ui then self.ui.bestZones=nil end
-  self.dirty=true
-  if C_Timer and C_Timer.After then C_Timer.After(0,function() self:ChooseResources(anchor) end) end
+  if v=='back' then return self:ChooseResource(anchor) end
+  self:SelectResource(v)
  end)
+end
+-- After picking one resource: if the route zone has none, jump the Zone to the best one.
+function N:ZoneForTarget(name)
+ local map=self.RouteZone and (self:RouteZone())
+ if map and #self:ZoneNodes(map)>0 then return end
+ local best=self.BestZones and self:BestZones(1)[1]
+ if best then
+  self.db.settings.routeZone=best.map
+  self:Print(name..' is not in this zone. Zone set to '..best.name..' ('..best.spawns..' spots). Use the Zone button to pick another.')
+ else
+  self:Print('No known spawn spots for '..name..'.')
+ end
 end
 do
  local select=N.SelectResource
  N.SelectResource=function(self,v)
-  if v=='multi:' then return self:ChooseResources(self.ui and self.ui.what) end
+  local how,arg=tostring(v):match('^(%a+):(.*)$')
+  if how=='list' then return self:ChooseOneResource(self.ui and self.ui.what,arg) end
   if v=='gray:toggle' then
    self.db.settings.hideGray=not self.db.settings.hideGray
    self:Print(self.db.settings.hideGray and 'Grey resources (no skill-ups) are hidden from routes and the map.' or 'Grey resources are shown again.')
    self.dirty=true;return
   end
-  return select(self,v)
+  local r=select(self,v)
+  if how=='name' and arg~='' then self:ZoneForTarget(arg) end
+  return r
  end
+ -- Old saves may still hold a "pick several" selection; show it sensibly.
  local label=N.ResourceLabel
  N.ResourceLabel=function(self)
   local s=self.db.settings
@@ -66,17 +94,6 @@ do
    return n..' picked'
   end
   return label(self)
- end
-end
--- The menu Choice builds: add "Pick several" and the grey toggle on top.
-do
- local choice=N.Choice
- N.Choice=function(self,anchor,choices,fn)
-  if self.ui and anchor==self.ui.what and choices[1] and choices[1].value=='kind:herb' then
-   table.insert(choices,4,{label='Pick several herbs / ore...',value='multi:'})
-   table.insert(choices,5,{label=(self.db.settings.hideGray and 'Show' or 'Hide')..' grey (no skill-ups)',value='gray:toggle'})
-  end
-  return choice(self,anchor,choices,fn)
  end
 end
 

@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.13.1 beta
+# VoidMark Nexus 0.13.2 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -15,6 +15,11 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.13.2
+
+- Gather resource menu: "Pick several herbs / ore" removed. New **One herb...** and **One ore...** list every herb and ore in the game (sorted by skill, "- here" marks ones in the route zone), not just the current zone.
+- Picking one that isn't in the route zone moves the Zone to where it grows most (Zone button still overrides).
 
 ## What changed in 0.13.1
 - Profession window button is now a small **MR** at the far right, so it no longer covers the skill bar.

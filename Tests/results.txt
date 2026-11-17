@@ -210,9 +210,12 @@ PASS 0.11 fishing: named pools, pool loop, sessions with gold/hr and the guide r
 PASS 0.11 fishing: pool markers draw on the world map and can be hidden
 PASS 0.11 wild data: a newer saved format is left untouched
 PASS 0.11 window: resizes within bounds, keeps size, and shows rows to fit
-PASS 0.11 filters: pick single herbs and ore; the menu toggles them
+PASS 0.13.2 filters: One herb / One ore list every resource in the game and move the zone
 PASS 0.11 filters: hiding grey drops resources 100+ below your skill from routes and map
 PASS 0.11 sync: an older bag, bank or profession snapshot never replaces newer data
+PASS 0.11 sync: status says plainly when the other account is unavailable or stale
+PASS 0.11 transfers: queued crafts list what to mail from which character
+PASS 0.11 dashboard: sessionata
 PASS 0.11 sync: status says plainly when the other account is unavailable or stale
 PASS 0.11 transfers: queued crafts list what to mail from which character
 PASS 0.11 dashboard: session figures, comparison with past sessions, window toggles

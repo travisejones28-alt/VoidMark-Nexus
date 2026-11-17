@@ -22,24 +22,34 @@ test('0.11 window: resizes within bounds, keeps size, and shows rows to fit',fun
  f.GetWidth=nil; f.GetHeight=nil; N:LayoutUI(); eq(#N.errors,0)
 end)
 
-test('0.11 filters: pick single herbs and ore; the menu toggles them',function()
- local s=N.db.settings; local keep={s.kind,s.target,s.routeSelectionMode,s.routeResources}
+test('0.13.2 filters: One herb / One ore list every resource in the game and move the zone',function()
+ local s=N.db.settings; local keep={s.kind,s.target,s.routeSelectionMode,s.routeResources,s.routeZone}
  N:Show('Gather')
  local opened
  local choice=N.Choice
  N.Choice=function(self,anchor,options,fn) opened={options=options,fn=fn}; return choice(self,anchor,options,fn) end
  N:ChooseResource(N.ui.what)
  local labels={}; for _,o in ipairs(opened.options) do labels[o.value]=o.label end
- assert(labels['multi:'] and labels['gray:toggle'],'pick several and grey toggle offered')
- N:ChooseResources(N.ui.what)
- local name; for _,o in ipairs(opened.options) do if o.value~='done' then name=o.value; break end end
- assert(name,'zone resources listed')
- opened.fn(name)
- eq(s.routeSelectionMode,'multi'); assert(s.routeResources[name]); eq(N:ResourceLabel(),'Only '..name)
- for _,n in ipairs(N:ZoneNodes(1411)) do eq(n.name,name) end
- opened.fn(name); eq(s.routeResources,nil); eq(s.routeSelectionMode,'all')
+ assert(labels['list:herb'] and labels['list:ore'] and labels['gray:toggle'],'one herb / one ore and grey toggle offered')
+ assert(not labels['multi:'],'pick several removed')
+ opened.fn('list:herb')
+ local herbs={}; for _,o in ipairs(opened.options) do herbs[o.value]=o.label end
+ assert(herbs["name:Arthas' Tears"],'Arthas Tears listed even outside its zones')
+ assert(herbs['name:Peacebloom'] and herbs['name:Black Lotus'],'all herbs listed')
+ for v in pairs(herbs) do assert(v=='back' or not v:find('Vein',1,true),'no ore in herb list') end
+ opened.fn('back'); assert(labels['list:ore'])
+ opened.fn('list:ore')
+ local ores={}; for _,o in ipairs(opened.options) do ores[o.value]=true end
+ assert(ores['name:Truesilver Deposit'] and ores['name:Copper Vein'],'all ore listed')
+ s.routeZone=nil
+ local here=N:ZoneNodes(1411,'herb','')[1]
+ assert(here,'test zone has herbs')
+ opened.fn('name:'..here.name)
+ eq(s.routeSelectionMode,'name'); eq(N:ResourceLabel(),'Only '..here.name); eq(s.routeZone,nil)
+ N:SelectResource("name:Arthas' Tears")
+ if #N:ZoneNodes(1411,'herb',"Arthas' Tears")==0 and #N:BestZones(1)>0 then assert(s.routeZone and s.routeZone~=1411,'zone moved to where it grows') end
  N.Choice=choice
- s.kind,s.target,s.routeSelectionMode,s.routeResources=keep[1],keep[2],keep[3],keep[4]
+ s.kind,s.target,s.routeSelectionMode,s.routeResources,s.routeZone=keep[1],keep[2],keep[3],keep[4],keep[5]
 end)
 
 test('0.11 filters: hiding grey drops resources 100+ below your skill from routes and map',function()
