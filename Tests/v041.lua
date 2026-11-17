@@ -4,6 +4,8 @@ local N,test,eq,widget=...
 local sent={}
 C_ChatInfo={SendAddonMessage=function(prefix,msg,channel,target) sent[#sent+1]={prefix=prefix,msg=msg,channel=channel,target=target} end,
  RegisterAddonMessagePrefix=function() return true end}
+-- The game's ticker flushes every 0.25 s; drain the queue the same way.
+local function drain() for _=1,100 do if not next(N.syncOut) then return end; N:FlushSync() end end
 
 local function sections(record)
  local s={}
@@ -29,7 +31,7 @@ end)
 test('Paired live sync applies a peer account character and counts its bank',function()
  N.db.sync.peers={};N.db.sync.known={};N.syncIn,N.syncHashes,N.syncOut={},N.db.sync.known,{}
  N:PairPeer('Banky-TestRealm');assert(N.db.sync.peers.banky)
- N:FlushSync()
+ drain()
  local hello;for _,m in ipairs(sent) do if m.msg:find('^H:') then hello=m end end;eq(hello.target,'Banky');assert(hello.msg:find('^H:'));eq(hello.channel,'WHISPER')
  local now=N:Now()
  local peer={name='Banky',realm='TestRealm',faction='Horde',account='PEER-1',at=now,bags={[2770]=40},bagsAt=now,bank={[2771]=7},bankAt=now,
@@ -38,7 +40,7 @@ test('Paired live sync applies a peer account character and counts its bank',fun
  sent={}
  local H=function(x) return N.SyncHash(x) end
  N:SyncReceive('VMNX','H:PEER-1:'..H(s.id)..':'..H(s.inv)..':'..H(s.prof),'WHISPER','Banky')
- N:FlushSync()
+ drain()
  local q,r
  for _,m in ipairs(sent) do if m.msg:find('^Q:') then q=m.msg elseif m.msg:find('^R:') then r=m.msg end end
  eq(q,'Q:id,inv,prof');assert(r,'reply with our hashes')
@@ -53,11 +55,11 @@ test('Paired live sync applies a peer account character and counts its bank',fun
  N.db.settings.includeSynced=false;N.renderStocks=nil
  eq(N:Stock(N.characterID)[2771],nil);N.db.settings.includeSynced=true
  -- Unchanged hashes are not requested again.
- sent={};N:SyncReceive('VMNX','R:PEER-1:'..H(s.id)..':'..H(s.inv)..':'..H(s.prof),'WHISPER','Banky');N:FlushSync();eq(#sent,0)
+ sent={};N:SyncReceive('VMNX','R:PEER-1:'..H(s.id)..':'..H(s.inv)..':'..H(s.prof),'WHISPER','Banky');drain();eq(#sent,0)
  -- After a reload, an inventory-only update still applies to the stored record.
  peer.bags={[2770]=1};local s2=sections(peer)
  N.syncIn={};N.syncHashes.banky={account='PEER-1',id=H(s.id),prof=H(s.prof)}
- sent={};N:SyncReceive('VMNX','H:PEER-1:'..H(s.id)..':'..H(s2.inv)..':'..H(s.prof),'WHISPER','Banky');N:FlushSync()
+ sent={};N:SyncReceive('VMNX','H:PEER-1:'..H(s.id)..':'..H(s2.inv)..':'..H(s.prof),'WHISPER','Banky');drain()
  local asked;for _,m in ipairs(sent) do if m.msg:find('^Q:') then asked=m.msg end end;eq(asked,'Q:inv')
  deliver('Banky','inv',s2.inv,9)
  eq(N.db.characters['PEER-1/TestRealm/Banky'].bags[2770],1)
@@ -66,7 +68,7 @@ end)
 
 test('Pairing one character per account also brings that account\'s other characters (alts)',function()
  N.db.sync.peers={};N.db.sync.known={};N.syncIn,N.syncHashes,N.syncOut={},N.db.sync.known,{}
- N:PairPeer('Banky');sent={};N:FlushSync()
+ N:PairPeer('Banky');sent={};drain()
  local helloA;for _,m in ipairs(sent) do if m.msg:find('^A:') then helloA=m.msg end end
  assert(helloA,'hello carries the alts hash')
  local now=N:Now()
@@ -76,14 +78,14 @@ test('Pairing one character per account also brings that account\'s other charac
  local alts=N:EncodeData({herb})
  sent={}
  N:SyncReceive('VMNX','H:PEER-3:'..H(s.id)..':'..H(s.inv)..':'..H(s.prof),'WHISPER','Banky')
- N:SyncReceive('VMNX','A:'..H(alts),'WHISPER','Banky');N:FlushSync()
+ N:SyncReceive('VMNX','A:'..H(alts),'WHISPER','Banky');drain()
  local asked;for _,m in ipairs(sent) do if m.msg=='Q:alts' then asked=true end end
  assert(asked,'asks for the alts it has not seen')
  deliver('Banky','alts',alts,21)
  local c=N.db.characters['PEER-3/TestRealm/Herbstorage']
  assert(c and c.synced,'other account alt stored');eq(c.bags[785],40);eq(c.bank[785],59)
  -- Same hash again: not asked twice.
- sent={};N:SyncReceive('VMNX','A:'..H(alts),'WHISPER','Banky');N:FlushSync();eq(#sent,0)
+ sent={};N:SyncReceive('VMNX','A:'..H(alts),'WHISPER','Banky');drain();eq(#sent,0)
  -- An alt claiming our own account, or a local character's identity, is ignored.
  local evil=N:EncodeData({{name=N.character.name,realm=N.character.realm,faction='Horde',account='PEER-3',at=now,bags={[1]=1},bank={},professions={}},
   {name='Mine',realm='TestRealm',faction='Horde',account=N.db.account,at=now,bags={},bank={},professions={}}})

@@ -42,3 +42,7 @@ This release adds original Nexus cache, recording, session and route-transfer im
 Reviewed supplied Missing TradeSkills List (Forever build v1.60.01.02, no license file, so all rights reserved) and RecipeRadar 1.3.2 (license: all rights reserved, no redistribution). Also reviewed RecipeRadar's Base and Forever database folders sent separately. None of their code, data or artwork is bundled. Learned from them: Forever exposes recipes through `C_TradeSkillUI`, and recipe sources for Forever's new recipes are only known by recording in game.
 
 Nexus ships its own Classic recipe sources generated from wow-classic-items (MIT, `Licenses/wow-classic-items.txt`) and records trainers, recipe vendors, recipe loot and quest-reward recipes itself. When RecipeRadar is installed, `RecipeFinder.lua` reads its global `RR_DATA` at runtime for display only. Nothing from it is written to saved variables, synced or exported.
+
+## 0.13.0 bundled recipe catalogs
+
+The recipe databases reviewed for 0.12.0 are now bundled, with permission, as two compact catalogs: `Data/ForeverRecipeCatalog.lua` (used first) and `Data/BaseRecipeCatalog.lua` (Classic baseline). Nexus no longer reads `RR_DATA` or any other addon's globals, and neither addon is an optional dependency. Catalog area IDs are mapped to the UI map IDs Forever reports (1411-1458, confirmed against `C_Map.GetMapInfo` at runtime, with modern IDs as a fallback); instance sources get no waypoint. Recorded recipe sources (not the catalogs) sync between paired accounts and export/import through `RecipeSync.lua`.

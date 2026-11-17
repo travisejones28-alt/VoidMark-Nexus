@@ -48,7 +48,7 @@ function N:TextDialog(title,text,import)
   e:SetScript('OnEscapePressed',function() e:ClearFocus() end); f.edit=e
   f.preview=button(f,'Preview import',18,-438,160,function()
    local preview,err
-   if f.importMode=='route' then preview,err=N:PreviewRouteImport(e:GetText()) else preview,err=N:PreviewImport(e:GetText()) end; f.status:SetText(preview and 'Review changes above, then confirm. Close to cancel.' or tostring(err))
+   if f.importMode=='route' then preview,err=N:PreviewRouteImport(e:GetText()) elseif f.importMode=='recipe-sources' then preview,err=N:PreviewRecipeSourceImport(e:GetText()) else preview,err=N:PreviewImport(e:GetText()) end; f.status:SetText(preview and 'Review changes above, then confirm. Close to cancel.' or tostring(err))
    if preview then local pending=N.pendingImport; e:SetText(preview); N.pendingImport=pending; f.preview:Disable(); N.importPreview=preview; f.confirm:Enable() else f.confirm:Disable() end
   end)
   f.confirm=button(f,'Confirm import',188,-438,160,function() N:ConfirmImport(); f:Hide() end)
@@ -57,7 +57,8 @@ function N:TextDialog(title,text,import)
   self.dialog=f
  end
  local f=self.dialog; f.importMode=import;N.pendingImport=nil; f.title:SetText(title); f.edit:SetText(text or ''); f.edit:HighlightText(); f.confirm:Disable()
- f.preview:SetShown(import==true or import=='route'); f.confirm:SetShown(import==true or import=='route'); f.review:SetShown(import==true or import=='route')
+ local canImport=import==true or import=='route' or import=='recipe-sources'
+ f.preview:SetShown(canImport); f.confirm:SetShown(canImport); f.review:SetShown(canImport)
  f.preview:Enable(); f.status:SetText(import and 'Paste VMN1 export, then preview and review before confirming.' or 'Ctrl+A, Ctrl+C to copy.'); f:Show()
 end
 -- Compact window: Gather | Professions | Characters | Guides | Settings.
@@ -189,13 +190,16 @@ function N:CreateUI()
  u.targetLabel=label(pr,'Up to skill',156,-37,'GameFontHighlight')
  u.target=edit(pr,240,-32,56,''); u.target:SetScript('OnTextChanged',function() N.dirty=true end)
  u.search=edit(pr,20,-32,260,''); u.search:SetScript('OnTextChanged',function() u.offset=0; N.dirty=true end)
+ u.sourceFilter=button(pr,'Sources: All',290,-32,156,function() N:RecipeSourceFilterMenu(u.sourceFilter) end)
  u.profInfo=label(pr,'',14,-64,'GameFontHighlight'); u.profInfo:SetWidth(W-28)
  -- Characters controls
  local ch=u.pages.Characters
  u.syncNow=button(ch,'Sync now',14,0,100,function() N:SyncAll(); N:Print('Sync requested.') end)
  u.pairName=edit(ch,126,0,150,'')
  u.pair=button(ch,'Pair',282,0,60,function() local name=u.pairName:GetText(); if name~='' then N:PairPeer(name); u.pairName:SetText('') end end)
- u.exportB=button(ch,'Export',348,0,98,function() N:Choice(u.exportB,{{label='Export (copy)',value='e'},{label='Import (paste)',value='i'}},function(v) if v=='e' then N:TextDialog('Copy to the other account',N:Export()) else N:TextDialog('Paste from the other account','',true) end end) end)
+ u.exportB=button(ch,'Export',348,0,98,function() N:Choice(u.exportB,{{label='Export (copy)',value='e'},{label='Import (paste)',value='i'},{label='Recipe sources: export (copy)',value='re'},{label='Recipe sources: import (paste)',value='ri'}},function(v)
+  if v=='e' then N:TextDialog('Copy to the other account',N:Export()) elseif v=='i' then N:TextDialog('Paste from the other account','',true)
+  elseif v=='re' then N:TextDialog('Copy recipe sources to the other account',N:ExportRecipeSources()) else N:TextDialog('Paste recipe sources from the other account','','recipe-sources') end end) end)
  u.syncInfo=label(ch,'',14,-36,'GameFontHighlight'); u.syncInfo:SetWidth(W-28)
  -- Guides page: pick a guide; trainers, steps, vendors and materials below.
  local gp=u.pages.Guides
@@ -513,6 +517,7 @@ function N:RenderProfessions(u)
  local c=u.character and self.db.characters[u.character]; local p=c and c.professions[u.profession]
  u.prof:SetText(p and (c.name..': '..p.name..' '..(p.skill or 0)..'/'..(p.max or 0)) or 'Pick a profession')
  local missing=u.profView=='missing'
+ if u.sourceFilter then u.sourceFilter:SetShown(missing); u.sourceFilter:SetText('Sources: '..select(2,self:RecipeSourceFilter())) end
  local level=u.profView~='recipes' and not missing
  u.mode:SetShown(level); u.target:SetShown(level); u.targetLabel:SetShown(level); u.search:SetShown(not level)
  u.mode:SetText(s.levelMode or 'Cheapest')

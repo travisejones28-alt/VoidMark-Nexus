@@ -119,33 +119,3 @@ test('0.12 missing: Professions > Missing view, /vmn missing and the waypoint cl
  eq(#N.errors,0)
  teardown()
 end)
-
-test('0.12 missing: RecipeRadar data is read when that addon is loaded, never stored',function()
- local cid,pid=setup()
- RR_DATA={zones={{id=14,name={English='Durotar'}}},
-  npcs={{id=1,name={English='Grubb'},location={x='52.10',y='41.30'},zone_id=14,reacts='Horde'},
-        {id=2,name={English='Kendor'},location={x='10',y='10'},zone_id=14,reacts='Alliance'}},
-  quests={{id=7,name={English='Stew Time'},npcs={1}}},objects={},
-  skills={Cooking={
-   {id=1,name={English='Herb Baked Egg'},min_skill=1},
-   {id=2,name={English='Forever Stew'},min_skill=45,items={900}},
-   {id=3,name={English='Camp Soup'},min_skill=30,trainers={price=500,sources={1}}},
-   {id=4,name={English='Alliance Pie'},min_skill=20,items={901}}}},
-  items={Cooking={{id=900,vendors={price=200,sources={1}},quests={7}},{id=901,vendors={sources={2}}}}}}
- local list,sum=N:MissingRecipes(cid,pid)
- assert(sum.external)
- assert(not find(list,'Herb Baked Egg'))
- local fs=find(list,'Forever Stew'); eq(fs.skill,45)
- local texts={}; for _,s in ipairs(fs.sources) do texts[#texts+1]=s.text end
- local all=table.concat(texts,'\n')
- assert(all:find('Vendor Grubb, Durotar (52.1, 41.3)',1,true),all)
- assert(all:find('Quest reward: Stew Time (Grubb',1,true),all)
- eq(fs.sources[1].kind,'client')  -- the client's own text stays first
- local soup=find(list,'Camp Soup'); assert(soup.sources[1].text:find('Trainer Grubb',1,true))
- local pie=find(list,'Alliance Pie'); assert(pie.other)
- assert(not find(list,'Scorpid Surprise'),'shipped Classic rows replaced by RecipeRadar data')
- eq(N.db.recipeRadar,nil)
- for k in pairs(N.db.recipeFinds) do error('stored '..tostring(k)) end
- RR_DATA=nil
- teardown()
-end)

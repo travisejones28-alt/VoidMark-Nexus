@@ -142,6 +142,11 @@ function N:PreviewImport(raw)
  self.pendingImport={raw=raw,accepted=accepted}; return table.concat(lines,'\n')
 end
 function N:ConfirmImport()
+ if self.pendingImport and self.pendingImport.kind=='recipe-sources' then
+  local n,err=self:MergeRecipeSources(self.pendingImport.data)
+  self.pendingImport=nil
+  return self:Print(n and ('Imported '..n..' recipe locations.') or tostring(err))
+ end
  if self.pendingImport and self.pendingImport.kind=='route' then
   local pending=self.pendingImport
   local preview,err=self:PreviewRouteImport(pending.raw)

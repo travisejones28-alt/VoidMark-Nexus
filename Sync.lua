@@ -178,6 +178,8 @@ function N:SyncSections()
  for key,value in pairs({id=id,inv=inv,prof={professions=c.professions,cooldowns=c.cooldowns},alts=alts}) do
   local raw=self:EncodeData(value);out[key]={raw=raw,hash=hash(raw)}
  end
+ -- Recorded recipe sources (RecipeSync.lua): re-encoded only after they change.
+ out.recipes=self:RecipeSyncSection(hash)
  return out
 end
 
@@ -187,6 +189,8 @@ function N:SyncHello(peer)
  self:SyncNote(peer,'hello')
  self:SendSync(peer,'H:'..self.db.account..':'..s.id.hash..':'..s.inv.hash..':'..s.prof.hash)
  self:SendSync(peer,'A:'..s.alts.hash)
+ -- Separate message: older versions ignore it and never ask for 'recipes'.
+ self:SendSync(peer,'F:'..s.recipes.hash)
 end
 function N:SyncAll()
  for peer in pairs(self.db.sync.peers) do self:SyncHello(peer) end
@@ -374,7 +378,13 @@ function N:SyncReceive(prefix,msg,channel,sender)
    local s=self:SyncSections();self.syncSections=s
    self:SendSync(peer,'R:'..self.db.account..':'..s.id.hash..':'..s.inv.hash..':'..s.prof.hash)
    self:SendSync(peer,'A:'..s.alts.hash)
+   self:SendSync(peer,'F:'..s.recipes.hash)
   end
+ elseif kind=='F:' then
+  local h=msg:match('^F:([%w%-]+)$')
+  local state=self.syncIn[peer];if not h or not state or not state.account then return end
+  local known=self.syncHashes[peer] or {};self.syncHashes[peer]=known
+  if known.recipes~=h then self:SendSync(peer,'Q:recipes') end
  elseif kind=='A:' then
   -- Separate message so older versions simply ignore it.
   local h=msg:match('^A:([%w%-]+)$')
@@ -384,11 +394,11 @@ function N:SyncReceive(prefix,msg,channel,sender)
  elseif kind=='Q:' then
   local list=msg:sub(3)
   -- id first so a new peer record is complete as early as possible.
-  for _,key in ipairs({'id','inv','prof','alts'}) do if list:find(key,1,true) then self:SendSection(peer,key) end end
+  for _,key in ipairs({'id','inv','prof','alts','recipes'}) do if list:find(key,1,true) then self:SendSection(peer,key) end end
  elseif kind=='D:' then
   local seq,key,i,n,body=msg:match('^D:(%d+):(%a+):(%d+):(%d+):(.*)$')
   i,n=tonumber(i),tonumber(n)
-  if not seq or (key~='id' and key~='inv' and key~='prof' and key~='alts') or not i or not n or n<1 or n>MAX_CHUNKS or i<1 or i>n then return end
+  if not seq or (key~='id' and key~='inv' and key~='prof' and key~='alts' and key~='recipes') or not i or not n or n<1 or n>MAX_CHUNKS or i<1 or i>n then return end
   local state=self.syncIn[peer];if not state or not state.account then return end
   local buf=state[key]
   if not buf or buf.seq~=seq or buf.n~=n then buf={seq=seq,n=n,parts={},got=0};state[key]=buf end
@@ -398,7 +408,9 @@ function N:SyncReceive(prefix,msg,channel,sender)
    local raw=unescape(table.concat(buf.parts))
    local ok,data=pcall(self.Decode,self,raw)
    if not ok or type(data)~='table' then return self:Print('Ignored damaged sync data from '..peer..'.') end
-   if key=='alts' then self:ApplyAlts(peer,data) else self:ApplySync(peer,key,data) end
+   if key=='alts' then self:ApplyAlts(peer,data) elseif key=='recipes' then
+    local n,err=self:MergeRecipeSources(data); if not n then return self:Print('Ignored invalid recipe sync: '..tostring(err)) end
+   else self:ApplySync(peer,key,data) end
    local known=self.syncHashes[peer] or {};self.syncHashes[peer]=known
    known[key]=hash(raw)
   end

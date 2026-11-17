@@ -224,7 +224,17 @@ PASS 0.12 missing: loot and quest rewards are recorded with place and shown as s
 PASS 0.12 missing: recorded vendors and trainers feed the list with their place
 PASS 0.12 missing: recipe finds are capped
 PASS 0.12 missing: Professions > Missing view, /vmn missing and the waypoint click
-PASS 0.12 missing: RecipeRadar data is read when that addon is loaded, never stored
+PASS 0.13 recipes: no RecipeRadar or MTSL dependency anywhere at runtime
+PASS 0.13 recipes: catalogs parse per profession, Forever first, Classic baseline fills in
+PASS 0.13 recipes: memory stays bounded (strings until viewed, three professions parsed)
+PASS 0.13 recipes: Forever map IDs resolve against the client (Classic first, modern fallback)
+PASS 0.13 recipes: clicking a missing recipe lists its individual sources and sets a waypoint
+PASS 0.13 recipes: source filter works for catalog and recorded sources and is remembered
+PASS 0.13 recipes: Missing list is rebuilt only when its inputs change
+PASS 0.13 recipes: merge keeps local records, validates first and caps sizes
+PASS 0.13 recipes: sync payload is encoded once per change
+PASS 0.13 recipes: recorded sources sync automatically between paired accounts
+PASS 0.13 recipes: manual export and import of recipe sources
 PASS Help: every /vmn command is in the Help window
 PASS Help: opens from Settings and /vmn help, and search filters it
-PASS: 229 tests; Lua 5.1 / standard interpreter
+PASS: 239 tests; Lua 5.1 / standard interpreter

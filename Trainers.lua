@@ -53,7 +53,7 @@ function N:ScanTrainer()
  entry.services=type(entry.services)=='table' and entry.services or {}
  -- Merge: the trainer's filter may hide some services this visit.
  for s,info in pairs(services) do entry.services[s]=info end
- list[key]=entry;self.dirty=true
+ list[key]=entry;self.dirty=true;self:RecipeSourcesChanged()
 end
 
 function N:ScanMerchant()
@@ -77,7 +77,7 @@ function N:ScanMerchant()
     item.vendors[key]={name=name,map=map,x=x,y=y,price=self:Finite(price,0,1e10) and price or nil,
      limited=self:Finite(available,0,1e4) and available>=0 and available or nil,at=self:Now()}
    end
-   root[id]=item;self.dirty=true
+   root[id]=item;self.dirty=true;self:RecipeSourcesChanged()
   end
  end
 end

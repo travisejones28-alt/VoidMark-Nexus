@@ -6,11 +6,12 @@ local _, N = ...
 --     recipe items you looted or were offered as quest rewards (recorded here).
 --  2. The game client: unlearned recipes the profession window reports, with
 --     the client's own source text when it gives one.
---  3. RecipeRadar's database, if that addon is loaded: read from the running
---     game only, never copied, stored or synced (its license forbids sharing).
---  4. Otherwise shipped Classic data (Data/RecipeSources.lua, MIT). Forever can
---     differ, so these lines are marked "Classic data".
--- Nothing is sent anywhere. Recorded finds are capped and only hold recipe facts.
+--  3. The bundled recipe catalogs (ForeverRecipeBridge.lua): Forever data first,
+--     then the Classic baseline. No other addon is needed.
+--  4. Shipped Classic item data (Data/RecipeSources.lua, MIT) for any profession
+--     the catalogs do not cover.
+-- Recorded finds are capped, only hold recipe facts, and are shared with the other
+-- account only through Nexus sync or export (RecipeSync.lua).
 
 local MAX_FINDS,MAX_PER_ITEM=3000,20
 local LIMIT_ROWS=400
@@ -61,73 +62,6 @@ local function dataText(self,d)
 end
 
 --------------------------------------------------------------------------------
--- Optional: RecipeRadar's data, read-only, when that addon is loaded.
--- Nexus never copies or ships it; it is only read from the running game.
---------------------------------------------------------------------------------
-local ext={}
-local function en(t) return type(t)=='table' and (t.English or t.enUS) or (type(t)=='string' and t) or nil end
-local function byID(list) local out={}; for _,e in ipairs(type(list)=='table' and list or {}) do if type(e)=='table' and e.id then out[e.id]=e end end; return out end
-local function ids(v)
- if type(v)~='table' then return {} end
- if type(v.sources)=='table' then return v.sources end
- local out={}; for _,x in ipairs(v) do if type(x)=='number' then out[#out+1]=x end end; return out
-end
-function N:ExternalRecipeData(profession)
- local R=rawget(_G,'RR_DATA')
- if type(R)~='table' or type(R.skills)~='table' or type(R.skills[profession])~='table' then return nil end
- if ext[profession] then return ext[profession] end
- ext.npcs=ext.npcs or byID(R.npcs); ext.zones=ext.zones or byID(R.zones); ext.quests=ext.quests or byID(R.quests); ext.objects=ext.objects or byID(R.objects)
- local items=byID(R.items and R.items[profession])
- local function place(e)
-  local z=e and ext.zones[e.zone_id]; local zone=en(z and z.name)
-  local loc=e and e.location
-  local x,y=loc and tonumber(loc.x),loc and tonumber(loc.y)
-  if zone and x and y and (x>0 or y>0) then return string.format('%s (%.1f, %.1f)',zone,x,y) end
-  return zone
- end
- local function npcText(id)
-  local n=ext.npcs[id]; local name=en(n and n.name) or ('NPC '..tostring(id))
-  local where=place(n); return name..(where and (', '..where) or ''),n and n.reacts
- end
- local out={}
- for _,s in ipairs(R.skills[profession]) do
-  local name=type(s)=='table' and en(s.name)
-  if name then
-   local row={name=name,skill=tonumber(s.min_skill),sources={}}
-   local function add(text,reacts) row.sources[#row.sources+1]={text=text,faction=reacts=='Alliance' and 'A' or reacts=='Horde' and 'H' or nil} end
-   if type(s.trainers)=='table' then
-    local price=tonumber(s.trainers.price)
-    for _,id in ipairs(ids(s.trainers)) do local t,r=npcText(id); add('Trainer '..t..(price and price>0 and (' | '..self:Gold(price)) or ''),r) end
-   end
-   if s.special_action then add((tostring(s.special_action):gsub('^%l',string.upper))) end
-   for _,iid in ipairs(type(s.items)=='table' and s.items or {}) do
-    local it=items[iid]; row.item=row.item or iid
-    if it then
-     if type(it.vendors)=='table' then
-      local price=tonumber(it.vendors.price)
-      for _,id in ipairs(ids(it.vendors)) do local t,r=npcText(id); add('Vendor '..t..(price and (' | '..self:Gold(price)) or ''),r) end
-     end
-     if type(it.drops)=='table' then
-      for _,id in ipairs(ids(it.drops)) do local t,r=npcText(id); add('Drops from '..t,r) end
-      local range=it.drops.range
-      if type(range)=='table' then add(string.format('World drop, mobs level %s-%s',tostring(range.min_xp_level or '?'),tostring(range.max_xp_level or '?'))) end
-     end
-     for _,qid in ipairs(type(it.quests)=='table' and it.quests or {}) do
-      local q=ext.quests[qid]; local giver=q and type(q.npcs)=='table' and q.npcs[1]
-      local t,r; if giver then t,r=npcText(giver) end
-      add('Quest reward: '..(en(q and q.name) or ('quest '..qid))..(t and (' ('..t..')') or ''),r)
-     end
-     for _,oid in ipairs(type(it.objects)=='table' and it.objects or {}) do local where=place(ext.objects[oid]); add('Found in an object'..(where and (', '..where) or '')) end
-    end
-   end
-   out[#out+1]=row
-  end
- end
- ext[profession]=out
- return out
-end
-
---------------------------------------------------------------------------------
 -- Recording loot and quest rewards
 --------------------------------------------------------------------------------
 local function itemName(self,link)
@@ -156,7 +90,7 @@ function N:RecordRecipeFind(link,kind,source)
  if not e and count(item[field])>=MAX_PER_ITEM then root[id]=item; return false end
  e=type(e)=='table' and e or {seen=0}
  e.name,e.map,e.x,e.y,e.at,e.seen=source,map,x,y,self:Now(),(tonumber(e.seen) or 0)+1
- item[field][key]=e; root[id]=item; self.dirty=true
+ item[field][key]=e; root[id]=item; self.dirty=true; self:RecipeSourcesChanged()
  return true
 end
 
@@ -244,16 +178,16 @@ function N:MissingRecipes(cid,pid)
    if e then e.client=true; if text then add(e,{kind='client',text=text,seen=true}) end end
   end
  end
- -- 3. RecipeRadar's data if that addon is loaded (read-only, never stored).
- local extRows=self:ExternalRecipeData(prof)
+ -- 3. Bundled recipe catalogs: Forever first, then the Classic baseline.
+ local extRows=self:CatalogRecipeData(prof)
  for _,d in ipairs(extRows or {}) do
   if not known[lower(d.name)] then
    local e=entry(d.name,d.skill,d.item)
    if e then e.skill=d.skill or e.skill end
-   for _,s in ipairs(d.sources) do add(e,{kind='ext',text=s.text,ext=true,other=s.faction and mine and s.faction~=mine or nil}) end
+   for _,s in ipairs(d.sources) do add(e,{kind=s.kind,text=s.text,ext=true,origin=s.origin,other=s.faction and mine and s.faction~=mine or nil,map=s.map,x=s.x,y=s.y}) end
   end
  end
- -- 4. Shipped Classic data (skipped when RecipeRadar's data is there).
+ -- 4. Shipped Classic item data, only when the catalogs lack this profession.
  for _,d in ipairs(extRows and {} or self:RecipeData(prof)) do
   if not known[lower(d.name)] then
    -- The data names one seller per recipe, so an Alliance-only line does not
@@ -278,6 +212,8 @@ function N:MissingRecipes(cid,pid)
    if (a.seen and true or false)~=(b.seen and true or false) then return a.seen==true end
    if (a.other and true or false)~=(b.other and true or false) then return not a.other end
    if (a.ext and true or false)~=(b.ext and true or false) then return a.ext==true end
+   if (a.origin=='forever')~=(b.origin=='forever') then return a.origin=='forever' end
+   if (a.map and true or false)~=(b.map and true or false) then return a.map~=nil end
    return a.text<b.text end)
   e.seenText=nil
   e.other=#e.sources>0 and e.sources[1].other or nil
@@ -314,37 +250,73 @@ function N:PointToSource(name,src)
  self:Print(src.text)
 end
 
+-- Rebuilt only when something it depends on changes (recorded sources, the
+-- profession scan, skill, faction), not on every redraw or keystroke.
+local buildMissing=N.MissingRecipes
+local missingCache
+function N:MissingRecipes(cid,pid)
+ local c=cid and self.db.characters[cid]; local p=c and c.professions and c.professions[pid]
+ if not p then return buildMissing(self,cid,pid) end
+ local key=table.concat({tostring(cid),tostring(pid),tostring(self.recipeSourceVersion or 0),tostring(p.at),tostring(p.skill),
+  tostring(p.recipes),tostring(self.db.trainers),tostring(self.db.recipeFinds),tostring(self.db.recipeVendors),tostring(c.faction)},'|')
+ if missingCache and missingCache.key==key and missingCache.db==self.db then return missingCache.list,missingCache.sum end
+ local list,sum=buildMissing(self,cid,pid)
+ missingCache={key=key,db=self.db,list=list,sum=sum}
+ return list,sum
+end
+function N:ClearMissingCache() missingCache=nil end
+
+local TIP_SOURCES=14
+local function sourceTag(s)
+ local tag=s.seen and '[seen] ' or s.origin=='forever' and '[Forever data] ' or (s.ext or s.data) and '[Classic data] ' or ''
+ if s.other and not s.seen then tag=tag:gsub('%] $',', other faction] ') end
+ return tag
+end
+
 -- Rows for the Professions > Missing view.
 function N:RenderMissing(u,c,p,colorRow,COLORS)
  local rows={}
  local list,sum=self:MissingRecipes(u.character,u.profession)
  local query=lower(u.search and u.search:GetText() or '')
+ local filter,filterLabel=self:RecipeSourceFilter()
+ local category=self.RecipeSourceCategory
  local shown=0
  for _,e in ipairs(list) do
+  local srcs=e.sources
+  if filter~='all' then
+   srcs={}
+   for _,s in ipairs(e.sources) do if category(s.kind)==filter then srcs[#srcs+1]=s end end
+  end
+  if #srcs>0 or filter=='all' then
   if query=='' or lower(e.name):find(query,1,true) then
    shown=shown+1
    if shown<=LIMIT_ROWS then
-    local first=e.sources[1]
+    local first=srcs[1]
     local where=first and first.text or 'Source not known yet. Nexus notes it when you see it.'
     local canNow=(e.skill or 999)<=sum.skill and not e.other
     local color=e.other and COLORS.gray or canNow and COLORS.good or (e.skill and COLORS.white or COLORS.gray)
+    local mappable=0; for _,s in ipairs(srcs) do if s.map then mappable=mappable+1 end end
     rows[#rows+1]=colorRow({text=e.name..(e.skill and ('  ('..e.skill..')') or '')..'   '..where,
      item=e.item,title=e.name,
-     click=function() local s; for _,x in ipairs(e.sources) do if x.map then s=x;break end end; self:PointToSource(e.name,s) end,
+     click=function() self:ChooseRecipeSource(e.name,srcs,u.search) end,
      tip=function(tt)
       tt:AddLine(e.skill and ('Needs '..p.name..' '..e.skill) or 'Skill needed: unknown',1,.82,0)
-      if #e.sources==0 then tt:AddLine('No source known yet. Visit vendors and trainers, or loot it, and Nexus records where.',.8,.8,.8,true) end
-      for _,s in ipairs(e.sources) do
-       tt:AddLine((s.seen and '[seen] ' or s.ext and (s.other and '[RecipeRadar, other faction] ' or '[RecipeRadar] ') or s.other and '[Classic data, other faction] ' or '[Classic data] ')..s.text,s.seen and .4 or .75,s.seen and 1 or .75,s.seen and .5 or .75,true)
+      if #srcs==0 then tt:AddLine('No source known yet. Visit vendors and trainers, or loot it, and Nexus records where.',.8,.8,.8,true) end
+      for i,s in ipairs(srcs) do
+       if i>TIP_SOURCES then tt:AddLine('...and '..(#srcs-TIP_SOURCES)..' more. Click to see the ones on the map.',.6,.6,.6); break end
+       tt:AddLine(sourceTag(s)..s.text,s.seen and .4 or .75,s.seen and 1 or .75,s.seen and .5 or .75,true)
       end
-      if e.sources[1] and e.sources[1].map then tt:AddLine('Click: set a waypoint.',.6,.6,.6) end
+      if mappable==1 then tt:AddLine('Click: set a waypoint.',.6,.6,.6)
+      elseif mappable>1 then tt:AddLine('Click: pick one of '..mappable..' places for a waypoint.',.6,.6,.6) end
      end},color)
    end
   end
+  end
  end
  u.profInfo:SetText(string.format('%d missing (%d you can learn now at %d). You know %d.%s',shown,sum.learnNow or 0,sum.skill or 0,sum.known,
-  shown>LIMIT_ROWS and (' Showing the first '..LIMIT_ROWS..'; search to narrow.') or '')..(sum.external and ' Sources: RecipeRadar + seen in game.' or ' Sources: Classic data + seen in game.'))
- u.footer:SetText('Green: learnable at your skill. Grey: only an other-faction seller is known. Hover for sources; click for a waypoint.')
+  shown>LIMIT_ROWS and (' Showing the first '..LIMIT_ROWS..'; search to narrow.') or '')..(filter~='all' and (' Showing: '..filterLabel..'.') or '')
+  ..(sum.external and ' Sources: Forever data + seen in game.' or ' Sources: Classic data + seen in game.'))
+ u.footer:SetText('Green: learnable at your skill. Grey: only an other-faction source is known. Hover for sources; click for a waypoint.')
  return rows
 end
 

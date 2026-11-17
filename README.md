@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.11.1 beta
+# VoidMark Nexus 0.13.0 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -15,6 +15,13 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.13.0
+- **Recipe database built in.** Missing recipes now uses Nexus's own Forever recipe catalog first and a Classic baseline second. No other recipe addon is needed or read.
+- **Click a recipe to pick a source.** Each trainer, vendor, drop, quest or object is listed on its own; pick one to set a waypoint. Outdoor zones and capitals have map positions; dungeon and raid sources are listed without one.
+- **Sources dropdown** on the Missing view: All, Trainers, Vendors, Drops, Quests, Objects or Other. It is remembered.
+- **Recipe sources sync between accounts.** Recipe loot, quest rewards and recipe vendors you record are shared with your paired character automatically while both are online. Manual: Characters > Export > *Recipe sources*, or `/vmn exportrecipes` / `/vmn importrecipes`. Your own records are never removed; a place is only replaced by a newer sighting.
+- Lighter: each profession's data is unpacked only when you view it (at most three kept), the Missing list is rebuilt only when something changes, and the sync data is re-encoded only after new sightings.
 
 ## What changed in 0.12.0
 - **Missing recipes**: Professions > *Missing*, the *Missing recipes* button on the profession window, or `/vmn missing [profession]`. Lists what you have not learned, green when your skill is high enough, with where to get it. Hover for every source; click a row with a recorded position to set a TomTom waypoint (or the game's map pin).
@@ -91,6 +98,7 @@ Gathering routes, profession leveling and your items across both accounts, for W
 | `/vmn terrain on\|off\|use\|ignore\|clear`, `/vmn block [yards]`, `/vmn clearblocks` | Learned trails and obstacle marks |
 | `/vmn level PROFESSION [target]`, `/vmn levelshop`, `/vmn transfers` | Leveling step, shopping list, what to mail |
 | `/vmn missing [profession]` | Recipes you have not learned and where to get them |
+| `/vmn exportrecipes`, `/vmn importrecipes` | Copy or paste recorded recipe sources between accounts |
 | `/vmn skinning`, `/vmn fishing`, `/vmn pool NAME`, `/vmn poolroute`, `/vmn pools on\|off` | Skinning and fishing |
 | `/vmn dash`, `/vmn notify on\|off`, `/vmn grey`, `/vmn resetwindow` | Dashboard, notices, grey filter, window |
 | `/vmn help [word]`, `/vmn debug` | Help & commands window (FAQ, search), diagnostics |
@@ -107,7 +115,7 @@ Nexus reads `VoidMarkMarketDB.schemaVersion == 1`, `economies[normalizedRealm ..
 
 ## Licensing
 
-Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and data: Copyright (c) 2019 Wuild, MIT; full license in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. Recipe sources in `Data/RecipeSources.lua`: generated from wow-classic-items, Copyright (c) 2019 Nakroma, MIT; license in `VoidMarkNexus/Licenses/wow-classic-items.txt` (`tools/bake_recipes.py` rebuilds it). RecipeRadar's and Missing TradeSkills List's databases are not included: Nexus only reads RecipeRadar's data from the running game when that addon is installed. Other reference addons and TomTom artwork are not redistributed.
+Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and data: Copyright (c) 2019 Wuild, MIT; full license in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. Recipe sources in `Data/RecipeSources.lua`: generated from wow-classic-items, Copyright (c) 2019 Nakroma, MIT; license in `VoidMarkNexus/Licenses/wow-classic-items.txt` (`tools/bake_recipes.py` rebuilds it). The bundled recipe catalogs (`Data/ForeverRecipeCatalog.lua`, `Data/BaseRecipeCatalog.lua`) are included with permission; Nexus does not load or read any other recipe addon. Other reference addons and TomTom artwork are not redistributed.
 
 ## Older versions
 

@@ -2,9 +2,9 @@
 ## Title: VoidMark Nexus
 ## Notes: Professions, offline alts, planning, profitability and gathering navigation.
 ## Author: VoidMark
-## Version: 0.12.0-beta
+## Version: 0.13.0-beta
 ## SavedVariables: VoidMarkNexusDB
-## OptionalDeps: VoidMarkMarket, Auctionator, ShortestPathForever, OpenMap, RecipeRadar
+## OptionalDeps: VoidMarkMarket, Auctionator, ShortestPathForever, OpenMap
 ## IconTexture: Interface\Icons\INV_Misc_Gem_Amethyst_02
 Core.lua
 Help.lua
@@ -12,6 +12,8 @@ Data\Nodes.lua
 Data\Spawns.lua
 Data\ZoneLand.lua
 Data\RecipeSources.lua
+Data\ForeverRecipeCatalog.lua
+Data\BaseRecipeCatalog.lua
 Model.lua
 Leveling.lua
 Trainers.lua
@@ -45,6 +47,8 @@ LevelingPlus.lua
 WildGather.lua
 Interface.lua
 RecipeFinder.lua
+ForeverRecipeBridge.lua
+RecipeSync.lua
 Dashboard.lua
 Boot.lua
 AutoInvite.lua

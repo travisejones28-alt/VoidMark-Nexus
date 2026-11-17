@@ -38,7 +38,7 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Help','Data/Nodes','Data/Spawns','Data/ZoneLand','Data/RecipeSources','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','RouteTerrain','Laps','RoutePlanner','Recording','MinimapRoute','UI','Finder','Guides','CraftGuides','Gold','Mail','Cooldowns','Tooltip','RouteLearning','LevelingPlus','WildGather','Interface','RecipeFinder','Dashboard','Boot'}
+local files={'Core','Help','Data/Nodes','Data/Spawns','Data/ZoneLand','Data/RecipeSources','Data/ForeverRecipeCatalog','Data/BaseRecipeCatalog','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','RouteTerrain','Laps','RoutePlanner','Recording','MinimapRoute','UI','Finder','Guides','CraftGuides','Gold','Mail','Cooldowns','Tooltip','RouteLearning','LevelingPlus','WildGather','Interface','RecipeFinder','ForeverRecipeBridge','RecipeSync','Dashboard','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
@@ -1102,6 +1102,7 @@ assert(loadfile(root..'/Tests/v011_professions.lua'))(N,test,eq,widget)
 assert(loadfile(root..'/Tests/v011_wild.lua'))(N,test,eq,widget)
 assert(loadfile(root..'/Tests/v011_ui_sync.lua'))(N,test,eq,widget)
 assert(loadfile(root..'/Tests/v012_missing.lua'))(N,test,eq,widget)
+assert(loadfile(root..'/Tests/v013_recipes.lua'))(N,test,eq,widget,root)
 assert(loadfile(root..'/Tests/help.lua'))(N,test,eq,widget,root)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
