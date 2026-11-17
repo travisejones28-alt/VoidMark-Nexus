@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.13.5 beta
+# VoidMark Nexus 0.13.6 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -15,6 +15,10 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.13.6
+
+- Detours are safe: running off to grab a node at a far stop (e.g. 50 while the route is on 24) leaves the route where it was. That stop is marked picked for this lap and passed over automatically when the route gets to it. Only the next 4 stops can pull the route forward.
 
 ## What changed in 0.13.5
 

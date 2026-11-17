@@ -327,6 +327,7 @@ N:On('UNIT_SPELLCAST_SUCCEEDED',function(unit,_,spell)
  local p=route.points[N.waypoint or 1]; local map,x,y=N:Position()
  if p and map==route.map and x then
   local dx,dy=(p.x-x)*route.width,(p.y-y)*route.height
-  if dx*dx+dy*dy<=(STOP_RADIUS+15)^2 then N:SkipWaypoint('picked') end
+  if dx*dx+dy*dy<=(STOP_RADIUS+15)^2 then N:SkipWaypoint('picked')
+  elseif N.MarkOffRoutePick then N:MarkOffRoutePick(route,x,y) end
  end
 end)

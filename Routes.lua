@@ -565,8 +565,30 @@ function N:GenerateRoute(refresh)
 end
 local LEAVE_YARDS=20 -- walk this far past the arrival circle and the loop moves on
 local CATCH_AHEAD=4   -- how many stops ahead count when you reach them out of order
+-- A detour: you gathered at a stop further along (e.g. 50 while heading to 24).
+-- The route stays where it is; that stop is just skipped when the route gets there this lap.
+function N:MarkOffRoutePick(route,x,y)
+ local w,h=route.width,route.height; if not w or not h then return end
+ local best,bd
+ for i,p in ipairs(route.points) do
+  if i~=(self.waypoint or 1) and not p.transit then
+   local d=((p.x-x)*w)^2+((p.y-y)*h)^2
+   if d<=50*50 and (not bd or d<bd) then best,bd=i,d end
+  end
+ end
+ if best then route.pickedLap=route.pickedLap or {}; route.pickedLap[best]=self.lap or 1; self.dirty=true end
+ return best
+end
 function N:LoopCatchUp(route,x,y)
  local n=#route.points; if n==0 then return false end
+ -- Stops you already picked on a detour this lap are passed over.
+ local moved=false
+ for _=1,n do
+  local cur=self.waypoint or 1
+  if route.pickedLap and route.pickedLap[cur]==(self.lap or 1) and self.lingerAt~=cur then
+   route.pickedLap[cur]=nil; self:SkipWaypoint('left'); self.loopLeg=nil; moved=true
+  else break end
+ end
  local wp=self.waypoint or 1
  local radius=route.arriveRadius or 25
  local w,h=route.width,route.height
@@ -576,7 +598,7 @@ function N:LoopCatchUp(route,x,y)
   local p=route.points[idx]
   if p and not p.transit and ((p.x-x)*w)^2+((p.y-y)*h)^2<=radius*radius then
    if k==0 then
-    if self.lingerAt==wp then return false end
+    if self.lingerAt==wp then return moved end
     -- At the stop while the arrow still follows a trail point: count it as arrived.
     self.loopLeg=nil;self.lingerAt=wp
     if self.BeginVisit then self:BeginVisit(route,wp) end
@@ -589,7 +611,7 @@ function N:LoopCatchUp(route,x,y)
    return true
   end
  end
- return false
+ return moved
 end
 function N:SkipWaypoint(reason)
  if not self.activeRoute then return end

@@ -30,3 +30,15 @@ test('0.13.5 loops: reaching a later stop moves the route on to it',function()
  N.waypoint=7; local lap=N.lap or 1; assert(N:LoopCatchUp(route,.1,.5)); eq(N.waypoint,1); eq(N.lap,lap+1)
  local td=N.TextDialog; N.TextDialog=function() end; N:StopRoute(); N.TextDialog=td
 end)
+test('0.13.6 loops: a detour to a far stop keeps the route; that stop is skipped later this lap',function()
+ local pts={}; for i=1,12 do pts[i]={x=.07*i,y=.5,name='Peacebloom'} end
+ local route={map=1411,loop=true,points=pts,width=5000,height=3000,arriveRadius=25,seconds=60,length=100}
+ N.activeRoute=nil; N:StartRoute(route,true); N.waypoint=3; N.lingerAt=nil
+ -- gather at stop 10 (far ahead): the route stays on 3
+ eq(N:MarkOffRoutePick(route,pts[10].x,.5),10); eq(N.waypoint,3)
+ assert(not N:LoopCatchUp(route,pts[10].x,.55),'standing near 10 does not jump the route')
+ eq(N.waypoint,3)
+ -- later the route reaches 9, then 10 is passed over automatically
+ N.waypoint=10; N.lingerAt=nil; assert(N:LoopCatchUp(route,.5,.95)); eq(N.waypoint,11)
+ local td=N.TextDialog; N.TextDialog=function() end; N:StopRoute(); N.TextDialog=td
+end)
