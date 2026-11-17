@@ -303,9 +303,9 @@ function N:BestZones(limit)
   if not self:IsGatheringCityMap(map) then
    local nodes=self:ZoneNodes(map)
    if #nodes>=4 then
-    local weight=0; for _,n in ipairs(nodes) do weight=weight+(n.skillPriority or 1) end
+    local weight,counts=0,{}; for _,n in ipairs(nodes) do weight=weight+(n.skillPriority or 1); counts[n.name]=(counts[n.name] or 0)+1 end
     local info=C_Map and C_Map.GetMapInfo and self:Call(C_Map.GetMapInfo,map)
-    out[#out+1]={map=map,name=type(info)=='table' and info.name or ('Zone '..map),spawns=#nodes,weight=weight}
+    out[#out+1]={map=map,name=type(info)=='table' and info.name or ('Zone '..map),spawns=#nodes,weight=weight,counts=counts}
    end
   end
  end

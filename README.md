@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.13.3 beta
+# VoidMark Nexus 0.13.4 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -15,6 +15,11 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.13.4
+
+- Gather page: "Best zones for ..." lists up to 10 zones for what you picked, best first, with a per-herb count when several are ticked. Click a zone to build routes there.
+- Route options window: rows sit below the explanation text and stay one line (notes like price estimates move to the hover tooltip); the window grows to fit, so text no longer overlaps.
 
 ## What changed in 0.13.3
 

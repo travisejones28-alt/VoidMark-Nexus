@@ -499,9 +499,21 @@ function N:RenderGather(u)
   end
   if zhere then info[#info+1]='Press Start route to see route options for this zone.'
   else info[#info+1]='Routes will be in '..self:RouteZoneName(zmap)..(zcur and (' (you are in '..self:RouteZoneName(zcur)..')') or '')..'. Zone button > Current zone to switch back.' end
+  -- Best zones for what you picked, best first (cached until the pick changes). Click one to route there.
+  if not u.bestZones and self.BestZones then u.bestZones=self:BestZones(10) end
   if u.bestZones then
-   rows[#rows+1]=colorRow({text='Best zones for '..self:ResourceLabel():lower()},COLORS.muted)
-   for _,z in ipairs(u.bestZones) do rows[#rows+1]={text=z.name..'  ('..z.spawns..' spawn spots)'} end
+   rows[#rows+1]=colorRow({text='Best zones for '..self:ResourceLabel():lower()..' (best first, click to use)'},COLORS.muted)
+   for i,z in ipairs(u.bestZones) do
+    local parts={}
+    for name,c in pairs(z.counts or {}) do parts[#parts+1]={name=name,c=c} end
+    table.sort(parts,function(a,b) if a.c~=b.c then return a.c>b.c end return a.name<b.name end)
+    local detail={}; if #parts>1 then for _,p in ipairs(parts) do detail[#detail+1]=p.c..' '..p.name end end
+    local picked=z.map==zmap
+    rows[#rows+1]=colorRow({text=(picked and '> ' or '')..i..'. '..z.name..'  '..z.spawns..' spots'..(#detail>0 and ('  ('..table.concat(detail,', ')..')') or ''),
+     click=function() s.routeZone=(z.map~=zcur) and z.map or nil; self.dirty=true end,
+     title=z.name,tip=function(tt) for _,p in ipairs(parts) do tt:AddLine(p.c..'  '..p.name,1,1,1) end; tt:AddLine('Click to build routes here.',.7,.7,.7) end},
+     picked and COLORS.accent or nil)
+   end
    if #u.bestZones==0 then rows[#rows+1]={text='No zone has enough matching spots.'} end
   end
  end

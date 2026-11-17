@@ -90,6 +90,7 @@ do
   if v=='multi:' then return self:ChooseResources(self.ui and self.ui.what) end
   if v=='gray:toggle' then
    self.db.settings.hideGray=not self.db.settings.hideGray
+   if self.ui then self.ui.bestZones=nil end
    self:Print(self.db.settings.hideGray and 'Grey resources (no skill-ups) are hidden from routes and the map.' or 'Grey resources are shown again.')
    self.dirty=true;return
   end

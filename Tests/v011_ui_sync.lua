@@ -46,6 +46,13 @@ test('0.13.3 filters: toggle list of every herb and ore; ticks stay open and mov
  list.toggle(here.name); eq(N:ResourceLabel(),"Only Arthas' Tears")
  list.done()
  if #N:ZoneNodes(1411)==0 and #N:BestZones(1)>0 then assert(s.routeZone and s.routeZone~=1411,'zone moved to where it grows') end
+ -- Gather page lists best zones for the pick, best first, clickable.
+ list.toggle(here.name); list.toggle("Arthas' Tears"); list.done()
+ N.ui.bestZones=nil; local rows=N:RenderGather(N.ui)
+ local zrows={}; for _,r in ipairs(rows) do if r.click and r.title then zrows[#zrows+1]=r end end
+ local bz=N.ui.bestZones; assert(bz,'best zones computed'); eq(#zrows,#bz)
+ for i=2,#bz do assert(bz[i-1].weight>=bz[i].weight,'best first') end
+ if zrows[1] then zrows[1].click(); local want=bz[1].map; eq(s.routeZone==nil and 1411 or s.routeZone,want) end
  list.clear(); eq(s.routeResources,nil); eq(s.routeSelectionMode,'all')
  N.Choice=choice; N.Checklist=check
  s.kind,s.target,s.routeSelectionMode,s.routeResources,s.routeZone=keep[1],keep[2],keep[3],keep[4],keep[5]

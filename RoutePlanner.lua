@@ -352,10 +352,16 @@ function N:CreateRoutePreview()
  f.why:SetWidth(CW); f.why:SetJustifyH('LEFT')
  f.rows={}
  for i=1,6 do
-  local r=CreateFrame('Button',nil,f); r:SetSize(CW,20); r:SetPoint('TOPLEFT',canvas,'BOTTOMLEFT',0,-80-(i-1)*21)
+  -- Rows sit under the explanation text (chained), one line each; full text on hover.
+  local r=CreateFrame('Button',nil,f); r:SetSize(CW,20)
+  if i==1 then r:SetPoint('TOPLEFT',f.why,'BOTTOMLEFT',0,-6) else r:SetPoint('TOPLEFT',f.rows[i-1],'BOTTOMLEFT',0,-1) end
   r.bg=r:CreateTexture(nil,'BACKGROUND'); r.bg:SetAllPoints(); r.bg:SetColorTexture(.2,.12,.3,.6)
   r.text=r:CreateFontString(nil,'OVERLAY','GameFontHighlight'); r.text:SetPoint('LEFT',6,0); r.text:SetWidth(CW-12); r.text:SetJustifyH('LEFT')
+  if r.text.SetWordWrap then r.text:SetWordWrap(false) end
+  if r.text.SetMaxLines then r.text:SetMaxLines(1) end
   r:SetScript('OnClick',function() N.routeSelected=i; N:DrawRoutePreview() end)
+  r:SetScript('OnEnter',function() if r.full then GameTooltip:SetOwner(r,'ANCHOR_RIGHT'); GameTooltip:SetText(r.full,1,1,1,1,true); GameTooltip:Show() end end)
+  r:SetScript('OnLeave',function() GameTooltip:Hide() end)
   f.rows[i]=r
  end
  f.start=btn(f,'Start this route',150,function() N:PickRouteOption(N.routeSelected or 1) end)
@@ -433,10 +439,16 @@ function N:DrawRoutePreview()
  for i,row in ipairs(f.rows) do
   local opt=list[i]; row:SetShown(opt~=nil)
   if opt then
-   row.text:SetText((self:RouteOptionLine(opt)))
+   local full=(self:RouteOptionLine(opt)); row.full=full
+   -- Short line in the row: name, stops, minutes, nodes/hr, gold/hr. Notes go to the tooltip.
+   row.text:SetText((full:gsub('%s*%(.-%).*$',''):gsub(';.*$','')))
    if i==sel then row.bg:SetColorTexture(.45,.25,.7,.85) else row.bg:SetColorTexture(.2,.12,.3,.6) end
   end
  end
+ -- Grow the window to fit the explanation and the rows, so nothing overlaps.
+ local whyH=f.why.GetStringHeight and f.why:GetStringHeight() or 60
+ if type(whyH)~='number' or whyH~=whyH then whyH=60 end
+ f:SetHeight(36+CH+16+math.min(whyH,200)+6+math.min(#list,#f.rows)*21+48)
 end
 
 -- Gather > Start route: build the options and show them. Starting is one click.
