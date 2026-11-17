@@ -19,9 +19,9 @@ do
  end
 end
 
--- Resource menu (0.13.2): presets, grey toggle, then "One herb..." / "One ore..."
--- which list EVERY herb or ore in the game (not just this zone). Picking one
--- that isn't in the route zone moves the Zone to where it grows most.
+-- Resource menu (0.13.3): presets, grey toggle, and "Pick herbs / ore (toggle)..."
+-- a checklist of EVERY herb and ore in the game (not just this zone). If none
+-- of the ticked ones are in the route zone, the Zone moves to where they grow most.
 function N:AllResourceNames(kind)
  local seen,out={},{}
  for _,t in pairs(self.nodeTypes or {}) do
@@ -33,30 +33,42 @@ end
 function N:ChooseResource(anchor)
  local grey=self.db.settings.hideGray
  local options={{label='Herbs',value='kind:herb'},{label='Ore',value='kind:ore'},{label='Herbs and ore',value='kind:all'},
-  {label='One herb...',value='list:herb'},{label='One ore...',value='list:ore'},
+  {label='Pick herbs / ore (toggle)...',value='pick:'},
   {label='Herbalism skill-ups',value='skill:herb'},{label='Mining skill-ups',value='skill:ore'},
   {label='Herbs for gold',value='gold:herb'},{label='Ore for gold',value='gold:ore'},
   {label=(grey and 'Show' or 'Hide')..' grey (no skill-ups)',value='gray:toggle'}}
  self:Choice(anchor,options,function(v) self:SelectResource(v) end)
 end
-function N:ChooseOneResource(anchor,kind)
- local names,skill=self:AllResourceNames(kind)
+-- Toggle list: every herb and ore in the game; tick the ones to look for.
+function N:ChooseResources(anchor)
+ local s=self.db.settings
  local map=self.RouteZone and (self:RouteZone()) or self:Position()
  local here={}
- for _,n in ipairs(map and self:ZoneNodes(map,kind,'') or {}) do here[n.name]=true end
+ for _,n in ipairs(map and self:ZoneNodes(map,'all','') or {}) do here[n.name]=true end
  local skills=self:GatheringSkills() or {}
- local p=skills[kind]
- local options={{label='< Back',value='back'}}
- for _,name in ipairs(names) do
-  local tag=''
-  if p and p.skill and skill[name]>p.skill then tag=' (need '..skill[name]..')'
-  elseif p and p.skill and p.skill-skill[name]>=100 then tag=' (grey)' end
-  options[#options+1]={label=name..tag..(here[name] and ' - here' or ''),value='name:'..name}
+ local items={}
+ for _,kind in ipairs({'herb','ore'}) do
+  items[#items+1]={label=kind=='herb' and 'Herbs' or 'Ore',header=true}
+  local names,skill=self:AllResourceNames(kind)
+  local p=skills[kind]
+  for _,name in ipairs(names) do
+   local tag=''
+   if p and p.skill and skill[name]>p.skill then tag=' (need '..skill[name]..')'
+   elseif p and p.skill and p.skill-skill[name]>=100 then tag=' (grey)' end
+   items[#items+1]={label=name..tag..(here[name] and ' - here' or ''),value=name}
+  end
  end
- self:Choice(anchor,options,function(v)
-  if v=='back' then return self:ChooseResource(anchor) end
-  self:SelectResource(v)
- end)
+ local function apply()
+  s.routeResources=type(s.routeResources)=='table' and next(s.routeResources) and s.routeResources or nil
+  s.kind,s.target,s.routeSelectionMode='all','',s.routeResources and 'multi' or 'all'
+  if self.ui then self.ui.bestZones=nil end
+  self.dirty=true
+ end
+ self:Checklist(anchor,items,
+  function(v) return type(s.routeResources)=='table' and s.routeResources[v] and true or false end,
+  function(v) local l=type(s.routeResources)=='table' and s.routeResources or {}; l[v]=not l[v] or nil; s.routeResources=l; apply() end,
+  function() apply(); if s.routeResources then self:ZoneForTarget(self:ResourceLabel():gsub('^Only ','')) end end,
+  function() s.routeResources=nil; apply() end)
 end
 -- After picking one resource: if the route zone has none, jump the Zone to the best one.
 function N:ZoneForTarget(name)
@@ -65,7 +77,7 @@ function N:ZoneForTarget(name)
  local best=self.BestZones and self:BestZones(1)[1]
  if best then
   self.db.settings.routeZone=best.map
-  self:Print(name..' is not in this zone. Zone set to '..best.name..' ('..best.spawns..' spots). Use the Zone button to pick another.')
+  self:Print(name..(name:find(' picked$') and ' are' or ' is')..' not in this zone. Zone set to '..best.name..' ('..best.spawns..' spots). Use the Zone button to pick another.')
  else
   self:Print('No known spawn spots for '..name..'.')
  end
@@ -74,7 +86,8 @@ do
  local select=N.SelectResource
  N.SelectResource=function(self,v)
   local how,arg=tostring(v):match('^(%a+):(.*)$')
-  if how=='list' then return self:ChooseOneResource(self.ui and self.ui.what,arg) end
+  if how=='pick' or how=='list' then return self:ChooseResources(self.ui and self.ui.what) end
+  if v=='multi:' then return self:ChooseResources(self.ui and self.ui.what) end
   if v=='gray:toggle' then
    self.db.settings.hideGray=not self.db.settings.hideGray
    self:Print(self.db.settings.hideGray and 'Grey resources (no skill-ups) are hidden from routes and the map.' or 'Grey resources are shown again.')
@@ -84,7 +97,7 @@ do
   if how=='name' and arg~='' then self:ZoneForTarget(arg) end
   return r
  end
- -- Old saves may still hold a "pick several" selection; show it sensibly.
+ -- Toggle-list label: one name, or how many are picked.
  local label=N.ResourceLabel
  N.ResourceLabel=function(self)
   local s=self.db.settings

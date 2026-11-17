@@ -42,6 +42,31 @@ function N:Choice(anchor,choices,fn)
  end
  self.menu=menu
 end
+-- Checklist dropdown: stays open, each click toggles a row in place (scroll kept).
+-- items: {label=,value=} or {label=,header=true}. Done closes; Clear unticks all.
+function N:Checklist(anchor,items,isChecked,toggle,onDone,onClear)
+ if self.menu then self.menu:Hide() end
+ local menu=CreateFrame('Frame',nil,UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil); skin(menu)
+ menu:SetFrameStrata('DIALOG'); menu:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT'); menu:SetSize(330,math.min(15,#items)*25+44)
+ local rows={}
+ local function text(c) return (isChecked(c.value) and '|cff40ff40[x]|r ' or '|cff999999[  ]|r ')..c.label end
+ local function refresh() for _,r in ipairs(rows) do r.b:SetText(text(r.c)) end end
+ button(menu,'Done',4,-4,150,function() menu:Hide(); if onDone then onDone() end; N.dirty=true end)
+ button(menu,'Clear all',158,-4,142,function() if onClear then onClear() end; refresh(); N.dirty=true end)
+ local scroll=CreateFrame('ScrollFrame',nil,menu,'UIPanelScrollFrameTemplate'); scroll:SetPoint('TOPLEFT',4,-34); scroll:SetPoint('BOTTOMRIGHT',-26,4)
+ local child=CreateFrame('Frame',nil,scroll); child:SetSize(295,#items*25); scroll:SetScrollChild(child)
+ for i,c in ipairs(items) do
+  local y=-(i-1)*25
+  if c.header then label(child,c.label,10,y-5,'GameFontHighlight')
+  else
+   local b=button(child,text(c),0,y,290,function() toggle(c.value); refresh(); N.dirty=true end)
+   rows[#rows+1]={b=b,c=c}
+  end
+ end
+ menu.refresh=refresh
+ self.menu=menu
+ return menu
+end
 function N:TextDialog(title,text,import)
  if not self.dialog then
   local f=CreateFrame('Frame','VoidMarkNexusTransfer',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil); skin(f)
@@ -416,7 +441,7 @@ function N:RowTooltip(row)
  GameTooltip:Show()
 end
 
--- Resource picker: see Interface.lua (ChooseResource / ChooseOneResource).
+-- Resource picker: see Interface.lua (ChooseResource / ChooseResources).
 function N:SelectResource(v)
  local s=self.db.settings
  local how,arg=tostring(v):match('^(%a+):(.*)$')
