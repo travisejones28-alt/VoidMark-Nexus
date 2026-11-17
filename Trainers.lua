@@ -71,6 +71,7 @@ function N:ScanMerchant()
    if not root[id] and count(root)>=MAX_RECIPE_ITEMS then return end
    local item=type(root[id])=='table' and root[id] or {vendors={}}
    item.name,item.recipe=itemName,recipe
+   local facts={self:Call(GetItemInfo,id)}; if self:Text(facts[7]) then item.profession=facts[7] end
    item.vendors=type(item.vendors)=='table' and item.vendors or {}
    if item.vendors[key] or count(item.vendors)<20 then
     item.vendors[key]={name=name,map=map,x=x,y=y,price=self:Finite(price,0,1e10) and price or nil,

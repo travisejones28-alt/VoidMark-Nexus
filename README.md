@@ -6,7 +6,7 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Gather.** Pick Herbs, Ore, one specific herb or ore, or *Herbalism / Mining skill-ups*, then press **Start route**. Nexus draws one smooth loop through the zone right away: spawns close together become one stop, lonely outliers are dropped, and the stops are ordered so the path never crosses itself. The arrow takes you stop to stop and moves on by itself when you get close or gather a node. The loop keeps going lap after lap. **Best zones** lists the zones with the most matching spawns for you.
 
-**Professions.** Pick a profession (any of your characters). *Level up* shows the cheapest (or fastest) steps to your target skill, what to buy, and which recipes to train. *Recipes* lists every recipe with its profit, most profitable first; hover for materials and prices.
+**Professions.** Pick a profession (any of your characters). *Level up* shows the cheapest (or fastest) steps to your target skill, what to buy, and which recipes to train. *Recipes* lists every recipe with its profit, most profitable first; hover for materials and prices. *Missing* lists the recipes you have not learned and where to get them (also the *Missing recipes* button on the game's profession window, or `/vmn missing`).
 
 **Characters.** Your characters with how fresh their bag and bank data is. Pair with the bank character on the other account to sync live while both are online. Item tooltips show how many of that item each character holds.
 
@@ -15,6 +15,11 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.12.0
+- **Missing recipes**: Professions > *Missing*, the *Missing recipes* button on the profession window, or `/vmn missing [profession]`. Lists what you have not learned, green when your skill is high enough, with where to get it. Hover for every source; click a row with a recorded position to set a TomTom waypoint (or the game's map pin).
+- Sources, best first: what you have seen in game (trainers, recipe vendors, and now recipe items you loot or are offered as quest rewards, with position); the game's own unlearned list and source text; RecipeRadar's database when that addon is installed (read only, never copied); otherwise shipped Classic data (787 recipe items, MIT data from wow-classic-items). Forever can differ from Classic data, so those lines say so.
+- Recipes whose only known seller is the other faction stay listed, greyed, at the bottom (the Classic data names one seller per recipe).
 
 ## What changed in 0.11.1
 - **Help & commands** window: Settings > Help & commands (or `/vmn help`). A short FAQ and every `/vmn` command, with a search box. A test fails if a command is added without a help line.
@@ -85,6 +90,7 @@ Gathering routes, profession leveling and your items across both accounts, for W
 | `/vmn compare`, `/vmn prices`, `/vmn market ITEM` | Herbs vs ore gold/hr, resource prices, open in Market |
 | `/vmn terrain on\|off\|use\|ignore\|clear`, `/vmn block [yards]`, `/vmn clearblocks` | Learned trails and obstacle marks |
 | `/vmn level PROFESSION [target]`, `/vmn levelshop`, `/vmn transfers` | Leveling step, shopping list, what to mail |
+| `/vmn missing [profession]` | Recipes you have not learned and where to get them |
 | `/vmn skinning`, `/vmn fishing`, `/vmn pool NAME`, `/vmn poolroute`, `/vmn pools on\|off` | Skinning and fishing |
 | `/vmn dash`, `/vmn notify on\|off`, `/vmn grey`, `/vmn resetwindow` | Dashboard, notices, grey filter, window |
 | `/vmn help [word]`, `/vmn debug` | Help & commands window (FAQ, search), diagnostics |
@@ -101,7 +107,7 @@ Nexus reads `VoidMarkMarketDB.schemaVersion == 1`, `economies[normalizedRealm ..
 
 ## Licensing
 
-Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and data: Copyright (c) 2019 Wuild, MIT; full license in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. Other reference addons and TomTom artwork are not redistributed.
+Original Nexus implementation: MIT, see LICENSE. GatherLite node definitions and data: Copyright (c) 2019 Wuild, MIT; full license in `VoidMarkNexus/Licenses/GatherLite.txt`. See `SOURCE_REVIEW.md` for reference decisions. Recipe sources in `Data/RecipeSources.lua`: generated from wow-classic-items, Copyright (c) 2019 Nakroma, MIT; license in `VoidMarkNexus/Licenses/wow-classic-items.txt` (`tools/bake_recipes.py` rebuilds it). RecipeRadar's and Missing TradeSkills List's databases are not included: Nexus only reads RecipeRadar's data from the running game when that addon is installed. Other reference addons and TomTom artwork are not redistributed.
 
 ## Older versions
 

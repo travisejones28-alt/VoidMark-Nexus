@@ -218,6 +218,13 @@ PASS 0.11 transfers: queued crafts list what to mail from which character
 PASS 0.11 dashboard: session figures, comparison with past sessions, window toggles
 PASS 0.11 notifications: near and at rank cap once each; never with notify off
 PASS 0.11 API: other addons get read-only copies of gathering figures
+PASS 0.12 missing: shipped Classic data parses per profession on demand
+PASS 0.12 missing: known recipes are left out; client unlearned recipes and data rows listed
+PASS 0.12 missing: loot and quest rewards are recorded with place and shown as seen
+PASS 0.12 missing: recorded vendors and trainers feed the list with their place
+PASS 0.12 missing: recipe finds are capped
+PASS 0.12 missing: Professions > Missing view, /vmn missing and the waypoint click
+PASS 0.12 missing: RecipeRadar data is read when that addon is loaded, never stored
 PASS Help: every /vmn command is in the Help window
 PASS Help: opens from Settings and /vmn help, and search filters it
-PASS: 222 tests; Lua 5.1 / standard interpreter
+PASS: 229 tests; Lua 5.1 / standard interpreter

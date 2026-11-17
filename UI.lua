@@ -82,7 +82,7 @@ end
 function N:Show(tab)
  if not self.ui then self:CreateUI() end
  local u=self.ui
- if tab=='Recipes' or tab=='Profitability' then u.profView='recipes' elseif tab=='Leveling' then u.profView='level' end
+ if tab=='Recipes' or tab=='Profitability' then u.profView='recipes' elseif tab=='Leveling' then u.profView='level' elseif tab=='Missing' then u.profView='missing' end
  u.tab=alias[tab] or tab or u.tab or 'Gather'
  u.offset=0; u.frame:Show(); self.dirty=true; self:Render()
 end
@@ -178,9 +178,10 @@ function N:CreateUI()
  u.gatherInfo=label(g,'',14,-64,'GameFontHighlight'); u.gatherInfo:SetWidth(W-28)
  -- Professions controls
  local pr=u.pages.Professions
- u.prof=button(pr,'Pick a profession',14,0,250,function() N:ChooseProfession(u.prof) end)
- u.viewLevel=button(pr,'Level up',270,0,86,function() u.profView='level'; u.offset=0 end)
- u.viewRecipes=button(pr,'Recipes',360,0,86,function() u.profView='recipes'; u.offset=0 end)
+ u.prof=button(pr,'Pick a profession',14,0,200,function() N:ChooseProfession(u.prof) end)
+ u.viewLevel=button(pr,'Level up',218,0,78,function() u.profView='level'; u.offset=0 end)
+ u.viewRecipes=button(pr,'Recipes',298,0,72,function() u.profView='recipes'; u.offset=0 end)
+ u.viewMissing=button(pr,'Missing',372,0,74,function() u.profView='missing'; u.offset=0 end)
  u.mode=button(pr,'Cheapest',14,-32,130,function()
   local options={}; for _,m in ipairs(N.levelModes) do options[#options+1]={label=m,value=m} end
   N:Choice(u.mode,options,function(v) N.db.settings.levelMode=v end)
@@ -511,13 +512,17 @@ function N:RenderProfessions(u)
  end
  local c=u.character and self.db.characters[u.character]; local p=c and c.professions[u.profession]
  u.prof:SetText(p and (c.name..': '..p.name..' '..(p.skill or 0)..'/'..(p.max or 0)) or 'Pick a profession')
- local level=u.profView~='recipes'
+ local missing=u.profView=='missing'
+ local level=u.profView~='recipes' and not missing
  u.mode:SetShown(level); u.target:SetShown(level); u.targetLabel:SetShown(level); u.search:SetShown(not level)
  u.mode:SetText(s.levelMode or 'Cheapest')
- if level then u.viewLevel:Disable(); u.viewRecipes:Enable() else u.viewLevel:Enable(); u.viewRecipes:Disable() end
+ for view,b in pairs({level=u.viewLevel,recipes=u.viewRecipes,missing=u.viewMissing}) do
+  if b then if (view=='level' and level) or u.profView==view then b:Disable() else b:Enable() end end
+ end
  u.footer:SetText(level and 'Hover a step for details. Prices come from VoidMark Market or your own prices.' or 'Profit for one craft after the auction cut. Hover for materials.')
  local rows={}
  if not p then u.profInfo:SetText('Open a profession in game once so Nexus records its recipes.'); return rows end
+ if missing then return self:RenderMissing(u,c,p,colorRow,COLORS) end
  if level then
   local plan=self:CachedLevelingPlan(u.character,u.profession,tonumber(u.target:GetText()),s.levelMode)
   if plan.error then u.profInfo:SetText(plan.error); return rows end

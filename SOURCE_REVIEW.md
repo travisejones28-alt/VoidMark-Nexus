@@ -36,3 +36,9 @@ Actual client build/API behavior remains to be verified with `/vmn debug` and th
 Reviewed supplied Shortest Path Forever v1.19.2, Travelcraft 1.28.1, Polestar 0.2.5, SkillUp Forever v0.16.1 and FarmLedger (ZIP named v1.00; internal version 1.1.11). Useful patterns included separate graph and endpoint caches, directed observations, explicit dependency invalidation, stable persisted identifiers and recorded-loop comparisons.
 
 This release adds original Nexus cache, recording, session and route-transfer implementations. No third-party source or artwork from those packages is bundled. Optional Shortest Path support calls its documented version-1 public navigation API after an explicit user action. Existing GatherLite data provenance remains unchanged. SkillUp profession-target integration and bundled terrain meshes are not part of this release.
+
+## 0.12.0 missing recipes
+
+Reviewed supplied Missing TradeSkills List (Forever build v1.60.01.02, no license file, so all rights reserved) and RecipeRadar 1.3.2 (license: all rights reserved, no redistribution). Also reviewed RecipeRadar's Base and Forever database folders sent separately. None of their code, data or artwork is bundled. Learned from them: Forever exposes recipes through `C_TradeSkillUI`, and recipe sources for Forever's new recipes are only known by recording in game.
+
+Nexus ships its own Classic recipe sources generated from wow-classic-items (MIT, `Licenses/wow-classic-items.txt`) and records trainers, recipe vendors, recipe loot and quest-reward recipes itself. When RecipeRadar is installed, `RecipeFinder.lua` reads its global `RR_DATA` at runtime for display only. Nothing from it is written to saved variables, synced or exported.

@@ -140,7 +140,7 @@ do -- Professions page: current step, holders, method comparison.
  local render=N.RenderProfessions
  N.RenderProfessions=function(self,u,...)
   local rows=render(self,u,...)
-  if u.profView=='recipes' or not u.character or not u.profession then return rows end
+  if u.profView=='recipes' or u.profView=='missing' or not u.character or not u.profession then return rows end
   local s=self.db.settings
   local target=tonumber(u.target:GetText())
   local plan=self:CachedLevelingPlan(u.character,u.profession,target,s.levelMode)
