@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.13.6 beta
+# VoidMark Nexus 0.13.7 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -15,6 +15,10 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.13.7
+
+- Minimap route is decluttered: only the current stop and the next 3 are drawn (rings, numbers and the line between them). Settings > "Minimap: stops shown ahead" changes it (1-10).
 
 ## What changed in 0.13.6
 

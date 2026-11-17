@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.13.6-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.13.7-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -161,7 +161,7 @@ function N:Initialize()
  local d=VoidMarkNexusDB
  if tonumber(d.schema) and d.schema>self.schema then self:Print('Newer saved schema detected; Nexus disabled to preserve your data.'); return false end
  for _,k in ipairs({'characters','settings','prices','itemNames','plans','nodes','routes','sessions','wish','excluded','levelEvidence','trainers','recipeVendors','recipeFinds','spots','laps','routeHistory','sentMail'}) do if type(d[k])~='table' then d[k]={} end end
- local defaults={native=true,learn=true,importedNodes=true,observedNodes=true,nodesVisible=true,routeVisible=true,minimapRoute=true,learnSpots=true,stats=true,
+ local defaults={native=true,learn=true,importedNodes=true,observedNodes=true,nodesVisible=true,routeVisible=true,minimapRoute=true,minimapAhead=3,learnSpots=true,stats=true,
  includeAlts=true,includeBanks=true,includeImports=false,includeStale=false,maxAge=86400,inventoryAge=604800,
  market=true,auctionator=false,manualFirst=false,cut=.05,deposit=0,failedAuctions=0,saleFraction=1,waste=0,
  speed=7,travel='Foot',mountDelay=0,gatherDelay=3,routeMinutes=20,nodeLimit=100,kind='all',target='',minimap=true,scale=1,arrowScale=1,mapIconSize=7,terrainLearn=true,manualStops=false,mapButton=true,tomtom=true,tomtomArrow=false,levelMode='Cheapest',includeSynced=true,levelResale=true,levelCraftValue=500,tooltipCounts=true}

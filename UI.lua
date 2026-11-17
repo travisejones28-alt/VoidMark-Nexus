@@ -294,6 +294,7 @@ function N:CreateUI()
   y=y-30
  end
  adjuster('Route lap length (minutes)','routeMinutes',5,5,60,'%d')
+ adjuster('Minimap: stops shown ahead','minimapAhead',1,1,10,'%d')
  adjuster('Window size','scale',.1,.6,1.5,'%.1f',function() f:SetScale(s().scale) end)
  u.helpButton=button(st,'Help & commands',20,y-4,160,function() N:ShowHelp() end)
  -- Shared list

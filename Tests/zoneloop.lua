@@ -117,7 +117,9 @@ test('Zone loop: reached stops leave the minimap; the next stop is a hollow ring
  N:UpdateMinimapRoute();eq(labels(),'3,4,5,6')
  local pin=N.minimapRoutePins[1]; eq(#pin.ring,12); eq(pin.background,nil)
  N.waypoint=1;N.Position=function() return 1411,.1,.1 end
- N:UpdateMinimapRoute();eq(labels(),'1,2,3,4,5,6')
+ N:UpdateMinimapRoute();eq(labels(),'1,2,3,4') -- 0.13.7: current + 3 ahead only
+ N.waypoint=5;N:UpdateMinimapRoute();eq(labels(),'1,2,5,6') -- wraps into the next lap
+ s.minimapAhead=1;N.waypoint=1;N:UpdateMinimapRoute();eq(labels(),'1,2');s.minimapAhead=3
  N.Position,Minimap,C_Minimap=oldPosition,oldMinimap,oldC;N.activeRoute=nil;N.minimapRouteOverlay=nil
 end)
 

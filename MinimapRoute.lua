@@ -88,13 +88,18 @@ function N:UpdateMinimapRoute()
  local ringN=#(route.points or {})
  local ring=route.loop and not route.travelPoints and ringN>1
  local w0=math.max(1,math.min(ringN,self.waypoint or 1))
+ local ahead=math.max(1,math.min(10,math.floor(tonumber(self.db.settings.minimapAhead) or 3)))
  -- Stops already reached this lap are dropped; the ring closes back to stop 1.
  if ring and self.LoopRing then
-  geometry={}; for _,r in ipairs(self:LoopRing(route,w0)) do geometry[#geometry+1]=r.n end
+  -- 0.13.7: only the current stop and the next few (Settings: Minimap stops shown ahead).
+  local stops=0
+  geometry={}; for _,r in ipairs(self:LoopRing(route,w0)) do
+   if r.stop then stops=stops+1; if stops>ahead+1 then break end end
+   geometry[#geometry+1]=r.n
+  end
   current=1; previous=nil
  elseif ring then
-  geometry={}; for k=w0,ringN do geometry[#geometry+1]=route.points[k] end
-  if w0>1 then geometry[#geometry+1]=route.points[1] end
+  geometry={}; for k=0,math.min(ahead,ringN-1) do geometry[#geometry+1]=route.points[(w0-1+k)%ringN+1] end
   current=1; previous=nil
  end
  local used,dots=0,0
@@ -158,7 +163,7 @@ function N:UpdateMinimapRoute()
  self.minimapRoutePins=self.minimapRoutePins or {}
  local shown=0
  local order={}
- if ring then for k=w0,math.min(ringN,150) do order[#order+1]=k end
+ if ring then for k=0,math.min(ahead,ringN-1) do order[#order+1]=(w0-1+k)%ringN+1 end
  else for index=self.waypoint or 1,math.min(#(route.points or {}),150) do order[#order+1]=index end end
  for _,index in ipairs(order) do
   local stop=route.points[index]
