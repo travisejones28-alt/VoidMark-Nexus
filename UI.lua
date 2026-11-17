@@ -6,6 +6,12 @@ local function button(parent,text,x,y,width,fn)
  local b=CreateFrame('Button',nil,parent,'UIPanelButtonTemplate'); b:SetSize(width,24); b:SetPoint('TOPLEFT',x,y); b:SetText(text)
  b:SetScript('OnClick',function() N:Guard(text,fn) end); return b
 end
+-- Hover text for a button: what it does, in plain words.
+local function hint(b,title,text)
+ b:SetScript('OnEnter',function() GameTooltip:SetOwner(b,'ANCHOR_BOTTOM'); GameTooltip:SetText(title); GameTooltip:AddLine(text,1,1,1,true); GameTooltip:Show() end)
+ b:SetScript('OnLeave',function() GameTooltip:Hide() end)
+ return b
+end
 local function edit(parent,x,y,width,text)
  local e=CreateFrame('EditBox',nil,parent,'InputBoxTemplate'); e:SetSize(width,24); e:SetPoint('TOPLEFT',x,y); e:SetAutoFocus(false); e:SetText(text or '')
  e:SetScript('OnEscapePressed',function() e:ClearFocus() end); return e
@@ -180,9 +186,13 @@ function N:CreateUI()
  -- Professions controls
  local pr=u.pages.Professions
  u.prof=button(pr,'Pick a profession',14,0,200,function() N:ChooseProfession(u.prof) end)
- u.viewLevel=button(pr,'Level up',218,0,78,function() u.profView='level'; u.offset=0 end)
- u.viewRecipes=button(pr,'Recipes',298,0,72,function() u.profView='recipes'; u.offset=0 end)
- u.viewMissing=button(pr,'Missing',372,0,74,function() u.profView='missing'; u.offset=0 end)
+ -- Long "Profession skill - Name" labels are cut short instead of running into Level up.
+ local fs=u.prof.GetFontString and u.prof:GetFontString()
+ if fs then fs:SetWidth(188); if fs.SetWordWrap then fs:SetWordWrap(false) end end
+ hint(u.prof,'Profession','Pick which character and profession to show.')
+ u.viewLevel=hint(button(pr,'Level up',218,0,78,function() u.profView='level'; u.offset=0 end),'Level up','Cheapest steps to reach your target skill, and what to buy.')
+ u.viewRecipes=hint(button(pr,'Profit',298,0,72,function() u.profView='recipes'; u.offset=0 end),'Profit','Recipes you know, most profitable first. Hover a row for materials.')
+ u.viewMissing=hint(button(pr,'To learn',372,0,74,function() u.profView='missing'; u.offset=0 end),'To learn','Recipes you do not know yet and where to get them. Click one for a waypoint.')
  u.mode=button(pr,'Cheapest',14,-32,130,function()
   local options={}; for _,m in ipairs(N.levelModes) do options[#options+1]={label=m,value=m} end
   N:Choice(u.mode,options,function(v) N.db.settings.levelMode=v end)
@@ -515,7 +525,7 @@ function N:RenderProfessions(u)
   if first then u.character,u.profession=first.cid,first.pid else u.character,u.profession=nil,nil end
  end
  local c=u.character and self.db.characters[u.character]; local p=c and c.professions[u.profession]
- u.prof:SetText(p and (c.name..': '..p.name..' '..(p.skill or 0)..'/'..(p.max or 0)) or 'Pick a profession')
+ u.prof:SetText(p and (p.name..' '..(p.skill or 0)..'/'..(p.max or 0)..' - '..(c.name:match('%s(%S+)$') or c.name)) or 'Pick a profession')
  local missing=u.profView=='missing'
  if u.sourceFilter then u.sourceFilter:SetShown(missing); u.sourceFilter:SetText('Sources: '..select(2,self:RecipeSourceFilter())) end
  local level=u.profView~='recipes' and not missing

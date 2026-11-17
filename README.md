@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.13.0 beta
+# VoidMark Nexus 0.13.1 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -6,7 +6,7 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Gather.** Pick Herbs, Ore, one specific herb or ore, or *Herbalism / Mining skill-ups*, then press **Start route**. Nexus draws one smooth loop through the zone right away: spawns close together become one stop, lonely outliers are dropped, and the stops are ordered so the path never crosses itself. The arrow takes you stop to stop and moves on by itself when you get close or gather a node. The loop keeps going lap after lap. **Best zones** lists the zones with the most matching spawns for you.
 
-**Professions.** Pick a profession (any of your characters). *Level up* shows the cheapest (or fastest) steps to your target skill, what to buy, and which recipes to train. *Recipes* lists every recipe with its profit, most profitable first; hover for materials and prices. *Missing* lists the recipes you have not learned and where to get them (also the *Missing recipes* button on the game's profession window, or `/vmn missing`).
+**Professions.** Pick a profession (any of your characters). *Level up* shows the cheapest (or fastest) steps to your target skill, what to buy, and which recipes to train. *Profit* lists every recipe you know with its profit, most profitable first; hover for materials and prices. *To learn* lists the recipes you have not learned and where to get them (also the *MR* button on the game's profession window, or `/vmn missing`). Hover any of these buttons for what it does.
 
 **Characters.** Your characters with how fresh their bag and bank data is. Pair with the bank character on the other account to sync live while both are online. Item tooltips show how many of that item each character holds.
 
@@ -15,6 +15,11 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.13.1
+- Profession window button is now a small **MR** at the far right, so it no longer covers the skill bar.
+- The profession picker reads "Cooking 300/300 - Soulreaver" and is cut short instead of running into *Level up*.
+- *Recipes* is now **Profit** and *Missing* is now **To learn**; hover any of these buttons for what it does.
 
 ## What changed in 0.13.0
 - **Recipe database built in.** Missing recipes now uses Nexus's own Forever recipe catalog first and a Classic baseline second. No other recipe addon is needed or read.

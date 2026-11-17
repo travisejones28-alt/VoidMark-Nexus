@@ -333,7 +333,10 @@ function N:AttachMissingButton()
  local host=rawget(_G,'ProfessionsFrame') or rawget(_G,'TradeSkillFrame')
  if type(host)~='table' or not host.IsShown then return end
  local b=CreateFrame('Button',nil,host,'UIPanelButtonTemplate')
- b:SetSize(110,22); b:SetPoint('TOPRIGHT',host,'TOPRIGHT',-60,-28); b:SetText('Missing recipes')
+ -- Small "MR" at the far right so it never covers the skill bar or its chat icon.
+ b:SetSize(36,22); b:SetPoint('TOPRIGHT',host,'TOPRIGHT',-10,-28); b:SetText('MR')
+ b:SetScript('OnEnter',function() GameTooltip:SetOwner(b,'ANCHOR_RIGHT'); GameTooltip:SetText('Missing recipes'); GameTooltip:AddLine('Recipes you do not know yet and where to get them.',1,1,1,true); GameTooltip:Show() end)
+ b:SetScript('OnLeave',function() GameTooltip:Hide() end)
  if b.SetFrameStrata then b:SetFrameStrata('HIGH') end
  b:SetScript('OnClick',function() N:Guard('missing',function() N:ShowMissing() end) end)
  self.missingButton=b
