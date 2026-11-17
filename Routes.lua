@@ -564,6 +564,33 @@ function N:GenerateRoute(refresh)
  end)
 end
 local LEAVE_YARDS=20 -- walk this far past the arrival circle and the loop moves on
+local CATCH_AHEAD=4   -- how many stops ahead count when you reach them out of order
+function N:LoopCatchUp(route,x,y)
+ local n=#route.points; if n==0 then return false end
+ local wp=self.waypoint or 1
+ local radius=route.arriveRadius or 25
+ local w,h=route.width,route.height
+ if not w or not h then return false end
+ for k=0,math.min(CATCH_AHEAD,n-1) do
+  local idx=(wp-1+k)%n+1
+  local p=route.points[idx]
+  if p and not p.transit and ((p.x-x)*w)^2+((p.y-y)*h)^2<=radius*radius then
+   if k==0 then
+    if self.lingerAt==wp then return false end
+    -- At the stop while the arrow still follows a trail point: count it as arrived.
+    self.loopLeg=nil;self.lingerAt=wp
+    if self.BeginVisit then self:BeginVisit(route,wp) end
+    return true
+   end
+   -- Reached a later stop: skip the ones passed (no visit recorded for them).
+   for _=1,k do self:SkipWaypoint('left') end
+   self.loopLeg=nil;self.lingerAt=self.waypoint or 1
+   if self.BeginVisit then self:BeginVisit(route,self.lingerAt) end
+   return true
+  end
+ end
+ return false
+end
 function N:SkipWaypoint(reason)
  if not self.activeRoute then return end
  if self.activeRoute.loop then
@@ -795,6 +822,12 @@ function N:UpdateArrow()
  if self.routePaused and route then
   arrow.status:SetText('Route paused');arrow.label:SetText('-- yd');arrow.eta:SetText('-- sec')
   arrow.texture:SetAlpha(.35);arrow.bearing=nil;return
+ end
+ -- 0.13.5: zone loops catch up when you reach the current stop or one of the
+ -- next few stops by any path (trail or not), so walking past 4 to 5 moves on.
+ if route and route.loop and not self.db.settings.manualStops and self.LoopCatchUp then
+  local cmap,cx,cy=self:Position()
+  if cmap==route.map and cx and cy and self:LoopCatchUp(route,cx,cy) then self.dirty=true;arrow.refreshAt=0 end
  end
  local node=route and route.points[self.waypoint or 1]
  local transit=route and route.travelPoints and route.travelPoints[self.terrainIndex or 1]

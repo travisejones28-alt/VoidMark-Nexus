@@ -1,4 +1,4 @@
-# VoidMark Nexus 0.13.4 beta
+# VoidMark Nexus 0.13.5 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
@@ -15,6 +15,11 @@ Gathering routes, profession leveling and your items across both accounts, for W
 **Find item.** Type in the box at the top of the window (part of a name, an item ID, or shift-click an item into it). Nexus lists every character holding it, split into bags and bank, with how old that information is. `/vmn find NAME` gives the same answer in chat.
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
+
+## What changed in 0.13.5
+
+- Route summary: Stop route opens a summary of everything you gathered on the route, each with its approximate AH value, the total and gold per hour. `/vmn haul` shows it mid-route (or the last one). The tally survives /reload; rebuilding the route keeps it.
+- Zone loops catch up: reaching the current stop or any of the next 4 stops (within 25 yd, by any path) moves the route on, so walking past stop 4 to stop 5 no longer leaves the arrow stuck on 4.
 
 ## What changed in 0.13.4
 

@@ -38,7 +38,7 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Help','Data/Nodes','Data/Spawns','Data/ZoneLand','Data/RecipeSources','Data/ForeverRecipeCatalog','Data/BaseRecipeCatalog','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','RouteTerrain','Laps','RoutePlanner','Recording','MinimapRoute','UI','Finder','Guides','CraftGuides','Gold','Mail','Cooldowns','Tooltip','RouteLearning','LevelingPlus','WildGather','Interface','RecipeFinder','ForeverRecipeBridge','RecipeSync','Dashboard','Boot'}
+local files={'Core','Help','Data/Nodes','Data/Spawns','Data/ZoneLand','Data/RecipeSources','Data/ForeverRecipeCatalog','Data/BaseRecipeCatalog','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','RouteTerrain','Laps','RoutePlanner','Recording','MinimapRoute','UI','Finder','Guides','CraftGuides','Gold','Mail','Cooldowns','Tooltip','RouteLearning','LevelingPlus','WildGather','Interface','RecipeFinder','ForeverRecipeBridge','RecipeSync','Dashboard','RouteHaul','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
@@ -856,6 +856,7 @@ assert(loadfile(root..'/Tests/zoneloop.lua'))(N,test,eq,nil,widget)
 assert(loadfile(root..'/Tests/laps.lua'))(N,test,eq,widget)
 assert(loadfile(root..'/Tests/planner.lua'))(N,test,eq,widget)
 assert(loadfile(root..'/Tests/mailcd.lua'))(N,test,eq,widget)
+assert(loadfile(root..'/Tests/v0135_haul.lua'))(N,test,eq)
 assert(loadfile(root..'/Tests/clock.lua'))(N,test,eq)
 test('Compact window: old tab names open the page that replaced them; settings are checkboxes',function()
  N:Show('Routes');eq(N.ui.tab,'Gather');N:Show('Dashboard');eq(N.ui.tab,'Gather')

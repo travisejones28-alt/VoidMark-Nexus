@@ -203,6 +203,7 @@ N:On('LOOT_SLOT_CLEARED',function(slot)
  local item=N.lootSlots and N.lootSlots[slot]; local g=N.lootGather
  if not item or not g then return end
  N.lootSlots[slot]=nil
+ if N.RouteHaulAdd then N:RouteHaulAdd(item.id,item.qty); N.db.itemNames[item.id]=item.name end
  if not N.db.settings.stats then return end
  if not N.session then N:StartSession() end
  local s=N.session; s.items[item.id]=(s.items[item.id] or 0)+item.qty; s.total=s.total+item.qty
