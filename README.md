@@ -1,4 +1,12 @@
-# VoidMark Nexus 0.13.8 beta
+# VoidMark Nexus
+
+## Disenchant value (WoW Forever)
+
+Shift-click an item into `/vmn de ITEM_LINK`, or use `/vmn de ITEM_ID`. Nexus shows expected dust/essence/shard yields, after-fee material value, vendor value, and estimated after-fee auction value using VoidMark Market's own realm/faction prices. Item tooltips show a short comparison by default; `/vmn de off` hides it (`/vmn de on` restores it; also in Settings).
+
+**Accuracy boundaries:** the built-in probabilities are independently authored Classic-based estimates mapped to Forever item levels (NOT required equip levels), *not* verified Forever drop rates. Greens and blues above item level 65, and epics above 92, are deliberately **not** projected into expansion tables. Unsupported items and unknown material prices produce **unknown**, not zero. Epic items level 61–92 require an external detailed distribution. The optional DisenchantBuddy API v1 may supply supported results; its outputs are validated and expansion materials rejected. No DisenchantBuddy code or tables are bundled. A best-option recommendation only appears with complete, non-stale prices, and is an expected-value estimate, not a guaranteed result or a verified disenchant-eligibility test. Baseline reference: https://legacyofwarcraft.com/db/forever/professions/disenchanting.html.
+
+ 0.13.8 beta
 
 Gathering routes, profession leveling and your items across both accounts, for WoW Forever (interface **16001**).
 
