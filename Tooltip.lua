@@ -42,6 +42,11 @@ function N:AddItemCounts(tooltip,id)
  if tooltip.Show then tooltip:Show() end
 end
 
+function N:AddNexusTooltip(tooltip,id)
+ self:AddItemCounts(tooltip,id)
+ if self.AddDisenchantTooltip then self:AddDisenchantTooltip(tooltip,id) end
+end
+
 local function linkID(tooltip)
  if not tooltip.GetItem then return end
  local ok,_,link=pcall(tooltip.GetItem,tooltip)
@@ -55,14 +60,14 @@ function N:HookTooltips()
  if type(TooltipDataProcessor)=='table' and type(TooltipDataProcessor.AddTooltipPostCall)=='function'
   and type(Enum)=='table' and type(Enum.TooltipDataType)=='table' and Enum.TooltipDataType.Item then
   hooked=pcall(TooltipDataProcessor.AddTooltipPostCall,Enum.TooltipDataType.Item,function(tooltip,data)
-   N:Guard('tooltip',function() N:AddItemCounts(tooltip,type(data)=='table' and data.id or linkID(tooltip)) end)
+   N:Guard('tooltip',function() N:AddNexusTooltip(tooltip,type(data)=='table' and data.id or linkID(tooltip)) end)
   end)
  end
  for _,tt in ipairs({GameTooltip,ItemRefTooltip}) do
   if tt and tt.HookScript then
-   if not hooked then pcall(tt.HookScript,tt,'OnTooltipSetItem',function(t) N:Guard('tooltip',function() N:AddItemCounts(t,linkID(t)) end) end) end
-   pcall(tt.HookScript,tt,'OnTooltipCleared',function(t) t.vmnItem=nil end)
-   pcall(tt.HookScript,tt,'OnHide',function(t) t.vmnItem=nil end)
+   if not hooked then pcall(tt.HookScript,tt,'OnTooltipSetItem',function(t) N:Guard('tooltip',function() N:AddNexusTooltip(t,linkID(t)) end) end) end
+   pcall(tt.HookScript,tt,'OnTooltipCleared',function(t) t.vmnItem=nil; t.vmnDE=nil end)
+   pcall(tt.HookScript,tt,'OnHide',function(t) t.vmnItem=nil; t.vmnDE=nil end)
   end
  end
 end
