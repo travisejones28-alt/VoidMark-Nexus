@@ -92,7 +92,8 @@ function N:DEItem(item)
  local id=itemID(item)
  if not id or id%1~=0 or id<1 or id>1e9 then return nil,'Provide an item link or numeric item ID.' end
  local api=GetItemInfo or (C_Item and C_Item.GetItemInfo)
- local name,link,quality,level,_,_,_,_,slot,_,vendor,class=self:Call(api,item)
+ local request=type(item)=='string' and item:find('item:',1,true) and item or id
+ local name,link,quality,level,_,_,_,_,slot,_,vendor,class=self:Call(api,request)
  if not name then return nil,'Item not cached. Hover the item in game and retry.' end
  if class~=2 and class~=4 then return nil,'Only weapons and armor may be disenchanted.' end
  if quality~=2 and quality~=3 and quality~=4 then return nil,'Requires uncommon, rare, or epic gear.' end
