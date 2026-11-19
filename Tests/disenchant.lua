@@ -84,6 +84,23 @@ test('DE command, tooltip dedupe and user toggle',function()
  local n=#tt.lines;N:AddDisenchantTooltip(tt,777001);eq(#tt.lines,n)
  N.Print=p
 end)
+test('0.13.11 DE: not-in-latest-scan prices still give a best option; only old or untrusted ones are flagged',function()
+ local realPrice=N.Price
+ local function tip() local tt={lines={},AddDoubleLine=function(self,a,b) self.lines[#self.lines+1]=a..b end,
+  AddLine=function(self,s) self.lines[#self.lines+1]=s end,Show=function() end}; N:AddDisenchantTooltip(tt,777001); return table.concat(tt.lines,'\n') end
+ -- Market "stale" status (seen today, just not in the very last scan).
+ N.Price=function(self,id) local p=realPrice(self,id); if p then p.stale=true; p.marketStatus='stale'; p.at=N:Now()-3600 end; return p end
+ local v=N:DEValue(777001); eq(v.best,'Disenchant'); eq(v.stale,false)
+ local t=tip(); assert(t:find('Best estimate: Disenchant',1,true),t); assert(not t:find('stale',1,true)); assert(not t:find('verify eligibility',1,true))
+ -- Last seen two days ago: still a best option, marked as old.
+ N.Price=function(self,id) local p=realPrice(self,id); if p then p.at=N:Now()-2*86400 end; return p end
+ v=N:DEValue(777001); eq(v.best,'Disenchant'); eq(v.stale,true)
+ assert(tip():find('over a day old',1,true))
+ -- Untrusted Market data: no best option.
+ N.Price=function(self,id) local p=realPrice(self,id); if p then p.untrusted=true end; return p end
+ v=N:DEValue(777001); eq(v.best,nil); assert(tip():find('not trusted',1,true))
+ N.Price=realPrice
+end)
 GetItemInfo=oldInfo;DisenchantBuddy=oldBuddy
 for k,v in pairs(old) do N.db.settings[k]=v end
 for _,id in ipairs(ids) do N.prices[id]=saved[id] end

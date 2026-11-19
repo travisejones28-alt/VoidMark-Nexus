@@ -120,19 +120,29 @@ function N:DEItem(item)
   source=source,rows=rows,vendor=self:Finite(vendor,0,1e12) and vendor or nil}
 end
 
+-- A DE price is only a problem when Market says its data is untrusted or the
+-- last sighting is older than Nexus' max price age (default a day). Market's own
+-- "stale" status also means "not in the very latest scan", which is true for most
+-- greens and many enchanting materials, so it no longer blocks the comparison.
+function N:DEPriceOld(p)
+ if type(p)~='table' then return false end
+ if p.untrusted then return true end
+ return self:Finite(p.at,0,1e12) and self:Now()-p.at>self.db.settings.maxAge or false
+end
 -- Values use Nexus' own realm/faction-scoped Market prices, not any remote
 -- market. All outcomes must be priced; missing prices are never treated as 0.
 function N:DEValue(item)
  local info,err=self:DEItem(item)
  if not info then return nil,err end
- local gross,missing,stale=0,0,false
+ local gross,missing,stale,untrusted=0,0,false,false
  for _,r in ipairs(info.rows) do
   r.expected=r.probability/100*(r.minQuantity+r.maxQuantity)/2
   r.name=materials[r.itemId]
   r.price=self:Price(r.itemId)
   if r.price and self:Finite(r.price.unit,0,1e12) then
    gross=gross+r.expected*r.price.unit
-   if r.price.stale or r.price.untrusted then stale=true end
+   r.old=self:DEPriceOld(r.price)
+   if r.price.untrusted then untrusted=true elseif r.old then stale=true end
   else missing=missing+1 end
  end
  info.unknownPrices=missing
@@ -145,12 +155,12 @@ function N:DEValue(item)
  local p=info.itemPrice
  if p and self:Finite(p.unit,0,1e12) then
   info.auctionNet=p.unit*(1-self.db.settings.cut)*self.db.settings.saleFraction
-  if p.stale or p.untrusted then stale=true end
+  if p.untrusted then untrusted=true elseif self:DEPriceOld(p) then stale=true end
  end
- info.stale=stale
- -- Only claim a complete best option when all three values are known and
- -- not flagged stale/untrusted. Market fair value is an estimate, not buyout.
- if info.net and info.auctionNet and info.vendor and not stale then
+ info.stale=stale; info.untrusted=untrusted
+ -- Only claim a best option when all three values are known and none comes
+ -- from untrusted data. Old prices still give a best option, marked as such.
+ if info.net and info.auctionNet and info.vendor and not untrusted then
   local best=info.vendor>info.net and 'Vendor' or 'Disenchant'
   local max=math.max(info.vendor,info.net)
   if info.auctionNet>max then best='Auction (estimate)' end
@@ -174,7 +184,7 @@ function N:DECommand(arg)
  for _,r in ipairs(v.rows) do
   self:Print(string.format('  %s: %g%%, %d-%d; average %.2f; %s',
    r.name,r.probability,r.minQuantity,r.maxQuantity,r.expected,
-   r.price and self:Money(r.price.unit)..(r.price.stale and ' (STALE)' or '') or 'price missing'))
+   r.price and self:Money(r.price.unit)..(r.old and ' (over a day old)' or '') or 'price missing'))
  end
  self:Print('DE expected sale net: '..money(self,v.net)..(v.unknownPrices>0 and ' (missing '..v.unknownPrices..' material prices)' or '')
   ..'; vendor: '..money(self,v.vendor)..'; auction sale net ~'..money(self,v.auctionNet))
@@ -192,10 +202,8 @@ function N:AddDisenchantTooltip(t,id)
  t.vmnDE=id
  t:AddDoubleLine('Nexus DE net (expected)',money(self,v.net),.8,.62,1,1,.95,.65)
  t:AddDoubleLine('Vendor / auction net ~',money(self,v.vendor)..' / '..money(self,v.auctionNet),.72,.72,.82,1,1,1)
- if v.best then t:AddLine('Best estimate: '..v.best,.45,1,.55)
+ if v.best then t:AddLine('Best estimate: '..v.best..(v.stale and ' (some prices over a day old)' or ''),.45,1,.55)
  elseif v.unknownPrices>0 then t:AddLine('DE incomplete: '..v.unknownPrices..' materials have no price',1,.5,.35)
- elseif v.stale then t:AddLine('DE comparison has stale/untrusted AH prices',1,.5,.35)
- else t:AddLine('No full comparison: item AH price missing',1,.72,.4) end
- t:AddLine(v.source..'; not guaranteed / verify eligibility',.68,.68,.76,true)
+ elseif v.untrusted then t:AddLine('DE comparison skipped: Market data not trusted yet',1,.5,.35) end
  if t.Show then t:Show() end
 end
