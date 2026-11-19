@@ -215,9 +215,6 @@ PASS 0.11 fishing: pool markers draw on the world map and can be hidden
 PASS 0.11 wild data: a newer saved format is left untouched
 PASS 0.11 window: resizes within bounds, keeps size, and shows rows to fit
 PASS 0.13.3 filters: toggle list of every herb and ore; ticks stay open and move the zone
-PASS 0.11 filters: hidin
-PASS 0.11 window: resizes within bounds, keeps size, and shows rows to fit
-PASS 0.13.3 filters: toggle list of every herb and ore; ticks stay open and move the zone
 PASS 0.11 filters: hiding grey drops resources 100+ below your skill from routes and map
 PASS 0.11 sync: an older bag, bank or profession snapshot never replaces newer data
 PASS 0.11 sync: status says plainly when the other account is unavailable or stale
@@ -231,6 +228,7 @@ PASS 0.12 missing: loot and quest rewards are recorded with place and shown as s
 PASS 0.12 missing: recorded vendors and trainers feed the list with their place
 PASS 0.12 missing: recipe finds are capped
 PASS 0.12 missing: Professions > Missing view, /vmn missing and the waypoint click
+PASS 0.13.10 Level up / Profit / To learn buttons switch the view and redraw at once
 PASS 0.13 recipes: no RecipeRadar or MTSL dependency anywhere at runtime
 PASS 0.13 recipes: catalogs parse per profession, Forever first, Classic baseline fills in
 PASS 0.13 recipes: memory stays bounded (strings until viewed, three professions parsed)
@@ -244,4 +242,12 @@ PASS 0.13 recipes: recorded sources sync automatically between paired accounts
 PASS 0.13 recipes: manual export and import of recipe sources
 PASS Help: every /vmn command is in the Help window
 PASS Help: opens from Settings and /vmn help, and search filters it
-PASS: 243 tests; Lua 5.1 / standard interpreter
+PASS DE built-in Forever fallback uses actual item level, distinct green weapons and armor
+PASS DE blue and purple brackets stay in vanilla, never return prismatic or void
+PASS DE external API validates probability, quantity and classic materials
+PASS DE exact weighted average, after-sale fee, and best of three options
+PASS DE never prices a material with no market data as zero
+PASS DE blocks unsupported high-level rares even with another addon installed
+PASS DE supported external API odds preserve duplicate material outcome entries
+PASS DE command, tooltip dedupe and user toggle
+PASS: 252 tests; Lua 5.1 / standard interpreter

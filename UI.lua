@@ -215,9 +215,16 @@ function N:CreateUI()
  local fs=u.prof.GetFontString and u.prof:GetFontString()
  if fs then fs:SetWidth(188); if fs.SetWordWrap then fs:SetWordWrap(false) end end
  hint(u.prof,'Profession','Pick which character and profession to show.')
- u.viewLevel=hint(button(pr,'Level up',218,0,78,function() u.profView='level'; u.offset=0 end),'Level up','Cheapest steps to reach your target skill, and what to buy.')
- u.viewRecipes=hint(button(pr,'Profit',298,0,72,function() u.profView='recipes'; u.offset=0 end),'Profit','Recipes you know, most profitable first. Hover a row for materials.')
- u.viewMissing=hint(button(pr,'To learn',372,0,74,function() u.profView='missing'; u.offset=0 end),'To learn','Recipes you do not know yet and where to get them. Click one for a waypoint.')
+ -- Switch the view and redraw right away (the click used to only set the view
+ -- and wait for something else to redraw, so the buttons looked dead).
+ local function setView(view)
+  if u.profView~=view then u.search:SetText(''); u.search:ClearFocus() end
+  u.profView=view; u.offset=0; if N.menu then N.menu:Hide() end
+  N.dirty=true; N:Render()
+ end
+ u.viewLevel=hint(button(pr,'Level up',218,0,78,function() setView('level') end),'Level up','Cheapest steps to reach your target skill, and what to buy.')
+ u.viewRecipes=hint(button(pr,'Profit',298,0,72,function() setView('recipes') end),'Profit','Recipes you know, most profitable first. Hover a row for materials.')
+ u.viewMissing=hint(button(pr,'To learn',372,0,74,function() setView('missing') end),'To learn','Recipes you do not know yet and where to get them. Click one for a waypoint.')
  u.mode=button(pr,'Cheapest',14,-32,130,function()
   local options={}; for _,m in ipairs(N.levelModes) do options[#options+1]={label=m,value=m} end
   N:Choice(u.mode,options,function(v) N.db.settings.levelMode=v end)
@@ -594,7 +601,7 @@ function N:RenderProfessions(u)
  else
   local query=u.search:GetText()
   local list={}
-  for _,r in ipairs(self:Search(query,u.character,u.profession,'All')) do
+  for _,r in ipairs(self:Search(query,u.character,u.profession,'Known')) do
    local e=self:Evaluate(r.r,1,r.character); list[#list+1]={r=r,e=e}
   end
   table.sort(list,function(a,b)
@@ -603,7 +610,7 @@ function N:RenderProfessions(u)
    if x and y and x~=y then return x>y end
    return a.r.r.name<b.r.r.name
   end)
-  u.profInfo:SetText(#list..' recipes, most profitable first.')
+  u.profInfo:SetText(#list..' known recipes, most profitable first.')
   for _,entry in ipairs(list) do
    local r,e=entry.r.r,entry.e
    local profit=e.economic
