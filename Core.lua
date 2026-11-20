@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.13.12-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.13.13-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -75,6 +75,18 @@ function N:UnitFullName(unit)
   return first..' '..second
  end
  return first
+end
+-- Faction can be unknown while the addon loads; fill it in once the player is in.
+function N:RefreshIdentity()
+ local c=self.character; if type(c)~='table' then return end
+ if c.faction=='Unknown' or c.faction=='' or c.faction==nil then
+  local f=self:Text(self:Call(UnitFactionGroup,'player'))
+  if f and f~='' then
+   c.faction=f; self.syncSections=nil
+   local realm=c.realm; self.economy=realm..'|'..f
+   self.db.prices[self.economy]=self.db.prices[self.economy] or {}; self.prices=self.db.prices[self.economy]
+  end
+ end
 end
 function N:SameRealm(a,b)
  if type(a)~='string' or type(b)~='string' then return a==b end
@@ -184,12 +196,14 @@ function N:Initialize()
  self.db=d
  -- Repair times saved while the PC clock was ahead (they'd block sync).
  for _,ch in pairs(d.characters) do self:FixFutureTimes(ch) end
- local realm=self:Call(GetNormalizedRealmName) or self:Call(GetRealmName) or 'Unknown'
+ -- '' counts as missing: early in loading the client can return an empty realm.
+ local function given(v) v=self:Text(v); return v and v~='' and v or nil end
+ local realm=given(self:Call(GetNormalizedRealmName)) or given(self:Call(GetRealmName)) or 'Unknown'
  local name=self:UnitFullName('player') or 'Unknown'; local guid=self:Text(self:Call(UnitGUID,'player'))
  self.characterID=d.account..'/'..realm..'/'..name
  self:MigrateCharacterID(d,self.characterID,guid)
  local c=d.characters[self.characterID] or {professions={},bags={},bank={}}
- c.name,c.realm,c.faction,c.guid,c.account=name,realm,self:Call(UnitFactionGroup,'player') or 'Unknown',guid,d.account
+ c.name,c.realm,c.faction,c.guid,c.account=name,realm,given(self:Call(UnitFactionGroup,'player')) or 'Unknown',guid,d.account
  c.imported=false; c.at=self:Now(); c.professions=c.professions or {}; c.bags=c.bags or {}; c.bank=c.bank or {}
  d.characters[self.characterID]=c; self.character=c; self.economy=realm..'|'..c.faction
  d.prices[self.economy]=d.prices[self.economy] or {}; self.prices=d.prices[self.economy]

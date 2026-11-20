@@ -287,14 +287,30 @@ function N:ApplySync(peer,key,data)
  if not pending.name then return end
  if shortName(pending.name)~=peer then return self:Print('Ignored sync: sender name does not match its data.') end
  if pending.account~=state.account or pending.account==self.db.account then return end
- local id=pending.account..'/'..pending.realm..'/'..pending.name
+ -- A paired character is on this realm and faction (whispers need both), so a
+ -- missing name, realm or faction is filled from what we know instead of
+ -- throwing away every sync. Happens when the other client saved its identity
+ -- before the game had the realm or faction ready.
+ local function blank(v) return type(v)~='string' or v=='' or v=='Unknown' end
+ local me=self.character or {}
+ if blank(pending.realm) then pending.realm=me.realm end
+ if blank(pending.faction) then pending.faction=me.faction end
+ local id=pending.account..'/'..tostring(pending.realm)..'/'..pending.name
  local existing=self.db.characters[id]
  -- Start from the last synced record so sections can arrive separately.
  local merged=existing and existing.synced and self:Copy(existing) or {professions={},bags={},bank={}}
  for k,v in pairs(pending) do merged[k]=v end
  self:FixFutureTimes(merged)
  local ok,err=pcall(self.ValidateCharacter,self,merged)
- if not ok then return self:Print('Ignored invalid sync data: '..tostring(err)) end
+ if not ok then
+  -- Say it once per peer and problem, not on every message.
+  err=tostring(err):gsub('^.-:%d+: ','')
+  self.syncWarned=self.syncWarned or {}
+  local key=peer..'|'..err
+  if self.syncWarned[key] then return end
+  self.syncWarned[key]=true
+  return self:Print('Ignored sync from '..(self.db.sync.peers[peer] or peer)..': '..err)
+ end
  for otherID,other in pairs(self.db.characters) do
   if otherID~=id and not other.imported and other.realm==merged.realm and other.name==merged.name then
    return self:Print('Ignored sync for '..merged.name..': a local character has that identity.')
@@ -327,17 +343,22 @@ function N:ApplyAlts(peer,list)
   if type(a)=='table' and type(a.name)=='string' and type(a.realm)=='string' and a.account==state.account and a.account~=self.db.account then
    local local_=false
    for _,o in pairs(self.db.characters) do if not o.imported and o.realm==a.realm and o.name==a.name then local_=true end end
-   local key=a.account..'/'..a.realm..'/'..a.name
+   local realm=(a.realm=='' or a.realm=='Unknown') and (self.character and self.character.realm) or a.realm
+   local key=a.account..'/'..realm..'/'..a.name
    local have=self.db.characters[key]
    local function stamp(c) return math.max(tonumber(c.at) or 0,tonumber(c.bagsAt) or 0,tonumber(c.bankAt) or 0) end
    if have and have.synced and stamp(have)>stamp(a) then local_=true;self:SyncNote(peer,'older') end
    if not local_ then
     local rec=self:Copy(a);rec.imported,rec.synced=nil,nil
+    -- Same realm and faction as the paired character (see ApplySync).
+    local me=self.character or {}
+    if rec.realm=='' or rec.realm=='Unknown' then rec.realm=me.realm end
+    if type(rec.faction)~='string' or rec.faction=='' or rec.faction=='Unknown' then rec.faction=me.faction end
     self:FixFutureTimes(rec)
     local ok=pcall(self.ValidateCharacter,self,rec)
     if ok then
      local clean=self:CleanImported(rec);clean.imported=true;clean.synced=true;clean.syncedAt=self:Now();clean.via=peer
-     self.db.characters[a.account..'/'..a.realm..'/'..a.name]=clean;n=n+1
+     self.db.characters[key]=clean;n=n+1
     end
    end
   end

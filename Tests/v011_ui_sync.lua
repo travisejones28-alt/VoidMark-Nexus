@@ -103,6 +103,42 @@ test('0.11 sync: an older bag, bank or profession snapshot never replaces newer 
  C_ChatInfo=api; N.db.sync.peers=savedPeers; N.syncOut,N.syncContact,N.syncHyphen,N.syncHelloForm,N.syncProbeAt={},nil,nil,nil,nil
 end)
 
+test('0.13.13 sync: a peer saved with a blank realm/faction still syncs, warning at most once',function()
+ local savedPeers=N.db.sync.peers; N.db.sync.peers={['voidmark bank']='Voidmark Bank'}
+ local api=C_ChatInfo; C_ChatInfo={SendAddonMessage=function() return 0 end}
+ local t=time(); local me=N.character; N.syncIn['voidmark bank']=nil
+ local printed={}; local p=N.Print; N.Print=function(_,s) printed[#printed+1]=s end
+ deliver({id={name='Voidmark Bank',realm='',faction='Unknown',guid='GUID-B13',account='B13',at=t},
+  inv={bags={[2447]=7},bank={},bagsAt=t,bankAt=t},prof={professions={}}},'B13')
+ local got=N.db.characters['B13/'..me.realm..'/Voidmark Bank']
+ assert(got,'synced despite blank realm'); eq(got.realm,me.realm); eq(got.faction,me.faction); eq(got.bags[2447],7)
+ for _,s in ipairs(printed) do assert(not s:find('Ignored',1,true),s) end
+ -- A record that really cannot be used is reported once, not on every message.
+ printed={}
+ N.syncIn['voidmark bank']=nil
+ deliver({id={name='Voidmark Bank',realm='TestRealm',faction='Horde',guid='GUID-B14',account='B14',at=t},
+  inv={bags={[2447]=-1},bank={},bagsAt=t,bankAt=t},prof={professions={}}},'B14')
+ deliver({inv={bags={[2447]=-2},bank={},bagsAt=t+1,bankAt=t},prof={professions={}}},'B14')
+ local n=0; for _,s in ipairs(printed) do if s:find('Ignored sync from Voidmark Bank',1,true) then n=n+1 end end
+ eq(n,1)
+ -- Missing identity fields are named.
+ local ok,err=pcall(N.ValidateCharacter,N,{name='A',realm='',faction='Horde',account='x'})
+ assert(not ok and tostring(err):find('realm missing',1,true),tostring(err))
+ N.Print=p; N.db.characters['B13/'..me.realm..'/Voidmark Bank']=nil; N.db.characters['B14/TestRealm/Voidmark Bank']=nil; N.syncWarned=nil
+ C_ChatInfo=api; N.db.sync.peers=savedPeers; N.syncOut,N.syncContact,N.syncHyphen,N.syncHelloForm,N.syncProbeAt={},nil,nil,nil,nil
+ N.syncIn['voidmark bank']=nil; N.syncHashes['voidmark bank']=nil
+end)
+
+test('0.13.13 identity: an empty realm name at load falls back instead of being saved blank',function()
+ local g=GetNormalizedRealmName
+ GetNormalizedRealmName=function() return '' end
+ local given=function(v) v=N:Text(v); return v and v~='' and v or nil end
+ eq(given(N:Call(GetNormalizedRealmName)) or given(N:Call(GetRealmName)) or 'Unknown','Test Realm')
+ GetNormalizedRealmName=g
+ local c=N.character; local f,e=c.faction,N.economy; c.faction='Unknown'; N:RefreshIdentity(); eq(c.faction,'Horde')
+ c.faction=f; N.economy=e; N.prices=N.db.prices[e]
+end)
+
 test('0.11 sync: status says plainly when the other account is unavailable or stale',function()
  local savedPeers,savedStatus=N.db.sync.peers,N.db.sync.status
  N.db.sync.peers={['voidmark bank']='Voidmark Bank'}; N.db.sync.status={}

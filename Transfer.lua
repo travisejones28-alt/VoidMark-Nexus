@@ -70,7 +70,8 @@ function N:FixFutureTimes(c)
  return fixed
 end
 function N:ValidateCharacter(c)
- assert(type(c)=='table' and text(c.name) and text(c.realm) and text(c.faction) and text(c.account),'Invalid character identity')
+ assert(type(c)=='table','Invalid character identity')
+ for _,k in ipairs({'name','realm','faction','account'}) do assert(text(c[k]),'Invalid character identity ('..k..' missing)') end
  assert(self:Finite(c.at,0,self:Now()+300),'Invalid timestamp')
  if c.guid then assert(text(c.guid),'Invalid GUID') end
  inventory(c.bags); inventory(c.bank)
