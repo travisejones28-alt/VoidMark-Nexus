@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.13.13-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.13.14-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -87,6 +87,16 @@ function N:RefreshIdentity()
    self.db.prices[self.economy]=self.db.prices[self.economy] or {}; self.prices=self.db.prices[self.economy]
   end
  end
+end
+-- Synced copies of the other account's characters that a newer copy of the
+-- same character replaces (old realm spelling). Only synced copies go; your
+-- own characters and manual imports are never removed here.
+function N:PruneSyncedCopies()
+ local keep=self:PreferredRecords(); local n=0
+ for cid,c in pairs(self.db.characters) do
+  if type(c)=='table' and c.synced and c.imported and not keep[cid] then self.db.characters[cid]=nil; n=n+1 end
+ end
+ return n
 end
 function N:SameRealm(a,b)
  if type(a)~='string' or type(b)~='string' then return a==b end
@@ -198,7 +208,10 @@ function N:Initialize()
  for _,ch in pairs(d.characters) do self:FixFutureTimes(ch) end
  -- '' counts as missing: early in loading the client can return an empty realm.
  local function given(v) v=self:Text(v); return v and v~='' and v or nil end
- local realm=given(self:Call(GetNormalizedRealmName)) or given(self:Call(GetRealmName)) or 'Unknown'
+ -- Always without spaces: WoW Forever sometimes has no normalized realm name
+ -- yet at load, and the spaced GetRealmName would save the same character
+ -- under a second ID ("Realm 8 PvP" vs "Realm8PvP").
+ local realm=(given(self:Call(GetNormalizedRealmName)) or given(self:Call(GetRealmName)) or 'Unknown'):gsub('%s','')
  local name=self:UnitFullName('player') or 'Unknown'; local guid=self:Text(self:Call(UnitGUID,'player'))
  self.characterID=d.account..'/'..realm..'/'..name
  self:MigrateCharacterID(d,self.characterID,guid)
@@ -206,6 +219,15 @@ function N:Initialize()
  c.name,c.realm,c.faction,c.guid,c.account=name,realm,given(self:Call(UnitFactionGroup,'player')) or 'Unknown',guid,d.account
  c.imported=false; c.at=self:Now(); c.professions=c.professions or {}; c.bags=c.bags or {}; c.bank=c.bank or {}
  d.characters[self.characterID]=c; self.character=c; self.economy=realm..'|'..c.faction
+ self:PruneSyncedCopies()
+ -- Price cache saved under the spaced realm spelling joins the current one.
+ for k,v in pairs(d.prices) do
+  if k~=self.economy and type(k)=='string' and k:gsub('%s','')==self.economy and type(v)=='table' then
+   local into=d.prices[self.economy] or {}; d.prices[self.economy]=into
+   for id,e in pairs(v) do if into[id]==nil then into[id]=e end end
+   d.prices[k]=nil
+  end
+ end
  d.prices[self.economy]=d.prices[self.economy] or {}; self.prices=d.prices[self.economy]
  if self.InitializeSync then self:InitializeSync() end
  if self.InitializeTerrain then self:InitializeTerrain() end

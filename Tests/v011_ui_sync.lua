@@ -129,6 +129,17 @@ test('0.13.13 sync: a peer saved with a blank realm/faction still syncs, warning
  N.syncIn['voidmark bank']=nil; N.syncHashes['voidmark bank']=nil
 end)
 
+test('0.13.14 identity: realm key never flips between spaced and unspaced; stale synced copies pruned',function()
+ local add={['X/Test Realm/Voidmark Bank']={name='Voidmark Bank',realm='Test Realm',faction='Horde',account='X',imported=true,synced=true,at=time()-100,bags={},bank={},professions={}},
+  ['X/TestRealm/Voidmark Bank']={name='Voidmark Bank',realm='TestRealm',faction='Horde',account='X',imported=true,synced=true,at=time(),bags={},bank={},professions={}}}
+ for k,v in pairs(add) do N.db.characters[k]=v end
+ eq(N:PruneSyncedCopies(),1)
+ eq(N.db.characters['X/Test Realm/Voidmark Bank'],nil); assert(N.db.characters['X/TestRealm/Voidmark Bank'])
+ assert(N.db.characters[N.characterID],'own record kept')
+ N.db.characters['X/TestRealm/Voidmark Bank']=nil
+ eq(('Test Realm'):gsub('%s',''),'TestRealm')
+end)
+
 test('0.13.13 identity: an empty realm name at load falls back instead of being saved blank',function()
  local g=GetNormalizedRealmName
  GetNormalizedRealmName=function() return '' end
