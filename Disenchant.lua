@@ -193,8 +193,18 @@ function N:DECommand(arg)
  self:Print('Expected value over many disenchants, not guaranteed for one item. Check that this item is actually disenchantable.')
 end
 
+-- VoidMark Market draws the disenchant tooltip (Shift held): it prices the
+-- exact gear variant, knows Forever's weapon-essence change and learns from
+-- your own disenchants. Nexus' short version only shows when Market's is not
+-- available, so there is never a second, disagreeing DE block.
+function N:MarketDETooltip()
+ local m=VoidMarkMarket
+ return type(m)=='table' and type(m.AppendDisenchantTooltip)=='function'
+  and not (type(m.db)=='table' and type(m.db.settings)=='table' and m.db.settings.tooltipDisenchant==false)
+end
 function N:AddDisenchantTooltip(t,id)
  if not self.ready or not self.db or not self.db.settings.deTooltips or not t or not t.AddDoubleLine then return end
+ if self:MarketDETooltip() then return end
  id=tonumber(id)
  if not id or t.vmnDE==id then return end
  local v=self:DEValue(id)

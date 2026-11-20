@@ -101,6 +101,18 @@ test('0.13.11 DE: not-in-latest-scan prices still give a best option; only old o
  v=N:DEValue(777001); eq(v.best,nil); assert(tip():find('not trusted',1,true))
  N.Price=realPrice
 end)
+test('0.13.12 DE: Nexus adds no DE tooltip when VoidMark Market draws its own',function()
+ local oldM=VoidMarkMarket
+ local function tip() local tt={lines={},AddDoubleLine=function(self,a,b) self.lines[#self.lines+1]=a..b end,
+  AddLine=function(self,s) self.lines[#self.lines+1]=s end,Show=function() end}; N:AddDisenchantTooltip(tt,777001); return #tt.lines end
+ VoidMarkMarket={AppendDisenchantTooltip=function() end,db={settings={}}}
+ eq(tip(),0)
+ VoidMarkMarket.db.settings.tooltipDisenchant=false
+ assert(tip()>=2)
+ VoidMarkMarket=nil
+ assert(tip()>=2)
+ VoidMarkMarket=oldM
+end)
 GetItemInfo=oldInfo;DisenchantBuddy=oldBuddy
 for k,v in pairs(old) do N.db.settings[k]=v end
 for _,id in ipairs(ids) do N.prices[id]=saved[id] end

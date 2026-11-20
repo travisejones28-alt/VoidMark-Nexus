@@ -143,7 +143,7 @@ N.HELP={title='VoidMark Nexus: Help & commands',
   {'/vmn prices','Prices of resources here with age, confidence and stale flags.'},
   {'/vmn market ITEM','Open an item in VoidMark Market (read only).'},
   {'/vmn price ITEM_ID GOLD','Set your own price for an item.'},
-  {'/vmn de ITEM_LINK | ITEM_ID (or /vmn disenchant)','Expected disenchant yields, vendor value and auction value. /vmn de on|off toggles tooltip display.'},
+  {'/vmn de ITEM_LINK | ITEM_ID (or /vmn disenchant)','Expected disenchant yields, vendor value and auction value. /vmn de on|off toggles tooltip display. With VoidMark Market installed, Market shows the disenchant tooltip (hold Shift) and Nexus adds none.'},
   {'/vmn gold  (or /vmn money)','Gold on every character and the total.'}}},
  {title='Professions and items',commands={
   {'/vmn level PROFESSION [target]','Next leveling step and the methods compared.'},

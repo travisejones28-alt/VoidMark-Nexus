@@ -251,4 +251,5 @@ PASS DE blocks unsupported high-level rares even with another addon installed
 PASS DE supported external API odds preserve duplicate material outcome entries
 PASS DE command, tooltip dedupe and user toggle
 PASS 0.13.11 DE: not-in-latest-scan prices still give a best option; only old or untrusted ones are flagged
-PASS: 253 tests; Lua 5.1 / standard interpreter
+PASS 0.13.12 DE: Nexus adds no DE tooltip when VoidMark Market draws its own
+PASS: 254 tests; Lua 5.1 / standard interpreter
