@@ -24,6 +24,11 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.14.1
+- Crates: costs now subtract the silver each sealed crate pays back (50c per favor). Expert favor is marked player-reported and Artisan expected; Apprentice and Journeyman are confirmed.
+- Crates: **Show rewards** lists what favor buys, priced in gold at your cheapest crate: the Pack Kodo, Minimule pet, Advertising License, tabard, certifications, Forged Delivery Receipts, and every favor recipe for your professions that you don't know yet (favor price from the vendors' skill bands, Wowhead).
+- A reminder line shows the cheapest empty crate for Forged Delivery Receipts (+50 reputation each).
+
 ## What changed in 0.14.0
 - New **Crates** tab: every Waylaid Crate ranked by the cheapest Merchant's Favor from your latest AH scan. Each row says what the crate **takes** (its cheapest bundle), what it **costs** (bundle + the crate's AH price, or nothing extra if you already hold one), what it **gives** (favor) and the cost per favor. Hover a row for every bundle, its price, and how many you already have.
 - Favor per crate (player reports): gathered goods 5/10/15/20, crafted goods 10/20/30/40 for Apprentice/Journeyman/Expert/Artisan; Artisan amounts are expected, not confirmed.

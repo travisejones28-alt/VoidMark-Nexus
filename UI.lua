@@ -245,7 +245,8 @@ function N:CreateUI()
  u.syncInfo=label(ch,'',14,-36,'GameFontHighlight'); u.syncInfo:SetWidth(W-28)
  -- Guides page: pick a guide; trainers, steps, vendors and materials below.
  -- Crates: cheapest Merchant's Favor (Crates.lua)
- u.crateInfo=label(u.pages.Crates,'',14,-6,'GameFontHighlight'); u.crateInfo:SetWidth(W-28)
+ u.crateToggle=button(u.pages.Crates,'Show rewards',14,-4,130,function() u.crateRewards=not u.crateRewards; u.offset=0 end)
+ u.crateInfo=label(u.pages.Crates,'',14,-34,'GameFontHighlight'); u.crateInfo:SetWidth(W-28)
  local gp=u.pages.Guides
  u.guideKey=N.db.settings.guide
  u.guideChar=N.db.settings.guideChar
@@ -702,7 +703,9 @@ function N:Render()
  elseif u.tab=='Professions' then rows=self:RenderProfessions(u)
  elseif u.tab=='Characters' then rows=self:RenderCharacters(u)
  elseif u.tab=='Guides' then rows=self:RenderGuides(u)
- elseif u.tab=='Crates' then rows=self:RenderCrates(u)
+ elseif u.tab=='Crates' then
+  u.crateToggle:SetText(u.crateRewards and 'Show crates' or 'Show rewards')
+  rows=u.crateRewards and self:RenderFavorRewards(u) or self:RenderCrates(u)
  else
   for _,cb in ipairs(u.checks) do cb:SetChecked(cb.get()) end
   for _,fn in ipairs(u.adjusters or {}) do fn() end
