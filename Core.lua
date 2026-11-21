@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.13.15-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.13.16-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -238,6 +238,15 @@ function N:Initialize()
  -- under a second ID ("Realm 8 PvP" vs "Realm8PvP").
  local realm=(given(self:Call(GetNormalizedRealmName)) or given(self:Call(GetRealmName)) or 'Unknown'):gsub('%s','')
  local name=self:UnitFullName('player') or 'Unknown'; local guid=self:Text(self:Call(UnitGUID,'player'))
+ -- 0.13.16: the game can leave the realm empty all session. Use the realm this
+ -- same character (GUID) was saved under, so it keeps its data and sync.
+ if realm=='Unknown' and guid then
+  local bestAt
+  for _,ch in pairs(d.characters) do
+   if type(ch)=='table' and not ch.imported and ch.guid==guid and type(ch.realm)=='string' and ch.realm~='' and ch.realm~='Unknown'
+    and (not bestAt or (tonumber(ch.at) or 0)>bestAt) then realm=ch.realm:gsub('%s',''); bestAt=tonumber(ch.at) or 0 end
+  end
+ end
  self.characterID=d.account..'/'..realm..'/'..name
  self:MigrateCharacterID(d,self.characterID,guid)
  local c=d.characters[self.characterID] or {professions={},bags={},bank={}}
