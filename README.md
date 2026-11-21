@@ -24,6 +24,9 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.14.2
+- Crates tab easier to read: each crate is a short headline (name and cost per favor) with the bundle, favor and cost on the line below; real item names instead of "Item 8172"; money without zero parts ("20s 96c", "2c").
+
 ## What changed in 0.14.1
 - Crates: costs now subtract the silver each sealed crate pays back (50c per favor). Expert favor is marked player-reported and Artisan expected; Apprentice and Journeyman are confirmed.
 - Crates: **Show rewards** lists what favor buys, priced in gold at your cheapest crate: the Pack Kodo, Minimule pet, Advertising License, tabard, certifications, Forged Delivery Receipts, and every favor recipe for your professions that you don't know yet (favor price from the vendors' skill bands, Wowhead).

@@ -50,6 +50,23 @@ N.CRATES={
  c(248713,'Artisan','Artisan Parts','crafted',{{15994,5},{18631,5},{16000,2}}),
 }
 
+N.CRATE_ITEM_NAMES={[765]="Silverleaf",[785]="Mageroyal",[2318]="Light Leather",[2319]="Medium Leather",[2447]="Peacebloom",[2449]="Earthroot",[2450]="Briarthorn",[2453]="Bruiseweed",[2589]="Linen Cloth",[2592]="Wool Cloth",[2770]="Copper Ore",[2771]="Tin Ore",[2772]="Iron Ore",[2775]="Silver Ore",[2776]="Gold Ore",[2840]="Copper Bar",[2841]="Bronze Bar",[2842]="Silver Bar",[2996]="Bolt of Linen Cloth",[2997]="Bolt of Woolen Cloth",[3355]="Wild Steelbloom",[3356]="Kingsblood",[3357]="Liferoot",[3358]="Khadgar's Whisker",[3369]="Grave Moss",[3575]="Iron Bar",[3576]="Tin Bar",[3577]="Gold Bar",[3818]="Fadeleaf",[3819]="Wintersbite",[3820]="Stranglekelp",[3821]="Goldthorn",[3858]="Mithril Ore",[3859]="Steel Bar",[3860]="Mithril Bar",[4231]="Cured Light Hide",[4233]="Cured Medium Hide",[4234]="Heavy Leather",[4236]="Cured Heavy Hide",[4304]="Thick Leather",[4305]="Bolt of Silk Cloth",[4306]="Silk Cloth",[4338]="Mageweave Cloth",[4339]="Bolt of Mageweave",[4359]="Handful of Copper Bolts",[4361]="Copper Tube",[4363]="Copper Modulator",[4371]="Bronze Tube",[4375]="Whirring Bronze Gizmo",[4382]="Bronze Framework",[4387]="Iron Strut",[4625]="Firebloom",[6037]="Truesilver Bar",[7911]="Truesilver Ore",[8170]="Rugged Leather",[8172]="Cured Thick Hide",[8831]="Purple Lotus",[8836]="Arthas' Tears",[8838]="Sungrass",[8839]="Blindweed",[8845]="Ghost Mushroom",[8846]="Gromsblood",[10558]="Gold Power Core",[10559]="Mithril Tube",[10560]="Unstable Trigger",[10561]="Mithril Casing",[10620]="Thorium Ore",[10939]="Greater Magic Essence",[10940]="Strange Dust",[10978]="Small Glimmering Shard",[11082]="Greater Astral Essence",[11083]="Soul Dust",[11084]="Large Glimmering Shard",[11135]="Greater Mystic Essence",[11137]="Vision Dust",[11138]="Small Glowing Shard",[11139]="Large Glowing Shard",[11175]="Greater Nether Essence",[11176]="Dream Dust",[11177]="Small Radiant Shard",[11178]="Large Radiant Shard",[11370]="Dark Iron Ore",[11371]="Dark Iron Bar",[12359]="Thorium Bar",[13463]="Dreamfoil",[13464]="Golden Sansam",[13465]="Mountain Silversage",[13466]="Plaguebloom",[13467]="Icecap",[14047]="Runecloth",[14048]="Bolt of Runecloth",[14343]="Small Brilliant Shard",[14344]="Large Brilliant Shard",[15994]="Thorium Widget",[16000]="Thorium Tube",[18631]="Truesilver Transformer"}
+local function matName(id)
+ return N.CRATE_ITEM_NAMES[id] or N:ItemName(id)
+end
+-- Short money: "20s 96c", "2c", "1g 5s" (no zero parts).
+local function cash(n)
+ if not N:Finite(n,-1e15,1e15) then return '?' end
+ n=math.floor(math.abs(n)+.5)
+ local g,sv,c=math.floor(n/10000),math.floor(n/100)%100,n%100
+ local t={}
+ if g>0 then t[#t+1]=g..'g' end
+ if sv>0 then t[#t+1]=sv..'s' end
+ if c>0 or #t==0 then t[#t+1]=c..'c' end
+ return table.concat(t,' ')
+end
+N.ShortMoney=function(_,n) return cash(n) end
+
 -- What one unit costs to BUY now: the lowest listing from the latest scan
 -- (Market's own scan or the one synced from the bank character), else Nexus' price.
 function N:BuyUnit(id)
@@ -109,50 +126,51 @@ function N:RenderCrates(u)
  local level=self:Call(UnitLevel,'player')
  local faction=self.character and self.character.faction
  local npc=faction=='Alliance' and 'Marcy Baker (Three Corners, Redridge)' or 'Dokimi (west of the Crossroads, Barrens)'
- u.crateInfo:SetText('Cheapest Merchant\'s Favor from the latest AH scan ('..(newest and self:Ago(newest) or 'no scan yet')..'). '..
-  'Each crate takes ONE bundle. Hand filled crates to '..npc..'. Hover a row for every bundle.')
+ u.crateInfo:SetText('Cheapest favor first. Prices from the AH scan '..(newest and self:Ago(newest) or '(no scan yet)')..'; costs include the silver crates pay back.\nTurn in to '..npc..'. Hover a crate for every bundle.')
  local rows={}
  for i,p in ipairs(plans) do
   local cr=p.crate
   local fav=p.favor..(p.estimated and '*' or '')..' favor'
-  local text,color
+  local text,color,detail
   if not p.best then
    text=cr.name..': no AH price for any bundle yet'
    color=COL.muted
   else
-   local takes=p.best.qty..' '..self:ItemName(p.best.item)
-   local crate=p.crates>0 and 'crate: you have '..p.crates or (p.crateUnit and 'crate '..self:Money(p.crateUnit) or 'crate: not on AH')
-   text=string.format('%s  |  takes %s  |  costs %s (+%s)  |  gives %s + %s back  |  %s/favor',
-    cr.name,takes,self:Money(p.best.cost),crate,fav,self:Money(p.refund),self:Money(p.perFavor))
+   text=string.format('%s  -  %s per favor',cr.name,cash(p.perFavor))
+   local crate=p.crates>0 and 'crate: have '..p.crates or (p.crateUnit and 'crate '..cash(p.crateUnit) or 'crate not on AH')
+   detail=string.format('      %d %s  |  %s  |  costs %s (%s)',p.best.qty,matName(p.best.item),fav,cash(math.max(0,p.total)),crate)
    color=(i==1 and COL.good) or COL.white
-   if level and p.level>level then text=text..'  (needs level '..p.level..')'; color=COL.muted end
+   if level and p.level>level then detail=detail..'  |  needs level '..p.level; color=COL.muted end
   end
   local plan=p
-  rows[#rows+1]={text=text,color=color,item=cr.id,tip=function(tt)
+  local tipFn
+  tipFn=function(tt)
    tt:AddLine(' ')
-   tt:AddLine(plan.crate.tier..' crate, '..plan.crate.kind..' goods: '..plan.favor..' Merchant\'s Favor + '..N:Money(plan.refund)..(plan.estimated and (' ('..plan.estimated..', not confirmed)') or ''),1,.82,0,true)
+   tt:AddLine(plan.crate.tier..' crate, '..plan.crate.kind..' goods: '..plan.favor..' Merchant\'s Favor + '..cash(plan.refund)..' back'..(plan.estimated and (' ('..plan.estimated..', not confirmed)') or ''),1,.82,0,true)
    tt:AddLine('Turn-in needs level '..plan.level,.8,.8,.8)
    tt:AddLine('Fill with ONE of:',1,1,1)
    for _,o in ipairs(plan.options) do
-    local line=o.qty..' '..N:ItemName(o.item)..': '..(o.cost and N:Money(o.cost)..' ('..N:Money(o.unit)..' each)' or 'no AH price')
+    local line=o.qty..' '..matName(o.item)..': '..(o.cost and cash(o.cost)..' ('..cash(o.unit)..' each)' or 'no AH price')
     if o.have>0 then line=line..'  - you have '..o.have end
     local best=plan.best==o
     tt:AddLine((best and '> ' or '   ')..line,best and .3 or .85,best and .9 or .85,best and .3 or .85)
    end
-   tt:AddLine(plan.crates>0 and ('You have '..plan.crates..' of this crate') or ('Crate on AH: '..(plan.crateUnit and N:Money(plan.crateUnit) or 'not listed')),.8,.8,.8)
-   if plan.fillPerFavor then tt:AddLine('Filling only (crate already owned): '..N:Money(plan.fillPerFavor)..' per favor',.8,.8,.8) end
+   tt:AddLine(plan.crates>0 and ('You have '..plan.crates..' of this crate') or ('Crate on AH: '..(plan.crateUnit and cash(plan.crateUnit) or 'not listed')),.8,.8,.8)
+   if plan.fillPerFavor then tt:AddLine('If you already have the crate: '..cash(plan.fillPerFavor)..' per favor',.8,.8,.8) end
    tt:AddLine('Performance Bonus (Legacy, Professions): up to 15% chance of double favor.',.6,.6,.6,true)
-  end}
+  end
+  rows[#rows+1]={text=text,color=color,item=cr.id,tip=tipFn,nowrap=true}
+  if detail then rows[#rows+1]={text=detail,color=COL.muted,item=cr.id,tip=tipFn,noIcon=true} end
  end
  -- Reputation instead of favor: any EMPTY crate + a Forged Delivery Receipt (15 favor, Friendly) = 50 reputation.
  local cheap,cheapUnit
  for _,p in ipairs(plans) do if p.crateUnit and (not cheapUnit or p.crateUnit<cheapUnit) then cheap,cheapUnit=p,p.crateUnit end end
  if cheap then
   rows[#rows+1]={text=' ',color=COL.muted}
-  rows[#rows+1]={text='For reputation: cheapest empty crate is '..cheap.crate.name..' at '..self:Money(cheapUnit)..
-   '. With a Forged Delivery Receipt (15 favor, needs Friendly) an empty crate gives 50 reputation.',color=COL.accent,item=cheap.crate.id}
+  rows[#rows+1]={text='For reputation: cheapest empty crate is '..cheap.crate.name..' at '..cash(cheapUnit)..
+   '. Empty crate + Forged Delivery Receipt (15 favor, Friendly) = 50 reputation.',color=COL.accent,item=cheap.crate.id}
  end
- u.footer:SetText('* Expert favor is player-reported, Artisan expected. Costs include the silver each crate pays back.')
+ u.footer:SetText('* Expert favor is player-reported, Artisan expected.')
  return rows
 end
 
@@ -211,9 +229,9 @@ end
 function N:RenderFavorRewards(u)
  local per,plan=self:BestFavorPrice()
  local c=self.character or {}
- local function gold(f) return per and ('about '..self:Money(f*per)..' in crates') or 'no crate prices yet' end
+ local function gold(f) return per and ('~'..cash(f*per)) or 'no crate prices yet' end
  u.crateInfo:SetText('What Merchant\'s Favor buys, priced in gold at today\'s cheapest crate'..
-  (plan and (' ('..plan.crate.name..', '..self:Money(per)..'/favor)') or '')..'. Recipes shown are for your professions; known ones are hidden.')
+  (plan and (' ('..plan.crate.name..', '..cash(per)..' per favor)') or '')..'. Recipes shown are for your professions; known ones are hidden.')
  local rows={}
  rows[#rows+1]={text='Other rewards',color=COL.gold}
  for _,r in ipairs(self.FAVOR_OTHER) do

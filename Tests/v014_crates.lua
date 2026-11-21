@@ -34,7 +34,8 @@ test('0.14 Crates: cheapest bundle, crate price, favor and cost per favor from M
  -- The tab renders a "takes / costs / gives" line for each crate.
  N:Show('Crates'); N:Render()
  local rows=N:RenderCrates(N.ui)
- assert(rows[1].text:find('takes 20 ',1,true) and rows[1].text:find('gives 5 favor + 0g 2s 50c back',1,true) and rows[1].text:find('/favor',1,true),rows[1].text)
+ assert(rows[1].text:find('Apprentice Herbs  -  2s 34c per favor',1,true),rows[1].text)
+ assert(rows[2].text:find('20 Silverleaf  |  5 favor  |  costs 11s 70c (crate 7s 20c)',1,true),rows[2].text)
  assert(rows[#rows].text:find('Forged Delivery Receipt',1,true),'reputation tip')
  assert(N.ui.crateInfo:GetText():find('Dokimi',1,true),'Horde hand-in NPC')
  VoidMarkMarket=old
@@ -54,7 +55,7 @@ test('0.14.1 Favor rewards: recipe favor follows the vendor skill bands; Horde c
  local rows=N:RenderFavorRewards(N.ui)
  local sawKodo,sawKnown,sawRecipe=false,false,false
  for _,r in ipairs(rows) do
-  if r.text:find('Pack Kodo',1,true) then sawKodo=true; assert(r.text:find('6000 favor',1,true) and r.text:find('in crates',1,true),r.text) end
+  if r.text:find('Pack Kodo',1,true) then sawKodo=true; assert(r.text:find('6000 favor',1,true) and r.text:find('~',1,true),r.text) end
   if r.text:find('Elixir of Lesser Spirit',1,true) then sawKnown=true end
   if r.text:find('Lesser Mageblood Elixir',1,true) then sawRecipe=true; assert(r.text:find('45 favor',1,true),r.text) end
  end
