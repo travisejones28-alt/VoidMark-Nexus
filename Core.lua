@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.13.14-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.13.15-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -79,6 +79,31 @@ end
 -- Faction can be unknown while the addon loads; fill it in once the player is in.
 function N:RefreshIdentity()
  local c=self.character; if type(c)~='table' then return end
+ -- Both realm functions can be empty while addons load: the character was
+ -- opened under realm "Unknown". Move it back to its real ID now.
+ if c.realm=='Unknown' then
+  local function given(v) v=self:Text(v); return v and v~='' and v or nil end
+  local realm=given(self:Call(GetNormalizedRealmName)) or given(self:Call(GetRealmName))
+  if realm then
+   realm=realm:gsub('%s','')
+   local d=self.db; local newID=d.account..'/'..realm..'/'..c.name
+   if d.characters[newID]==nil then
+    d.characters[newID]=c; d.characters[self.characterID]=nil
+    for _,k in ipairs({'recordings','activeSessions','navigation'}) do
+     local t=d[k]; if type(t)=='table' and t[self.characterID]~=nil and t[newID]==nil then t[newID]=t[self.characterID]; t[self.characterID]=nil end
+    end
+    for _,plan in ipairs(d.plans) do if type(plan)=='table' and plan.character==self.characterID then plan.character=newID end end
+   else
+    -- A real-realm record exists (not moved, e.g. no GUID): keep the newer.
+    local old=d.characters[newID]
+    if (tonumber(c.at) or 0)>=(tonumber(old.at) or 0) then d.characters[newID]=c end
+    d.characters[self.characterID]=nil; c=d.characters[newID]
+   end
+   c.realm=realm; self.characterID=newID; self.character=c; self.syncSections=nil
+   self.economy=realm..'|'..tostring(c.faction)
+   d.prices[self.economy]=d.prices[self.economy] or {}; self.prices=d.prices[self.economy]
+  end
+ end
  if c.faction=='Unknown' or c.faction=='' or c.faction==nil then
   local f=self:Text(self:Call(UnitFactionGroup,'player'))
   if f and f~='' then

@@ -230,6 +230,11 @@ function N:MinimapButton()
  self.minimap=b
 end
 
+-- Realm/faction can still be missing at login on Forever; try again here.
+N:On('PLAYER_ENTERING_WORLD',function()
+ local c=N.character
+ if c and (c.realm=='Unknown' or c.faction=='Unknown') then N:RefreshIdentity() end
+end)
 local frame=CreateFrame('Frame'); N.eventFrame=frame
 frame:RegisterEvent('ADDON_LOADED'); frame:RegisterEvent('PLAYER_LOGIN')
 for event in pairs(N.handlers) do pcall(frame.RegisterEvent,frame,event) end

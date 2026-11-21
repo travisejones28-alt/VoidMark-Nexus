@@ -219,6 +219,7 @@ PASS 0.11 filters: hiding grey drops resources 100+ below your skill from routes
 PASS 0.11 sync: an older bag, bank or profession snapshot never replaces newer data
 PASS 0.13.13 sync: a peer saved with a blank realm/faction still syncs, warning at most once
 PASS 0.13.14 identity: realm key never flips between spaced and unspaced; stale synced copies pruned
+PASS 0.13.15 identity: realm unknown at load is moved to the real realm at login
 PASS 0.13.13 identity: an empty realm name at load falls back instead of being saved blank
 PASS 0.11 sync: status says plainly when the other account is unavailable or stale
 PASS 0.11 transfers: queued crafts list what to mail from which character
@@ -255,4 +256,4 @@ PASS DE supported external API odds preserve duplicate material outcome entries
 PASS DE command, tooltip dedupe and user toggle
 PASS 0.13.11 DE: not-in-latest-scan prices still give a best option; only old or untrusted ones are flagged
 PASS 0.13.12 DE: Nexus adds no DE tooltip when VoidMark Market draws its own
-PASS: 257 tests; Lua 5.1 / standard interpreter
+PASS: 258 tests; Lua 5.1 / standard interpreter

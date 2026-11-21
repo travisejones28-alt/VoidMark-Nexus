@@ -140,6 +140,14 @@ test('0.13.14 identity: realm key never flips between spaced and unspaced; stale
  eq(('Test Realm'):gsub('%s',''),'TestRealm')
 end)
 
+test('0.13.15 identity: realm unknown at load is moved to the real realm at login',function()
+ local id0,c=N.characterID,N.character; local realm0=c.realm
+ local unk=N.db.account..'/Unknown/'..c.name
+ N.db.characters[id0]=nil; N.db.characters[unk]=c; c.realm='Unknown'; N.characterID=unk
+ N:RefreshIdentity()
+ eq(N.characterID,id0); eq(c.realm,realm0); eq(N.db.characters[unk],nil); assert(N.db.characters[id0]==c)
+end)
+
 test('0.13.13 identity: an empty realm name at load falls back instead of being saved blank',function()
  local g=GetNormalizedRealmName
  GetNormalizedRealmName=function() return '' end
