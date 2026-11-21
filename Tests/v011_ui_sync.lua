@@ -140,6 +140,25 @@ test('0.13.14 identity: realm key never flips between spaced and unspaced; stale
  eq(('Test Realm'):gsub('%s',''),'TestRealm')
 end)
 
+test('0.13.17 records filed under Unknown move to the real realm; newer copy wins; prices merged',function()
+ local d=N.db; local t=time()
+ d.characters['B17/Unknown/Voidmark Bank']={name='Voidmark Bank',realm='Unknown',faction='Horde',account='B17',imported=true,synced=true,at=t,bags={[1]=2},bank={},professions={}}
+ d.characters['B17/TestRealm/Voidmark Bank']={name='Voidmark Bank',realm='TestRealm',faction='Horde',account='B17',imported=true,synced=true,at=t-500,bags={[1]=1},bank={},professions={}}
+ d.prices['Unknown|Horde']={[424242]={manual={unit=5,at=t}}}
+ N:RehomeUnknown(d,'TestRealm')
+ eq(d.characters['B17/Unknown/Voidmark Bank'],nil); eq(d.characters['B17/TestRealm/Voidmark Bank'].bags[1],2)
+ eq(d.prices['Unknown|Horde'],nil); eq(d.prices['TestRealm|Horde'][424242].manual.unit,5)
+ d.characters['B17/TestRealm/Voidmark Bank']=nil; d.prices['TestRealm|Horde'][424242]=nil
+end)
+
+test('0.13.17 prices come from Market itself (bank-synced prices included)',function()
+ local old=VoidMarkMarket; local now=time()
+ VoidMarkMarket={db={},PriceObservation=function(_,id) if id==3575 then return {floor=278,fair=290,at=now-60,source='Synced account',confidence=80} end end}
+ N.prices[3575]=nil
+ local p=N:Price(3575); assert(p,'no price'); eq(p.unit,290); eq(p.source,'VoidMark Market (synced)')
+ VoidMarkMarket=old; N.prices[3575]=nil
+end)
+
 test('0.13.15 identity: realm unknown at load is moved to the real realm at login',function()
  local id0,c=N.characterID,N.character; local realm0=c.realm
  local unk=N.db.account..'/Unknown/'..c.name

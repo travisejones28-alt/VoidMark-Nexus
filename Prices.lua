@@ -9,6 +9,22 @@ function N:Price(id)
   return {unit=unit,at=at,source=source,confidence=confidence,stale=self:Now()-at>settings.maxAge}
  end
  if settings.manualFirst and cache and type(cache.manual)=='table' then return record(cache.manual.unit,cache.manual.at,'Manual') end
+ -- 0.13.17: ask Market itself first. It uses the newest of this character's
+ -- own scan and the prices synced from the bank character; reading Market's
+ -- saved table directly only saw this character's own (often old) scans.
+ local api=VoidMarkMarket
+ if settings.market and type(api)=='table' and api.db and type(api.PriceObservation)=='function' then
+  local o=self:Call(api.PriceObservation,api,id)
+  if type(o)=='table' then
+   local p=record(o.fair or o.floor,o.at,o.source=='Synced account' and 'VoidMark Market (synced)' or 'VoidMark Market',o.confidence)
+   if p then
+    self.prices[id]=cache or {}; self.prices[id].cached={unit=p.unit,at=p.at}
+    if o.unverified then p.stale=true; p.untrusted=true end
+    if o.developing then p.developing=true end
+    return p
+   end
+  end
+ end
  if settings.market and type(VoidMarkMarketDB)=='table' and VoidMarkMarketDB.schemaVersion==1 then
   local economies=VoidMarkMarketDB.economies
   -- Market 1.23.29+ names the realm without spaces; older saves may still have them.

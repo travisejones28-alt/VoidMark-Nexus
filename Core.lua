@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.13.16-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.13.17-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -75,6 +75,35 @@ function N:UnitFullName(unit)
   return first..' '..second
  end
  return first
+end
+-- Records filed under realm "Unknown" (realm name missing that session) move to
+-- the real realm; when both exist the newer copy is kept. Prices too.
+function N:RehomeUnknown(d,realm)
+ local moved=0
+ for cid,c in pairs(d.characters) do
+  if type(c)=='table' and c.realm=='Unknown' and type(c.name)=='string' and type(c.account)=='string' then
+   local newID=c.account..'/'..realm..'/'..c.name
+   local have=d.characters[newID]
+   c.realm=realm
+   if type(have)~='table' or (tonumber(c.at) or 0)>=(tonumber(have.at) or 0) then d.characters[newID]=c end
+   d.characters[cid]=nil; moved=moved+1
+   for _,k in ipairs({'recordings','activeSessions','navigation'}) do
+    local t=d[k]; if type(t)=='table' and t[cid]~=nil then if t[newID]==nil then t[newID]=t[cid] end; t[cid]=nil end
+   end
+   for _,plan in ipairs(type(d.plans)=='table' and d.plans or {}) do if type(plan)=='table' and plan.character==cid then plan.character=newID end end
+  end
+ end
+ if type(d.prices)=='table' then
+  for k,v in pairs(d.prices) do
+   local f=type(k)=='string' and k:match('^Unknown|(.+)$')
+   if f and type(v)=='table' then
+    local into=d.prices[realm..'|'..f] or {}; d.prices[realm..'|'..f]=into
+    for id,e in pairs(v) do if into[id]==nil then into[id]=e end end
+    d.prices[k]=nil
+   end
+  end
+ end
+ return moved
 end
 -- Faction can be unknown while the addon loads; fill it in once the player is in.
 function N:RefreshIdentity()
@@ -247,6 +276,24 @@ function N:Initialize()
     and (not bestAt or (tonumber(ch.at) or 0)>bestAt) then realm=ch.realm:gsub('%s',''); bestAt=tonumber(ch.at) or 0 end
   end
  end
+ -- 0.13.17: still unknown (an earlier session already filed this character
+ -- under "Unknown"). Use VoidMark Market's realm, then the realm your synced
+ -- characters were last saved under.
+ if realm=='Unknown' then
+  local m=VoidMarkMarket
+  if type(m)=='table' and type(m.RealmName)=='function' then
+   local ok,r=pcall(m.RealmName,m)
+   if ok and type(r)=='string' and r~='' then realm=r end
+  end
+ end
+ if realm=='Unknown' then
+  local bestAt
+  for _,ch in pairs(d.characters) do
+   if type(ch)=='table' and type(ch.realm)=='string' and ch.realm~='' and ch.realm~='Unknown' and ch.faction==(given(self:Call(UnitFactionGroup,'player')) or ch.faction)
+    and (not bestAt or (tonumber(ch.at) or 0)>bestAt) then realm=ch.realm:gsub('%s',''); bestAt=tonumber(ch.at) or 0 end
+  end
+ end
+ if realm~='Unknown' then self:RehomeUnknown(d,realm) end
  self.characterID=d.account..'/'..realm..'/'..name
  self:MigrateCharacterID(d,self.characterID,guid)
  local c=d.characters[self.characterID] or {professions={},bags={},bank={}}
