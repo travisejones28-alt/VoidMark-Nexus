@@ -258,4 +258,6 @@ PASS DE supported external API odds preserve duplicate material outcome entries
 PASS DE command, tooltip dedupe and user toggle
 PASS 0.13.11 DE: not-in-latest-scan prices still give a best option; only old or untrusted ones are flagged
 PASS 0.13.12 DE: Nexus adds no DE tooltip when VoidMark Market draws its own
-PASS: 260 tests; Lua 5.1 / standard interpreter
+PASS 0.14 Crates: every crate has its favor, level and bundles; item IDs are unique
+PASS 0.14 Crates: cheapest bundle, crate price, favor and cost per favor from Market prices
+PASS: 262 tests; Lua 5.1 / standard interpreter

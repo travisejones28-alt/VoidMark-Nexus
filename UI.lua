@@ -92,15 +92,15 @@ function N:TextDialog(title,text,import)
  f.preview:SetShown(canImport); f.confirm:SetShown(canImport); f.review:SetShown(canImport)
  f.preview:Enable(); f.status:SetText(import and 'Paste VMN1 export, then preview and review before confirming.' or 'Ctrl+A, Ctrl+C to copy.'); f:Show()
 end
--- Compact window: Gather | Professions | Characters | Guides | Settings.
+-- Compact window: Gather | Professions | Characters | Guides | Crates | Settings.
 local W,H=480,560
 local MAX_W,MAX_H=1100,1000  -- 0.11: the window can be resized between W,H and these
 local TOP=176          -- list starts below each page's controls
 local ROW_H=24
-local pages={'Gather','Professions','Characters','Guides','Settings'}
+local pages={'Gather','Professions','Characters','Guides','Crates','Settings'}
 -- Older tab names open the page that replaced them.
 local alias={Dashboard='Gather',Home='Gather',Routes='Gather',Gathering='Gather',Recipes='Professions',
- Profitability='Professions',Leveling='Professions',Crafting='Professions',Inventory='Characters',Guide='Guides'}
+ Profitability='Professions',Leveling='Professions',Crafting='Professions',Inventory='Characters',Guide='Guides',Crate='Crates',Favor='Crates'}
 local COLORS={orange={1,.5,.25},yellow={1,1,0},green={.25,.75,.25},gray={.6,.6,.6},
  good={.3,.9,.3},bad={1,.35,.35},muted={.65,.6,.72},white={1,1,1},accent={.78,.6,1}}
 
@@ -191,7 +191,7 @@ function N:CreateUI()
   end)
  end)
  for i,name in ipairs(pages) do
-  u.tabs[name]=button(f,name,12+(i-1)*92,-40,88,function() u.tab=name; u.offset=0; if N.menu then N.menu:Hide() end; N.dirty=true end)
+  u.tabs[name]=button(f,name,12+(i-1)*77,-40,75,function() u.tab=name; u.offset=0; if N.menu then N.menu:Hide() end; N.dirty=true end)
  end
  for _,name in ipairs(pages) do
   local p=CreateFrame('Frame',nil,f); p:SetPoint('TOPLEFT',0,-72); p:SetSize(W,TOP-72); u.pages[name]=p
@@ -244,6 +244,8 @@ function N:CreateUI()
   elseif v=='re' then N:TextDialog('Copy recipe sources to the other account',N:ExportRecipeSources()) else N:TextDialog('Paste recipe sources from the other account','','recipe-sources') end end) end)
  u.syncInfo=label(ch,'',14,-36,'GameFontHighlight'); u.syncInfo:SetWidth(W-28)
  -- Guides page: pick a guide; trainers, steps, vendors and materials below.
+ -- Crates: cheapest Merchant's Favor (Crates.lua)
+ u.crateInfo=label(u.pages.Crates,'',14,-6,'GameFontHighlight'); u.crateInfo:SetWidth(W-28)
  local gp=u.pages.Guides
  u.guideKey=N.db.settings.guide
  u.guideChar=N.db.settings.guideChar
@@ -700,6 +702,7 @@ function N:Render()
  elseif u.tab=='Professions' then rows=self:RenderProfessions(u)
  elseif u.tab=='Characters' then rows=self:RenderCharacters(u)
  elseif u.tab=='Guides' then rows=self:RenderGuides(u)
+ elseif u.tab=='Crates' then rows=self:RenderCrates(u)
  else
   for _,cb in ipairs(u.checks) do cb:SetChecked(cb.get()) end
   for _,fn in ipairs(u.adjusters or {}) do fn() end
@@ -739,7 +742,7 @@ function N:LayoutUI()
  w,h=math.max(W,math.min(MAX_W,w)),math.max(H,math.min(MAX_H,h))
  u.width,u.height=w,h
  for name,p in pairs(u.pages) do p:SetWidth(w);if name=='Settings' then p:SetHeight(h-110) end end
- for _,l in ipairs({u.gatherInfo,u.profInfo,u.syncInfo,u.guideInfo}) do if l then l:SetWidth(w-28) end end
+ for _,l in ipairs({u.gatherInfo,u.profInfo,u.syncInfo,u.guideInfo,u.crateInfo}) do if l then l:SetWidth(w-28) end end
  if u.guideBarBg then u.guideBarBg:SetWidth(w-28) end
  u.list:SetSize(w-20,h-TOP-40)
  u.textWidth=w-64
