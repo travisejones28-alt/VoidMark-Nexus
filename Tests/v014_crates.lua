@@ -26,16 +26,16 @@ test('0.14 Crates: cheapest bundle, crate price, favor and cost per favor from M
  eq(ingots.best.item,2841); eq(ingots.best.cost,2390); eq(ingots.favor,10); eq(ingots.perFavor,349)  -- 10 Bronze beats 20 Tin; crafted: double favor
  eq(plans[1].crate.name,'Apprentice Herbs')                                        -- sorted cheapest per favor first
  assert(plans[#plans].perFavor==nil,'unpriced crates go last')
- -- A crate you hold costs nothing extra.
+ -- 0.14.3: a crate you hold still counts at its AH price.
  local cid=N.characterID; local c=N.db.characters[cid]; local bags=c.bags; c.bags={[248682]=1}; c.bagsAt=now
  local again; for _,p in ipairs(N:CratePlans()) do if p.crate.id==248682 then again=p end end
- eq(again.crates,1); eq(again.total,450); eq(again.perFavor,90)
+ eq(again.crates,1); eq(again.total,1170); eq(again.perFavor,234)
  c.bags=bags
  -- The tab renders a "takes / costs / gives" line for each crate.
  N:Show('Crates'); N:Render()
  local rows=N:RenderCrates(N.ui)
  assert(rows[1].text:find('Apprentice Herbs  -  2s 34c per favor',1,true),rows[1].text)
- assert(rows[2].text:find('20 Silverleaf  |  5 favor  |  costs 11s 70c (crate 7s 20c)',1,true),rows[2].text)
+ assert(rows[2].text:find('20 Silverleaf  |  5 favor  |  costs 11s 70c (incl. crate 7s 20c)',1,true),rows[2].text)
  assert(rows[#rows].text:find('Forged Delivery Receipt',1,true),'reputation tip')
  assert(N.ui.crateInfo:GetText():find('Dokimi',1,true),'Horde hand-in NPC')
  VoidMarkMarket=old

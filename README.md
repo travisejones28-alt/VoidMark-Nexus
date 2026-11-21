@@ -24,6 +24,9 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.14.3
+- Crates: the crate's own AH price is always part of the cost, even for crates you already hold (you could sell them instead). The hover box still shows the materials-only cost.
+
 ## What changed in 0.14.2
 - Crates tab easier to read: each crate is a short headline (name and cost per favor) with the bundle, favor and cost on the line below; real item names instead of "Item 8172"; money without zero parts ("20s 96c", "2c").
 

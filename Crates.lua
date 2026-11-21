@@ -104,8 +104,9 @@ function N:CratePlans()
   local crateUnit,crateAt=self:BuyUnit(cr.id)
   if crateAt and (not newest or crateAt>newest) then newest=crateAt end
   local crates=have(stock,cr.id)
-  -- A crate you already hold costs nothing extra; otherwise add its AH price when known.
-  local crateCost=crates>0 and 0 or crateUnit
+  -- 0.14.3: the crate's AH price always counts, even for a crate you already hold
+  -- (you could sell it instead). Only a crate with no AH price adds nothing.
+  local crateCost=crateUnit
   local refund=favor*self.CRATE_SILVER_PER_FAVOR
   local total=best and math.max(0,best.cost+(crateCost or 0)-refund) or nil
   out[#out+1]={crate=cr,favor=favor,estimated=self.CRATE_FAVOR_ESTIMATED[cr.tier] or false,level=self.CRATE_LEVEL[cr.tier],
@@ -137,7 +138,7 @@ function N:RenderCrates(u)
    color=COL.muted
   else
    text=string.format('%s  -  %s per favor',cr.name,cash(p.perFavor))
-   local crate=p.crates>0 and 'crate: have '..p.crates or (p.crateUnit and 'crate '..cash(p.crateUnit) or 'crate not on AH')
+   local crate=(p.crateUnit and 'incl. crate '..cash(p.crateUnit) or 'crate not on AH')..(p.crates>0 and ', you have '..p.crates or '')
    detail=string.format('      %d %s  |  %s  |  costs %s (%s)',p.best.qty,matName(p.best.item),fav,cash(math.max(0,p.total)),crate)
    color=(i==1 and COL.good) or COL.white
    if level and p.level>level then detail=detail..'  |  needs level '..p.level; color=COL.muted end
@@ -156,7 +157,7 @@ function N:RenderCrates(u)
     tt:AddLine((best and '> ' or '   ')..line,best and .3 or .85,best and .9 or .85,best and .3 or .85)
    end
    tt:AddLine(plan.crates>0 and ('You have '..plan.crates..' of this crate') or ('Crate on AH: '..(plan.crateUnit and cash(plan.crateUnit) or 'not listed')),.8,.8,.8)
-   if plan.fillPerFavor then tt:AddLine('If you already have the crate: '..cash(plan.fillPerFavor)..' per favor',.8,.8,.8) end
+   if plan.fillPerFavor then tt:AddLine('Materials only, not counting the crate: '..cash(plan.fillPerFavor)..' per favor',.8,.8,.8) end
    tt:AddLine('Performance Bonus (Legacy, Professions): up to 15% chance of double favor.',.6,.6,.6,true)
   end
   rows[#rows+1]={text=text,color=color,item=cr.id,tip=tipFn,nowrap=true}
