@@ -24,6 +24,9 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.14.5
+- Routes: the current gathering stop is now also WoW's own waypoint (map pin, tracked), so the game's on-screen navigation marker (`/console showInGameNavigation 1`) points at it and moves with the route. A pin you set yourself is never cleared by Nexus.
+
 ## What changed in 0.14.4
 - Gather: 141 herb stops that were missing from Nexus's spawn list were added across 25 herbs, e.g. Black Lotus at The Maul in Feralas (Dire Maul arena), Plaguewood and Browman Mill, and 33 Dreamfoil stops. Positions come from WarcraftMaps (warcraftmaps.com/gold/herb-spots); they are Classic spawn positions, not yet checked in Forever. A stop is only added where Nexus had no spawn within about 60-70 yards.
 

@@ -250,7 +250,7 @@ frame:SetScript('OnEvent',function(_,event,...)
    C_Timer.NewTicker(.5,function() N:Guard('tick',function()
     if N.db.settings.terrainLearn then N:SampleTerrain() end
     if N.recording and N.recordingActive then N:SampleRecording() end
-    if N.activeRoute or N.tomtomUID then N:SyncTomTom() end
+    if N.activeRoute or N.tomtomUID or N.gamePin then N:SyncTomTom() end
    end) end)
   end
  elseif N.ready and N.handlers[event] then

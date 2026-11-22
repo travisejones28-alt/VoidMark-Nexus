@@ -808,7 +808,43 @@ function N:ShowArrow()
 end
 -- Optional TomTom handoff: mirror the current gathering stop as one temporary
 -- TomTom waypoint. Uses only TomTom's public AddWaypoint/RemoveWaypoint.
+-- 0.14.5: the current route stop is also WoW's own waypoint (map pin, tracked so the
+-- game shows its on-screen marker and distance, like a quest objective). Only the pin
+-- Nexus placed is ever cleared, so a pin you set yourself is left alone.
+function N:SyncGamePin()
+ local s=self.db.settings
+ if not (C_Map and C_Map.SetUserWaypoint and UiMapPoint and UiMapPoint.CreateFromCoordinates) then
+  if self.activeRoute and s.gameWaypoint~=false and not self.gamePinMissingNoted then
+   self.gamePinMissingNoted=true;self:Print('This game client has no map pin, so only the Nexus arrow can guide you.')
+  end
+  return
+ end
+ local route=self.activeRoute
+ local want,p,i
+ if route and s.gameWaypoint~=false and s.routeVisible and not self.routePaused then
+  i=self.waypoint or 1;p=route.points and route.points[i]
+  if p and self:Finite(p.x,0,1) and self:Finite(p.y,0,1) then want=table.concat({route.map,i,p.x,p.y},':') end
+ end
+ if want==self.gamePinKey then return end
+ local mine=self.gamePin
+ if mine and C_Map.GetUserWaypoint and C_Map.ClearUserWaypoint then
+  local cur=self:Call(C_Map.GetUserWaypoint)
+  local pos=type(cur)=='table' and cur.position
+  if pos and cur.uiMapID==mine.map and math.abs((pos.x or -1)-mine.x)<.0005 and math.abs((pos.y or -1)-mine.y)<.0005 then
+   pcall(C_Map.ClearUserWaypoint)
+  end
+ end
+ self.gamePin,self.gamePinKey=nil,want
+ if want then
+  local point=self:Call(UiMapPoint.CreateFromCoordinates,route.map,p.x,p.y)
+  if point and pcall(C_Map.SetUserWaypoint,point) then
+   self.gamePin={map=route.map,x=p.x,y=p.y}
+   if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then pcall(C_SuperTrack.SetSuperTrackedUserWaypoint,true) end
+  end
+ end
+end
 function N:SyncTomTom()
+ self:SyncGamePin()
  local tt=rawget(_G,'TomTom')
  if type(tt)~='table' or type(tt.AddWaypoint)~='function' then return end
  local s=self.db.settings

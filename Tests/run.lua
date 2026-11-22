@@ -700,7 +700,26 @@ end)
 test('Saved run comparison uses weighted overall rate and separate median',function()
  local sessions=N.db.sessions;local r=N.db.routes['Test recording'];local id=N:RouteIdentity(r)
  N.db.sessions={{routePerformance={[id]={seconds=60,total=10}}},{routePerformance={[id]={seconds=120,total=10}}}}
- local summary=N:SavedRunSummary(r);assert(summary:find('400.0 materials/hour',1,true));assert(summary:find('median 450.0',1,true))
+ test('0.14.5 route stop is WoW\'s own waypoint (tracked); moves with the route; only Nexus\'s pin is cleared',function()
+ local pin,tracked
+ UiMapPoint={CreateFromCoordinates=function(m,x,y) return {uiMapID=m,position={x=x,y=y}} end}
+ C_Map=C_Map or {}; local oldSet,oldGet,oldClear=C_Map.SetUserWaypoint,C_Map.GetUserWaypoint,C_Map.ClearUserWaypoint
+ C_Map.SetUserWaypoint=function(p) pin=p end; C_Map.GetUserWaypoint=function() return pin end; C_Map.ClearUserWaypoint=function() pin=nil end
+ C_SuperTrack={SetSuperTrackedUserWaypoint=function(v) tracked=v end}
+ local s=N.db.settings; local vis=s.routeVisible; s.routeVisible=true
+ N.activeRoute={map=1449,points={{x=.55,y=.64,name='Dreamfoil'},{x=.52,y=.24,name='Dreamfoil'}},width=3000,height=2000}
+ N.waypoint=1;N.routePaused=false;N.gamePin=nil;N.gamePinKey=nil
+ N:SyncTomTom(); assert(pin and pin.uiMapID==1449,'pin set'); eq(.55,pin.position.x); eq(true,tracked)
+ N.waypoint=2; N:SyncTomTom(); eq(.52,pin.position.x)
+ N:StopRoute(); eq(nil,pin)
+ N.activeRoute={map=1449,points={{x=.1,y=.1}},width=3000,height=2000}; N.waypoint=1; N:SyncTomTom()
+ pin={uiMapID=1411,position={x=.5,y=.5}} -- you set your own pin
+ N:StopRoute(); assert(pin and pin.uiMapID==1411,'your own pin is kept')
+ s.gameWaypoint=false; N.activeRoute={map=1449,points={{x=.3,y=.3}},width=3000,height=2000}; N.waypoint=1; pin=nil; N:SyncTomTom(); eq(nil,pin)
+ N:StopRoute(); s.gameWaypoint=true; s.routeVisible=vis
+ C_Map.SetUserWaypoint,C_Map.GetUserWaypoint,C_Map.ClearUserWaypoint=oldSet,oldGet,oldClear; UiMapPoint=nil; C_SuperTrack=nil
+end)
+local summary=N:SavedRunSummary(r);assert(summary:find('400.0 materials/hour',1,true));assert(summary:find('median 450.0',1,true))
  N.db.sessions=sessions
 end)
 

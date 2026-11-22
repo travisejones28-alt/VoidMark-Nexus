@@ -68,6 +68,7 @@ PASS Time limit preserves a completed candidate for reuse
 PASS Recordings survive reload and playback retains exact trail geometry
 PASS Recording discontinuities do not create false walked connections
 PASS Route export/import previews, validates, and never overwrites an existing name
+PASS 0.14.5 route stop is WoW's own waypoint (tracked); moves with the route; only Nexus's pin is cleared
 PASS Saved run comparison uses weighted overall rate and separate median
 PASS Optional travel integration handles absence, refusal and explicit navigation
 PASS New route planning reuses geometry after cosmetic settings and harvest timestamps change
@@ -262,4 +263,4 @@ PASS 0.13.12 DE: Nexus adds no DE tooltip when VoidMark Market draws its own
 PASS 0.14 Crates: every crate has its favor, level and bundles; item IDs are unique
 PASS 0.14 Crates: cheapest bundle, crate price, favor and cost per favor from Market prices
 PASS 0.14.1 Favor rewards: recipe favor follows the vendor skill bands; Horde camp vendors; gold at the cheapest crate
-PASS: 264 tests; Lua 5.1 / standard interpreter
+PASS: 265 tests; Lua 5.1 / standard interpreter
