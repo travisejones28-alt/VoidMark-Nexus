@@ -1,4 +1,4 @@
-PASS 0.14.4 Black Lotus: Feralas Maul added; missing spots filled once; existing spots not doubled
+PASS 0.14.4 Herb stops: missing warcraftmaps stops added once (Black Lotus Feralas Maul, Dreamfoil), none doubled
 PASS All TOC Lua files compile and load under Lua 5.1 compatible runtime
 PASS Initialize and retain existing characters
 PASS Profession separation and offline search

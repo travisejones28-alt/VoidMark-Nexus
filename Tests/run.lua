@@ -45,11 +45,12 @@ local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
-test('0.14.4 Black Lotus: Feralas Maul added; missing spots filled once; existing spots not doubled',function()
+test('0.14.4 Herb stops: missing warcraftmaps stops added once (Black Lotus Feralas Maul, Dreamfoil), none doubled',function()
  local z=N.spawns[176589]; assert(z[1444] and #z[1444]==2,'Feralas'); eq(0.627,z[1444][1])
- local function near(m,x,y) local l=z[m]; for j=1,#l-1,2 do if (l[j]-x)^2+(l[j+1]-y)^2<0.0001 then return true end end end
- assert(near(1423,0.336,0.232),'Plaguewood'); assert(near(1423,0.671,0.433),'Browman Mill')
- assert(N.extraLotusSpots>0 and N.extraLotusSpots<=23,'added '..tostring(N.extraLotusSpots))
+ local function near(o,m,x,y) local l=N.spawns[o][m]; for j=1,#l-1,2 do if (l[j]-x)^2+(l[j+1]-y)^2<0.0004 then return true end end end
+ assert(near(176589,1423,0.336,0.232),'Plaguewood'); assert(near(176589,1423,0.671,0.433),'Browman Mill')
+ eq(141,N.extraHerbStops)
+ for object,zones in pairs(N.spawns) do for map,l in pairs(zones) do assert(#l%2==0,'pairs '..object..' '..map) end end
 end)
 test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() local toc=assert(io.open(root..'/VoidMarkNexus.toc')):read('*a'); eq(N.version,toc:match('## Version: (%S+)')) end)
 test('Initialize and retain existing characters',function()

@@ -1,0 +1,950 @@
+# warcraftmaps.com /gold/<herb> stop lists (Classic spawn data on Forever terrain), fetched 2026-11-21
+# H <herb> ; then zone|x|y|nodes  (map percent)
+H Black Lotus
+Feralas|62.7|29.1|2
+Burning Steppes|62.6|39.4|4
+Burning Steppes|55.5|42.0|2
+Burning Steppes|43.2|34.3|3
+Burning Steppes|35.6|48.9|5
+Burning Steppes|31.4|56.6|2
+Burning Steppes|21.1|46.6|4
+Burning Steppes|54.4|63.3|3
+Burning Steppes|76.6|48.6|3
+Burning Steppes|82.5|34.1|2
+Eastern Plaguelands|67.1|43.3|3
+Eastern Plaguelands|52.1|57.2|3
+Eastern Plaguelands|23.2|72.9|2
+Eastern Plaguelands|33.6|23.2|4
+Eastern Plaguelands|61.2|23.9|2
+Winterspring|67.5|42.2|3
+Winterspring|49.2|8.6|3
+Winterspring|51.5|40.9|4
+Winterspring|59.4|59.2|3
+Winterspring|63.1|72.8|3
+Winterspring|65.6|63.3|3
+Silithus|39.0|83.0|2
+Silithus|18.8|84.0|3
+H Icecap
+Winterspring|54.2|44.1|9
+Winterspring|43.6|37.6|14
+Winterspring|47.3|36.1|8
+Winterspring|54.5|30.2|5
+Winterspring|65.1|48.5|6
+Winterspring|62.4|61.6|5
+Winterspring|60.7|72.9|13
+Winterspring|60.4|62.2|13
+Winterspring|60.4|58.4|8
+Winterspring|60.1|54.3|9
+Winterspring|56.7|50.0|6
+Winterspring|29.0|40.2|5
+H Plaguebloom
+Eastern Plaguelands|75.1|33.3|6
+Eastern Plaguelands|54.5|31.2|5
+Eastern Plaguelands|61.8|10.1|7
+Eastern Plaguelands|45.7|32.2|5
+Eastern Plaguelands|33.1|19.2|6
+Eastern Plaguelands|21.5|30.0|4
+Eastern Plaguelands|42.6|35.0|4
+Eastern Plaguelands|12.9|54.8|7
+Eastern Plaguelands|32.6|43.2|8
+Eastern Plaguelands|36.3|64.2|4
+Eastern Plaguelands|46.0|67.6|8
+Eastern Plaguelands|56.7|58.4|4
+Western Plaguelands|53.0|65.2|6
+Western Plaguelands|69.0|75.3|6
+Western Plaguelands|37.3|55.4|6
+Western Plaguelands|46.3|53.4|6
+Western Plaguelands|62.4|57.7|6
+Felwood|43.3|42.9|0
+H Mountain Silversage
+Azshara|34.3|39.4|4
+Azshara|40.2|32.6|6
+Azshara|26.1|54.5|3
+Azshara|34.5|57.0|3
+Azshara|74.9|27.3|3
+Azshara|69.4|25.0|3
+Un'Goro Crater|52.6|47.9|9
+Un'Goro Crater|22.7|66.1|6
+Un'Goro Crater|46.5|45.5|5
+Un'Goro Crater|37.4|17.4|4
+Un'Goro Crater|53.5|54.9|3
+Un'Goro Crater|75.5|66.9|5
+Un'Goro Crater|64.0|81.1|4
+Un'Goro Crater|57.2|89.5|4
+Un'Goro Crater|43.4|86.2|5
+Un'Goro Crater|24.4|38.3|4
+Winterspring|52.5|26.9|5
+Winterspring|29.6|47.1|5
+Winterspring|46.3|46.1|6
+Winterspring|56.0|33.5|4
+Winterspring|56.8|27.0|4
+Winterspring|68.9|37.1|6
+Winterspring|60.8|53.7|3
+Winterspring|51.8|46.8|4
+Winterspring|40.1|44.5|4
+Winterspring|31.1|35.5|5
+Winterspring|39.1|34.8|4
+Winterspring|42.5|34.9|4
+Burning Steppes|74.2|66.8|3
+Burning Steppes|78.9|38.8|4
+H Dreamfoil
+Burning Steppes|68.1|46.0|8
+Burning Steppes|56.9|41.5|3
+Burning Steppes|91.1|33.2|3
+Burning Steppes|63.1|51.3|3
+Burning Steppes|54.3|63.5|3
+Burning Steppes|22.9|72.9|3
+Burning Steppes|22.5|58.4|3
+Burning Steppes|18.6|48.4|4
+Burning Steppes|34.8|48.0|4
+Burning Steppes|47.5|42.0|6
+Un'Goro Crater|55.3|64.4|11
+Un'Goro Crater|52.6|24.1|6
+Un'Goro Crater|27.9|46.6|4
+Un'Goro Crater|36.3|53.5|3
+Un'Goro Crater|37.9|57.9|3
+Un'Goro Crater|33.3|76.0|3
+Un'Goro Crater|46.4|79.6|3
+Un'Goro Crater|64.7|70.8|3
+Un'Goro Crater|69.3|55.0|3
+Un'Goro Crater|66.7|47.6|3
+Un'Goro Crater|74.1|42.8|3
+Western Plaguelands|66.1|43.5|6
+Western Plaguelands|47.0|57.9|4
+Western Plaguelands|39.8|53.4|3
+Western Plaguelands|44.8|35.4|4
+Western Plaguelands|46.3|47.0|5
+Azshara|77.7|24.3|6
+Azshara|47.7|73.7|6
+Azshara|27.5|55.4|5
+Azshara|32.4|44.8|4
+Azshara|43.6|35.5|4
+Azshara|56.6|17.0|6
+Azshara|63.7|15.8|3
+Azshara|68.2|22.5|3
+Azshara|80.4|18.7|5
+Azshara|67.8|30.4|4
+Azshara|51.9|77.9|3
+Azshara|40.8|75.6|6
+Eastern Plaguelands|45.7|45.4|6
+Eastern Plaguelands|42.7|19.3|5
+Eastern Plaguelands|62.6|58.7|5
+Eastern Plaguelands|14.5|26.0|4
+Eastern Plaguelands|24.4|31.4|3
+Eastern Plaguelands|39.8|32.7|4
+Eastern Plaguelands|33.0|56.8|3
+Eastern Plaguelands|26.2|56.6|5
+Eastern Plaguelands|11.0|54.4|3
+Eastern Plaguelands|27.7|61.4|3
+Eastern Plaguelands|31.8|75.1|3
+Eastern Plaguelands|43.7|56.0|3
+Felwood|56.8|22.4|4
+Felwood|56.3|84.4|3
+Felwood|43.4|65.5|3
+Felwood|40.4|59.7|3
+H Golden Sansam
+Feralas|57.2|48.5|4
+Un'Goro Crater|34.0|28.1|6
+Un'Goro Crater|55.7|17.4|4
+Un'Goro Crater|51.0|74.7|5
+Un'Goro Crater|38.3|24.1|4
+Un'Goro Crater|29.4|31.9|4
+Un'Goro Crater|20.8|41.8|3
+Un'Goro Crater|29.7|57.3|3
+Un'Goro Crater|74.5|56.9|4
+Un'Goro Crater|59.7|38.8|3
+Un'Goro Crater|52.3|33.9|3
+Un'Goro Crater|47.2|30.1|4
+Un'Goro Crater|44.4|36.5|4
+Felwood|38.6|58.9|3
+Felwood|49.5|17.9|5
+Eastern Plaguelands|53.0|59.7|5
+Eastern Plaguelands|59.1|40.4|4
+Eastern Plaguelands|55.2|43.9|3
+Eastern Plaguelands|73.5|73.4|11
+Eastern Plaguelands|34.7|64.9|3
+Eastern Plaguelands|35.5|32.8|3
+Eastern Plaguelands|40.6|26.5|3
+Eastern Plaguelands|55.6|17.7|3
+Eastern Plaguelands|62.5|12.9|3
+The Hinterlands|76.0|55.0|4
+The Hinterlands|67.7|48.1|3
+The Hinterlands|48.8|62.5|3
+Burning Steppes|76.7|62.9|3
+Burning Steppes|45.1|57.7|6
+Burning Steppes|21.9|46.8|6
+H Gromsblood
+Desolace|50.3|72.9|12
+Desolace|46.7|82.7|3
+Felwood|38.8|49.1|9
+Felwood|38.8|59.4|5
+Felwood|40.4|69.0|6
+Felwood|42.0|80.2|7
+Felwood|49.2|15.2|5
+Felwood|57.5|15.2|5
+Felwood|64.5|13.1|4
+Blasted Lands|40.1|33.4|7
+Blasted Lands|57.1|53.3|13
+Blasted Lands|56.5|30.8|7
+Blasted Lands|46.0|42.5|3
+Ashenvale|84.1|70.8|4
+Ashenvale|88.6|78.2|3
+Ashenvale|81.1|80.2|4
+H Ghost Mushroom
+The Hinterlands|57.4|42.6|17
+The Hinterlands|58.1|81.6|3
+Desolace|30.5|63.2|7
+Desolace|28.9|57.0|6
+H Blindweed
+Swamp of Sorrows|46.3|38.8|18
+Swamp of Sorrows|38.3|35.5|7
+Swamp of Sorrows|33.4|39.1|20
+Swamp of Sorrows|25.7|38.2|5
+Swamp of Sorrows|14.1|39.3|8
+Swamp of Sorrows|14.8|62.7|8
+Swamp of Sorrows|31.5|49.2|13
+Swamp of Sorrows|56.7|52.5|8
+Swamp of Sorrows|81.5|65.7|8
+Swamp of Sorrows|85.0|35.7|7
+Swamp of Sorrows|79.7|23.2|7
+Swamp of Sorrows|55.0|34.4|12
+Un'Goro Crater|47.0|15.8|0
+H Sungrass
+Azshara|17.5|51.9|13
+Azshara|31.7|82.7|9
+Azshara|12.6|79.0|3
+Azshara|16.1|78.7|3
+Azshara|23.4|77.8|5
+Azshara|53.2|90.5|3
+Azshara|62.0|86.1|4
+Azshara|52.5|78.6|6
+Azshara|46.6|77.8|4
+Azshara|39.7|72.6|5
+Azshara|18.1|60.9|8
+The Hinterlands|40.1|45.7|17
+The Hinterlands|46.6|55.3|11
+The Hinterlands|53.8|47.2|13
+The Hinterlands|24.6|56.2|12
+The Hinterlands|18.1|51.4|6
+The Hinterlands|64.5|49.7|6
+The Hinterlands|58.1|52.2|3
+The Hinterlands|36.8|58.8|5
+The Hinterlands|29.4|64.7|7
+Eastern Plaguelands|15.3|24.2|6
+Eastern Plaguelands|53.8|39.1|4
+Eastern Plaguelands|40.7|31.8|3
+Eastern Plaguelands|25.8|59.6|3
+Eastern Plaguelands|41.3|72.2|4
+Eastern Plaguelands|51.9|54.7|4
+Eastern Plaguelands|47.8|48.0|4
+Blasted Lands|63.3|33.6|4
+Blasted Lands|60.2|49.9|5
+Blasted Lands|51.9|54.3|3
+Blasted Lands|47.1|40.0|4
+Felwood|38.6|53.4|3
+Felwood|55.9|9.3|3
+Feralas|71.4|42.0|9
+Feralas|56.0|62.7|4
+Feralas|52.0|48.2|3
+Feralas|55.4|49.6|3
+H Arthas' Tears
+Western Plaguelands|49.2|79.9|9
+Western Plaguelands|47.2|68.9|4
+Western Plaguelands|47.4|60.3|6
+Western Plaguelands|60.9|54.2|5
+Western Plaguelands|46.6|45.0|4
+Western Plaguelands|33.4|63.0|6
+Western Plaguelands|40.8|66.7|5
+Eastern Plaguelands|38.3|71.7|3
+Eastern Plaguelands|25.6|66.9|6
+H Purple Lotus
+Tanaris|38.9|20.6|5
+Tanaris|53.7|47.5|8
+Tanaris|59.9|24.2|8
+Tanaris|47.0|65.8|6
+Tanaris|63.2|50.8|5
+Tanaris|39.5|72.8|5
+Azshara|34.1|51.6|13
+Azshara|38.8|44.4|10
+Azshara|23.7|58.2|7
+Azshara|13.8|74.5|6
+Azshara|16.5|69.4|9
+Azshara|19.1|63.2|8
+Azshara|29.9|60.7|6
+Azshara|36.3|47.3|5
+Azshara|39.3|52.8|5
+Azshara|40.4|64.2|6
+Azshara|37.1|55.8|8
+Azshara|30.4|53.8|7
+The Hinterlands|32.3|58.1|4
+The Hinterlands|48.8|68.9|4
+The Hinterlands|67.9|74.2|4
+The Hinterlands|65.4|67.8|11
+The Hinterlands|62.3|69.4|3
+The Hinterlands|57.6|42.8|3
+H Firebloom
+Searing Gorge|36.7|50.2|28
+Searing Gorge|58.4|64.5|12
+Searing Gorge|24.3|78.1|8
+Searing Gorge|25.6|33.5|8
+Searing Gorge|60.8|29.4|4
+Blasted Lands|58.4|42.8|13
+Blasted Lands|44.2|28.8|4
+Badlands|50.8|44.3|7
+Badlands|27.0|57.9|8
+Tanaris|63.3|35.0|8
+Tanaris|37.6|37.2|3
+Tanaris|41.5|26.2|5
+Tanaris|54.4|35.0|3
+Tanaris|48.6|37.2|7
+Tanaris|44.4|47.5|4
+Tanaris|33.8|61.7|6
+Tanaris|41.0|66.8|3
+Tanaris|60.8|60.5|3
+Tanaris|56.6|50.1|4
+Tanaris|62.8|43.7|5
+Tanaris|71.6|47.4|4
+H Wintersbite
+Alterac Mountains|39.2|68.7|11
+Alterac Mountains|47.8|42.2|5
+Alterac Mountains|33.2|47.7|6
+Alterac Mountains|44.5|63.5|3
+Alterac Mountains|39.2|59.9|4
+Alterac Mountains|43.6|51.2|3
+H Khadgar's Whisker
+Stranglethorn Vale|30.4|19.7|6
+Stranglethorn Vale|33.7|13.7|8
+Stranglethorn Vale|38.7|19.7|12
+Stranglethorn Vale|38.3|14.6|7
+Stranglethorn Vale|43.3|9.7|8
+Stranglethorn Vale|47.2|16.3|6
+Stranglethorn Vale|45.4|32.7|9
+Stranglethorn Vale|47.9|39.7|7
+Stranglethorn Vale|42.0|40.9|6
+Stranglethorn Vale|38.7|46.5|6
+Stranglethorn Vale|29.0|43.1|11
+Stranglethorn Vale|29.9|37.8|12
+Arathi Highlands|36.6|45.9|4
+Arathi Highlands|51.8|35.3|10
+Arathi Highlands|56.4|32.0|6
+Arathi Highlands|60.6|36.7|6
+Arathi Highlands|63.3|49.3|3
+Arathi Highlands|72.0|65.3|9
+Arathi Highlands|64.3|71.6|12
+Arathi Highlands|56.1|68.2|3
+Arathi Highlands|41.0|61.5|4
+Arathi Highlands|15.7|44.2|6
+Swamp of Sorrows|55.3|53.3|4
+Swamp of Sorrows|19.2|46.3|3
+Swamp of Sorrows|27.3|44.7|9
+Swamp of Sorrows|37.6|30.5|5
+Swamp of Sorrows|53.4|37.9|7
+Swamp of Sorrows|79.0|49.3|9
+Swamp of Sorrows|84.9|61.1|3
+Swamp of Sorrows|85.4|74.5|3
+Swamp of Sorrows|76.7|78.7|7
+The Hinterlands|75.0|50.9|6
+The Hinterlands|63.4|50.9|5
+The Hinterlands|43.6|45.1|7
+The Hinterlands|52.8|37.8|3
+The Hinterlands|60.2|39.7|4
+Badlands|15.6|55.1|4
+Badlands|30.1|55.1|5
+Badlands|7.5|76.9|4
+Alterac Mountains|76.9|44.9|3
+Alterac Mountains|61.2|51.3|3
+Alterac Mountains|39.8|93.7|5
+Alterac Mountains|42.4|14.7|5
+Alterac Mountains|53.5|19.8|4
+Alterac Mountains|56.3|38.4|7
+H Goldthorn
+Stranglethorn Vale|47.6|35.9|20
+Stranglethorn Vale|39.4|38.5|20
+Stranglethorn Vale|33.2|63.8|6
+Stranglethorn Vale|37.6|45.5|14
+Stranglethorn Vale|29.8|20.5|5
+Stranglethorn Vale|43.8|10.1|6
+Stranglethorn Vale|47.5|29.6|11
+Stranglethorn Vale|41.3|34.4|13
+Stranglethorn Vale|38.9|42.8|6
+Stranglethorn Vale|35.3|50.6|7
+Stranglethorn Vale|33.2|55.2|7
+Stranglethorn Vale|32.9|60.8|4
+Swamp of Sorrows|13.8|45.3|13
+Swamp of Sorrows|66.4|77.2|13
+Swamp of Sorrows|53.8|63.1|4
+Swamp of Sorrows|72.5|89.7|11
+Swamp of Sorrows|57.8|23.3|5
+Swamp of Sorrows|28.7|31.2|7
+Swamp of Sorrows|21.7|38.2|3
+Swamp of Sorrows|10.0|28.4|3
+Swamp of Sorrows|10.3|61.5|10
+Swamp of Sorrows|21.5|56.5|3
+Swamp of Sorrows|26.3|64.0|9
+Alterac Mountains|54.5|47.4|10
+Alterac Mountains|48.4|58.8|7
+Alterac Mountains|45.2|44.1|13
+Alterac Mountains|37.2|48.2|5
+Alterac Mountains|34.0|53.6|3
+Alterac Mountains|30.4|44.6|4
+Alterac Mountains|37.1|30.5|6
+Alterac Mountains|42.7|22.6|6
+Alterac Mountains|53.4|21.3|3
+Alterac Mountains|55.8|38.1|7
+Alterac Mountains|60.7|40.6|3
+Arathi Highlands|50.7|37.8|12
+Arathi Highlands|73.6|28.3|15
+Arathi Highlands|40.8|44.1|5
+Arathi Highlands|27.1|19.1|9
+Arathi Highlands|26.8|36.3|9
+Arathi Highlands|21.3|37.5|7
+Arathi Highlands|19.5|57.2|5
+Arathi Highlands|17.5|62.2|4
+Arathi Highlands|14.6|68.6|4
+Arathi Highlands|42.2|65.0|5
+Arathi Highlands|50.4|76.2|5
+Arathi Highlands|79.0|35.2|9
+The Hinterlands|74.7|86.4|3
+The Hinterlands|77.4|59.2|5
+The Hinterlands|67.6|62.7|3
+The Hinterlands|54.6|55.2|3
+The Hinterlands|45.2|64.7|3
+The Hinterlands|34.5|74.6|4
+The Hinterlands|56.9|39.2|4
+The Hinterlands|64.7|41.2|3
+The Hinterlands|66.4|53.1|6
+Badlands|21.3|44.8|7
+Badlands|43.1|56.4|6
+Badlands|43.7|68.2|3
+Badlands|14.3|76.1|8
+Badlands|8.2|79.1|5
+H Fadeleaf
+Stranglethorn Vale|33.2|66.9|6
+Stranglethorn Vale|35.6|57.8|9
+Stranglethorn Vale|38.2|15.9|3
+Stranglethorn Vale|40.5|50.3|4
+Stranglethorn Vale|46.2|20.5|3
+Swamp of Sorrows|37.5|48.3|14
+Swamp of Sorrows|24.3|60.2|10
+Swamp of Sorrows|43.5|35.5|9
+Swamp of Sorrows|12.1|64.8|6
+Alterac Mountains|40.4|20.5|12
+Alterac Mountains|79.4|52.8|3
+Alterac Mountains|28.9|71.3|3
+Alterac Mountains|21.0|79.9|4
+Alterac Mountains|55.6|25.2|3
+Alterac Mountains|63.2|42.6|5
+Arathi Highlands|66.4|39.8|9
+Arathi Highlands|29.7|23.2|4
+Arathi Highlands|21.4|35.9|4
+Arathi Highlands|28.3|34.0|3
+Arathi Highlands|29.6|41.2|4
+Arathi Highlands|35.2|54.7|3
+Arathi Highlands|32.3|62.2|3
+Arathi Highlands|35.6|66.7|4
+Arathi Highlands|40.7|70.3|3
+Arathi Highlands|54.3|58.0|3
+Arathi Highlands|58.8|66.0|8
+Badlands|40.0|51.0|5
+Badlands|51.0|47.9|4
+Badlands|61.9|36.9|4
+Badlands|64.4|44.8|3
+Badlands|64.7|70.1|4
+Badlands|56.3|63.8|3
+The Hinterlands|26.0|54.3|3
+The Hinterlands|31.9|63.8|4
+The Hinterlands|45.1|56.0|3
+The Hinterlands|56.2|52.1|3
+The Hinterlands|52.5|58.1|3
+The Hinterlands|33.7|51.6|5
+H Liferoot
+Wetlands|30.8|23.1|5
+Wetlands|45.3|30.1|9
+Wetlands|51.6|36.5|5
+Wetlands|55.4|44.0|8
+Wetlands|58.8|50.3|3
+Wetlands|61.9|60.6|4
+Wetlands|40.1|31.9|10
+Arathi Highlands|44.7|69.6|9
+Arathi Highlands|29.4|53.8|6
+Arathi Highlands|23.5|50.8|9
+Arathi Highlands|67.2|64.3|24
+Arathi Highlands|45.6|78.4|4
+Alterac Mountains|34.8|9.8|11
+Alterac Mountains|33.1|29.7|9
+Alterac Mountains|23.8|46.8|5
+Alterac Mountains|17.1|52.9|10
+Hillsbrad Foothills|67.7|26.1|5
+Hillsbrad Foothills|66.6|35.7|9
+Hillsbrad Foothills|59.2|46.1|5
+Stranglethorn Vale|35.6|23.2|9
+Stranglethorn Vale|27.3|45.3|3
+Stranglethorn Vale|27.8|58.0|3
+Stranglethorn Vale|29.0|67.4|6
+Stranglethorn Vale|37.6|32.6|5
+Stranglethorn Vale|38.9|27.3|5
+Stranglethorn Vale|41.0|22.0|3
+Stranglethorn Vale|40.0|14.1|5
+Swamp of Sorrows|41.2|37.0|3
+Swamp of Sorrows|32.0|46.4|3
+H Kingsblood
+Stranglethorn Vale|40.5|82.2|4
+Stranglethorn Vale|30.1|43.8|7
+Stranglethorn Vale|32.3|59.0|7
+Stranglethorn Vale|31.2|16.4|11
+Stranglethorn Vale|45.4|17.0|9
+Stranglethorn Vale|45.5|31.8|13
+Stonetalon Mountains|31.9|67.0|11
+Stonetalon Mountains|40.1|11.1|4
+Stonetalon Mountains|36.6|48.6|3
+Swamp of Sorrows|48.4|39.6|5
+Dustwallow Marsh|53.3|83.7|3
+Ashenvale|19.2|34.2|6
+Badlands|37.7|55.9|8
+Badlands|13.4|72.2|3
+Badlands|49.7|33.7|3
+Badlands|60.4|69.6|4
+Arathi Highlands|46.0|39.3|8
+Arathi Highlands|64.1|44.2|10
+Arathi Highlands|53.1|64.7|4
+Arathi Highlands|22.4|46.1|5
+Hillsbrad Foothills|50.8|33.1|4
+Hillsbrad Foothills|30.7|30.1|3
+Hillsbrad Foothills|31.0|57.7|11
+Hillsbrad Foothills|71.4|60.0|8
+Hillsbrad Foothills|71.6|37.0|4
+The Barrens|47.4|33.4|5
+The Barrens|49.7|58.7|4
+The Barrens|43.5|82.4|7
+The Barrens|47.2|72.4|7
+H Grave Moss
+Wetlands|43.8|25.5|17
+Duskwood|16.0|45.5|17
+Duskwood|22.5|34.9|4
+Duskwood|23.1|43.3|10
+Duskwood|79.4|71.5|9
+Desolace|49.0|60.3|2
+Desolace|53.4|61.8|7
+Desolace|51.0|58.2|8
+Eastern Plaguelands|23.4|73.2|3
+Arathi Highlands|28.3|57.2|8
+Alterac Mountains|39.0|54.7|0
+H Wild Steelbloom
+Arathi Highlands|67.6|26.4|10
+Arathi Highlands|60.2|31.4|11
+Arathi Highlands|49.6|32.9|8
+Arathi Highlands|44.4|31.2|10
+Arathi Highlands|37.5|23.3|18
+Arathi Highlands|33.2|20.8|5
+Arathi Highlands|34.3|42.4|10
+Arathi Highlands|21.7|75.3|5
+Arathi Highlands|16.5|68.3|8
+Arathi Highlands|57.2|73.1|8
+Arathi Highlands|66.5|74.7|6
+Arathi Highlands|80.4|38.6|12
+Stonetalon Mountains|38.9|21.0|7
+Stonetalon Mountains|45.1|37.1|5
+Stonetalon Mountains|25.7|67.4|3
+Stonetalon Mountains|58.6|84.3|3
+Stonetalon Mountains|85.5|85.1|3
+Stonetalon Mountains|72.2|59.1|3
+Stonetalon Mountains|68.5|41.8|4
+Stonetalon Mountains|64.1|40.1|5
+Stonetalon Mountains|58.9|51.9|4
+Stonetalon Mountains|53.4|37.2|4
+Wetlands|46.8|18.0|5
+Wetlands|69.2|33.4|5
+Wetlands|52.5|55.2|3
+Wetlands|31.2|46.5|4
+Wetlands|37.1|16.9|3
+Alterac Mountains|51.5|39.4|8
+Alterac Mountains|43.4|35.6|5
+Badlands|22.0|42.6|4
+Badlands|4.4|82.9|3
+Badlands|42.3|86.1|3
+Badlands|68.3|34.2|4
+Badlands|53.6|39.8|3
+Stranglethorn Vale|26.1|63.7|3
+Stranglethorn Vale|28.2|61.5|4
+H Bruiseweed
+Silverpine Forest|46.3|68.2|11
+Silverpine Forest|61.9|62.2|16
+Desolace|37.3|61.3|8
+Loch Modan|81.6|64.6|7
+Loch Modan|70.3|49.0|15
+Loch Modan|69.1|31.0|16
+Loch Modan|65.0|23.2|6
+Loch Modan|70.6|20.4|9
+Loch Modan|77.6|39.2|5
+Redridge Mountains|20.9|69.1|6
+Redridge Mountains|30.1|71.0|5
+Redridge Mountains|54.9|71.6|11
+Redridge Mountains|58.4|82.9|4
+Redridge Mountains|67.1|75.4|10
+Redridge Mountains|76.2|56.7|5
+Redridge Mountains|70.3|56.1|3
+Redridge Mountains|70.0|42.3|7
+Redridge Mountains|34.8|15.5|6
+Redridge Mountains|28.8|6.6|6
+Redridge Mountains|42.4|17.3|6
+Redridge Mountains|32.7|41.5|6
+Hillsbrad Foothills|40.8|38.3|10
+Hillsbrad Foothills|44.1|48.6|4
+Hillsbrad Foothills|66.2|10.2|7
+Hillsbrad Foothills|79.2|27.8|5
+Hillsbrad Foothills|69.6|56.3|7
+Hillsbrad Foothills|69.9|64.4|6
+Hillsbrad Foothills|57.4|56.7|4
+Hillsbrad Foothills|42.6|66.2|7
+Hillsbrad Foothills|37.0|56.6|5
+Hillsbrad Foothills|16.6|53.8|8
+Hillsbrad Foothills|25.2|33.3|4
+Hillsbrad Foothills|29.4|39.7|7
+Duskwood|65.2|71.5|12
+Duskwood|21.1|72.2|10
+Duskwood|80.8|59.4|11
+Duskwood|80.5|72.3|5
+Duskwood|54.8|79.2|3
+Duskwood|42.5|71.4|4
+Duskwood|33.2|78.3|5
+Duskwood|32.6|69.0|5
+Duskwood|18.6|43.7|5
+Duskwood|38.4|28.5|4
+Duskwood|36.0|53.6|6
+Duskwood|49.8|61.0|3
+Westfall|54.3|54.8|3
+Westfall|60.1|59.3|5
+Westfall|63.1|68.0|3
+Westfall|44.4|81.1|3
+Westfall|41.7|66.2|3
+Westfall|37.0|56.4|10
+Westfall|41.1|47.5|3
+Westfall|45.0|25.0|10
+Westfall|43.1|17.2|3
+Westfall|58.4|20.4|11
+Westfall|55.7|30.2|6
+Westfall|57.7|43.9|5
+Wetlands|13.1|57.7|4
+Wetlands|23.3|59.4|4
+Wetlands|28.1|44.6|8
+Wetlands|33.0|49.7|4
+Wetlands|66.8|63.9|6
+Wetlands|63.5|31.2|4
+Wetlands|47.9|16.6|10
+Wetlands|44.1|25.2|8
+Wetlands|33.8|15.0|5
+Wetlands|26.2|25.8|5
+Wetlands|12.4|65.9|8
+Wetlands|16.6|63.1|3
+H Stranglekelp
+Ashenvale|76.9|49.4|8
+Ashenvale|32.4|67.6|6
+Ashenvale|13.3|25.5|11
+Ashenvale|13.5|18.2|7
+Ashenvale|48.7|71.3|6
+Ashenvale|66.0|64.5|3
+Ashenvale|70.2|57.1|4
+Ashenvale|79.3|56.6|4
+Ashenvale|81.3|64.1|7
+Ashenvale|19.9|42.4|7
+The Hinterlands|80.0|87.7|6
+The Hinterlands|81.8|64.9|9
+The Hinterlands|84.2|42.9|8
+The Hinterlands|81.7|76.1|6
+The Hinterlands|84.5|56.6|4
+Stranglethorn Vale|33.9|35.9|4
+Stranglethorn Vale|29.0|87.5|19
+Stranglethorn Vale|26.2|84.2|5
+Stranglethorn Vale|32.5|82.3|6
+Stranglethorn Vale|35.7|74.6|4
+Stranglethorn Vale|23.9|58.5|3
+Stranglethorn Vale|25.4|67.9|7
+Stranglethorn Vale|22.0|51.3|4
+Stranglethorn Vale|26.7|42.5|6
+Stranglethorn Vale|28.1|30.7|8
+Stranglethorn Vale|25.9|20.7|3
+Stranglethorn Vale|23.4|25.5|3
+Wetlands|5.6|53.2|9
+Wetlands|16.8|55.7|8
+Wetlands|27.0|15.9|11
+Wetlands|19.4|17.4|6
+Wetlands|13.6|25.8|10
+Wetlands|12.0|34.0|3
+Wetlands|6.1|43.5|3
+Wetlands|12.2|44.2|9
+Wetlands|13.8|62.8|3
+Wetlands|7.6|66.8|15
+The Barrens|64.9|37.8|8
+The Barrens|62.2|41.9|10
+The Barrens|63.4|54.0|5
+The Barrens|68.6|49.7|10
+The Barrens|65.3|47.3|5
+The Barrens|65.0|41.6|12
+Westfall|50.5|8.3|3
+Westfall|36.5|13.1|3
+Westfall|27.7|29.1|5
+Westfall|24.8|43.7|6
+Westfall|27.4|74.4|5
+Westfall|32.6|86.8|4
+H Briarthorn
+Westfall|36.4|34.9|19
+Westfall|66.2|50.1|6
+Westfall|39.5|68.1|9
+Westfall|37.3|84.9|4
+Westfall|54.2|67.8|8
+Westfall|70.2|71.6|3
+Duskwood|29.8|35.0|21
+Duskwood|64.5|41.8|16
+Duskwood|78.5|32.2|8
+Duskwood|58.7|30.9|5
+Duskwood|54.8|57.0|3
+Duskwood|34.8|49.5|3
+Duskwood|15.5|53.7|7
+Duskwood|21.5|75.8|5
+Duskwood|32.6|66.6|13
+Duskwood|47.0|72.3|3
+Duskwood|60.4|68.7|9
+Duskwood|79.2|65.2|11
+Darkshore|39.7|67.3|12
+Darkshore|39.6|54.9|3
+Darkshore|52.5|27.1|3
+Darkshore|47.1|34.2|8
+Darkshore|43.7|38.0|6
+Darkshore|45.2|59.3|3
+Darkshore|38.5|92.0|3
+Darkshore|40.7|80.4|6
+Loch Modan|74.4|46.3|7
+Redridge Mountains|14.5|61.0|15
+Wetlands|23.7|52.8|4
+Wetlands|18.6|31.2|4
+Wetlands|40.6|28.4|7
+Wetlands|55.7|33.4|8
+Wetlands|65.4|47.6|3
+Wetlands|62.2|72.8|4
+Wetlands|49.8|45.8|3
+Silverpine Forest|52.6|64.6|11
+Silverpine Forest|49.2|36.3|7
+Silverpine Forest|43.5|51.6|3
+Silverpine Forest|50.1|77.8|6
+Silverpine Forest|62.0|75.5|4
+The Barrens|44.6|55.3|5
+The Barrens|44.9|64.1|5
+The Barrens|43.6|76.5|4
+The Barrens|45.2|83.5|4
+The Barrens|62.6|54.0|3
+The Barrens|58.9|49.7|5
+The Barrens|54.8|40.5|4
+The Barrens|48.9|9.8|3
+The Barrens|40.2|20.7|9
+The Barrens|44.3|23.2|5
+The Barrens|45.3|37.8|6
+The Barrens|49.1|46.0|3
+H Mageroyal
+The Barrens|56.2|12.7|16
+The Barrens|46.8|41.0|19
+The Barrens|52.9|49.7|14
+The Barrens|46.6|65.0|11
+The Barrens|44.6|40.3|12
+The Barrens|43.6|21.6|9
+The Barrens|42.1|14.4|8
+The Barrens|48.2|12.5|5
+The Barrens|63.1|6.3|5
+The Barrens|62.8|12.2|8
+The Barrens|54.1|44.0|11
+The Barrens|50.7|54.7|10
+Westfall|39.1|32.7|17
+Westfall|53.4|42.1|3
+Westfall|52.8|64.3|4
+Westfall|36.6|26.5|3
+Westfall|59.0|25.4|5
+Ashenvale|83.1|47.6|6
+Ashenvale|17.2|35.1|10
+Ashenvale|16.9|28.4|3
+Ashenvale|21.1|44.4|7
+Ashenvale|76.6|72.2|5
+Ashenvale|49.5|59.9|5
+Ashenvale|41.0|71.4|5
+Ashenvale|33.8|69.8|4
+Ashenvale|22.6|35.4|5
+Wetlands|36.1|48.1|3
+Hillsbrad Foothills|57.5|23.2|3
+Darkshore|37.5|49.4|3
+Darkshore|37.7|61.0|3
+Darkshore|36.3|86.1|4
+Darkshore|37.0|74.1|3
+Darkshore|48.7|22.6|4
+Darkshore|53.6|21.6|3
+Darkshore|57.2|17.0|6
+Darkshore|58.7|23.6|4
+Darkshore|54.3|30.9|3
+Darkshore|38.3|36.6|7
+Silverpine Forest|55.1|35.1|8
+Silverpine Forest|48.7|29.1|6
+Silverpine Forest|65.9|12.5|4
+Silverpine Forest|56.1|20.7|6
+Redridge Mountains|13.0|55.7|6
+Redridge Mountains|22.6|27.7|5
+Redridge Mountains|50.8|40.3|4
+Redridge Mountains|38.5|38.2|3
+H Earthroot
+The Barrens|64.0|46.7|35
+The Barrens|60.8|18.3|25
+The Barrens|61.7|42.7|18
+The Barrens|62.1|11.6|16
+The Barrens|40.4|22.8|13
+The Barrens|42.8|34.7|6
+The Barrens|40.4|29.8|14
+The Barrens|41.6|18.7|6
+The Barrens|44.0|23.7|6
+The Barrens|61.2|26.6|3
+Westfall|42.0|33.8|16
+Westfall|30.5|38.9|5
+Westfall|40.9|16.2|3
+Westfall|55.6|12.9|3
+Loch Modan|25.1|48.5|3
+Dun Morogh|66.4|54.9|13
+Dun Morogh|47.7|59.5|7
+Dun Morogh|74.5|52.1|5
+Dun Morogh|70.7|59.3|3
+Dun Morogh|59.1|54.9|7
+Dun Morogh|37.0|61.6|4
+Teldrassil|51.7|73.0|3
+Teldrassil|38.7|69.0|4
+Teldrassil|39.6|29.6|4
+Teldrassil|44.8|46.7|4
+Teldrassil|45.1|55.5|4
+Durotar|56.1|14.3|3
+Durotar|54.1|70.4|3
+Durotar|50.2|53.0|4
+Durotar|42.9|44.9|3
+Durotar|38.2|50.3|5
+Durotar|42.9|24.5|6
+Tirisfal Glades|81.0|62.2|5
+Tirisfal Glades|79.1|44.1|3
+Tirisfal Glades|84.3|36.0|5
+Tirisfal Glades|76.0|34.6|5
+Tirisfal Glades|39.0|36.9|3
+Tirisfal Glades|55.3|31.0|3
+Tirisfal Glades|51.1|43.5|5
+H Silverleaf
+Durotar|41.7|14.6|17
+Durotar|52.5|11.2|10
+Durotar|57.6|20.3|12
+Durotar|57.0|39.1|17
+Durotar|56.6|47.5|4
+Durotar|60.3|56.3|12
+Durotar|42.3|66.2|6
+Durotar|52.5|76.3|8
+Durotar|64.2|75.1|4
+Durotar|54.8|66.4|14
+Durotar|52.6|59.0|8
+Durotar|47.6|48.1|16
+The Barrens|51.2|31.4|5
+The Barrens|54.1|35.7|3
+The Barrens|56.4|43.3|7
+The Barrens|55.1|51.6|4
+The Barrens|46.8|37.9|27
+The Barrens|46.7|29.6|5
+The Barrens|41.2|17.8|3
+The Barrens|39.6|14.7|8
+The Barrens|53.7|17.5|3
+The Barrens|61.4|16.3|6
+The Barrens|54.7|21.9|3
+The Barrens|50.3|24.1|15
+Dun Morogh|45.9|41.4|7
+Dun Morogh|71.0|51.1|8
+Dun Morogh|63.4|59.0|4
+Dun Morogh|57.1|57.9|5
+Dun Morogh|49.0|61.2|8
+Dun Morogh|44.4|57.4|3
+Dun Morogh|38.0|60.3|8
+Dun Morogh|31.7|54.3|7
+Dun Morogh|28.1|44.1|5
+Dun Morogh|38.0|33.4|3
+Dun Morogh|44.5|31.4|3
+Loch Modan|33.3|55.7|4
+Loch Modan|30.6|80.2|8
+Loch Modan|46.2|76.5|10
+Loch Modan|54.6|28.9|36
+Loch Modan|39.1|26.0|3
+Loch Modan|25.0|23.8|5
+Loch Modan|31.9|35.5|11
+Darkshore|38.7|51.3|5
+Darkshore|42.2|88.1|3
+Darkshore|38.6|84.5|5
+Darkshore|39.9|75.2|4
+Darkshore|43.1|57.6|5
+Darkshore|45.2|43.4|6
+Darkshore|52.2|32.8|4
+Darkshore|54.7|26.3|11
+Darkshore|49.4|27.9|3
+Darkshore|43.8|27.5|9
+Darkshore|41.0|34.5|3
+Elwynn Forest|36.9|58.1|8
+Elwynn Forest|31.3|66.8|6
+Elwynn Forest|37.7|79.7|7
+Elwynn Forest|47.0|84.5|5
+Elwynn Forest|66.5|80.9|3
+Elwynn Forest|79.0|77.8|6
+Elwynn Forest|87.5|78.6|4
+Elwynn Forest|77.1|63.1|4
+Elwynn Forest|80.5|54.4|3
+Elwynn Forest|71.2|42.0|3
+Elwynn Forest|64.5|62.7|8
+Elwynn Forest|51.9|63.1|6
+Mulgore|58.5|62.0|22
+H Peacebloom
+Redridge Mountains|62.5|40.7|3
+Loch Modan|51.6|70.4|4
+Westfall|35.6|36.0|3
+The Barrens|54.0|28.1|13
+The Barrens|48.4|13.7|10
+The Barrens|46.1|60.2|9
+The Barrens|45.5|48.7|7
+The Barrens|51.7|37.9|4
+The Barrens|43.8|28.4|3
+The Barrens|59.9|7.1|4
+The Barrens|53.3|21.1|4
+The Barrens|59.2|26.2|6
+The Barrens|60.3|34.4|4
+The Barrens|64.0|48.3|3
+The Barrens|47.2|77.4|8
+Dun Morogh|50.2|45.7|5
+Dun Morogh|33.9|35.8|3
+Dun Morogh|27.7|48.4|6
+Dun Morogh|36.8|60.9|7
+Dun Morogh|48.1|55.6|14
+Dun Morogh|61.9|56.1|10
+Dun Morogh|74.2|55.2|6
+Durotar|53.9|71.9|8
+Durotar|42.4|20.7|7
+Durotar|54.8|15.4|8
+Durotar|50.8|35.0|6
+Durotar|55.0|51.8|9
+Durotar|52.7|60.3|3
+Durotar|39.5|45.3|12
+Durotar|38.8|34.6|7
+Mulgore|35.6|34.8|5
+Mulgore|38.8|23.9|4
+Mulgore|47.6|25.5|8
+Mulgore|48.1|43.5|9
+Mulgore|54.0|49.9|4
+Mulgore|59.5|68.5|7
+Mulgore|53.0|67.0|3
+Mulgore|37.9|68.6|5
+Mulgore|39.5|53.6|7
+Tirisfal Glades|55.2|63.1|12
+Tirisfal Glades|46.0|54.7|13
+Tirisfal Glades|32.7|50.5|3
+Tirisfal Glades|46.8|35.0|9
+Tirisfal Glades|65.6|34.4|4
+Tirisfal Glades|69.2|54.4|9
+Tirisfal Glades|78.3|68.6|5
+Elwynn Forest|42.8|60.9|9
+Elwynn Forest|64.1|65.3|9
+Elwynn Forest|78.8|58.3|3
+Elwynn Forest|88.5|77.1|5
+Elwynn Forest|71.7|82.7|4
+Elwynn Forest|55.4|80.5|3
+Elwynn Forest|38.8|87.5|8
+Elwynn Forest|26.2|81.5|5
