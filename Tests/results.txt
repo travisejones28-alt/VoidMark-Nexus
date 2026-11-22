@@ -1,3 +1,4 @@
+PASS 0.14.4 Black Lotus: Feralas Maul added; missing spots filled once; existing spots not doubled
 PASS All TOC Lua files compile and load under Lua 5.1 compatible runtime
 PASS Initialize and retain existing characters
 PASS Profession separation and offline search
@@ -261,4 +262,4 @@ PASS 0.13.12 DE: Nexus adds no DE tooltip when VoidMark Market draws its own
 PASS 0.14 Crates: every crate has its favor, level and bundles; item IDs are unique
 PASS 0.14 Crates: cheapest bundle, crate price, favor and cost per favor from Market prices
 PASS 0.14.1 Favor rewards: recipe favor follows the vendor skill bands; Horde camp vendors; gold at the cheapest crate
-PASS: 263 tests; Lua 5.1 / standard interpreter
+PASS: 264 tests; Lua 5.1 / standard interpreter

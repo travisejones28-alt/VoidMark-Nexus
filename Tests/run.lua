@@ -38,13 +38,19 @@ C_Timer={After=function(_,fn) timers[#timers+1]=fn end,NewTicker=function() end}
 local function flush() local rounds=0; while #timers>0 do rounds=rounds+1; assert(rounds<100000,'timer recursion'); local fn=table.remove(timers,1); fn() end end
 C_Map={GetBestMapForUnit=function() return 1411 end,GetPlayerMapPosition=function() return {GetXY=function() return .4,.4 end} end,GetMapWorldSize=function() return 5000,3000 end}
 local N={}
-local files={'Core','Help','Data/Nodes','Data/Spawns','Data/ZoneLand','Data/RecipeSources','Data/ForeverRecipeCatalog','Data/BaseRecipeCatalog','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Disenchant','Crates','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','RouteTerrain','Laps','RoutePlanner','Recording','MinimapRoute','UI','Finder','Guides','CraftGuides','Gold','Mail','Cooldowns','Tooltip','RouteLearning','LevelingPlus','WildGather','Interface','RecipeFinder','ForeverRecipeBridge','RecipeSync','Dashboard','RouteHaul','Boot'}
+local files={'Core','Help','Data/Nodes','Data/Spawns','Data/SpawnsExtra','Data/ZoneLand','Data/RecipeSources','Data/ForeverRecipeCatalog','Data/BaseRecipeCatalog','Model','Leveling','Trainers','Transfer','Sync','Professions','Inventory','Prices','Disenchant','Crates','Gathering','Analytics','Cache','Planner','Terrain','Routes','RouteGen','RouteTerrain','Laps','RoutePlanner','Recording','MinimapRoute','UI','Finder','Guides','CraftGuides','Gold','Mail','Cooldowns','Tooltip','RouteLearning','LevelingPlus','WildGather','Interface','RecipeFinder','ForeverRecipeBridge','RecipeSync','Dashboard','RouteHaul','Boot'}
 for _,f in ipairs(files) do assert(loadfile(root..'/'..f..'.lua'))('VoidMarkNexus',N) end
 local results={}; local count=0
 local function test(name,fn)
  local ok,err=pcall(fn); results[#results+1]=(ok and 'PASS ' or 'FAIL ')..name..(ok and '' or ': '..tostring(err)); print(results[#results]); if not ok then error(err) end; count=count+1
 end
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b)) end
+test('0.14.4 Black Lotus: Feralas Maul added; missing spots filled once; existing spots not doubled',function()
+ local z=N.spawns[176589]; assert(z[1444] and #z[1444]==2,'Feralas'); eq(0.627,z[1444][1])
+ local function near(m,x,y) local l=z[m]; for j=1,#l-1,2 do if (l[j]-x)^2+(l[j+1]-y)^2<0.0001 then return true end end end
+ assert(near(1423,0.336,0.232),'Plaguewood'); assert(near(1423,0.671,0.433),'Browman Mill')
+ assert(N.extraLotusSpots>0 and N.extraLotusSpots<=23,'added '..tostring(N.extraLotusSpots))
+end)
 test('All TOC Lua files compile and load under Lua 5.1 compatible runtime',function() local toc=assert(io.open(root..'/VoidMarkNexus.toc')):read('*a'); eq(N.version,toc:match('## Version: (%S+)')) end)
 test('Initialize and retain existing characters',function()
  assert(N:Initialize()); local account=N.db.account; N.character.custom='retained'; assert(N:Initialize()); eq(N.db.account,account); eq(N.character.custom,'retained')

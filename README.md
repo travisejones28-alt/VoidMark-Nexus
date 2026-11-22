@@ -24,6 +24,9 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.14.4
+- Gather: Black Lotus now includes The Maul in Feralas (Dire Maul arena) and 12 more Black Lotus spots in Burning Steppes, Eastern Plaguelands, Winterspring and Silithus that were missing, e.g. Plaguewood and Browman Mill. These are Classic spawn positions, not checked in Forever yet.
+
 ## What changed in 0.14.3
 - Crates: the crate's own AH price is always part of the cost, even for crates you already hold (you could sell them instead). The hover box still shows the materials-only cost.
 
