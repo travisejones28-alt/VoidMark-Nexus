@@ -264,7 +264,7 @@ function N:CreateUI()
    local tag=ch.p and ((ch.p.skill or 0)..' / '..(ch.p.max or 0)) or 'not learned'
    choices[#choices+1]={label=ch.name..'  ('..tag..')',value=ch.id}
   end
-  N:Choice(u.charPick,choices,function(v) u.guideChar=v or nil; N.db.settings.guideChar=u.guideChar; u.offset=0 end)
+  N:Choice(u.charPick,choices,function(v) u.guideChar=v or nil; N.db.settings.guideChar=u.guideChar; N.db.settings.guideWhole=(v==false) or nil; u.offset=0 end)
  end)
  -- Progress bar under the two buttons.
  u.guideBarBg=gp:CreateTexture(nil,'ARTWORK'); u.guideBarBg:SetPoint('TOPLEFT',14,-28); u.guideBarBg:SetSize(W-28,4); u.guideBarBg:SetColorTexture(.2,.15,.28,1)
@@ -364,6 +364,13 @@ function N:RenderGuides(u)
  u.guidePick:SetText(known.label)
  local cid=hasProf and u.guideChar
  if cid and not self.db.characters[cid] then cid=nil; u.guideChar=nil; self.db.settings.guideChar=nil end
+ -- Default to the character you are on when they have this profession
+ -- (unless you picked "Whole guide"), also when the picked one doesn't.
+ if hasProf and not self.db.settings.guideWhole then
+  local prof=self:GuideProfession(key)
+  local mine=self.characterID and self:CharProfession(self.character,prof)
+  if mine and (not cid or not self:CharProfession(self.db.characters[cid],prof)) then cid=self.characterID end
+ end
  local rows,info,foot,frac
  if cid then
   u.charPick:SetText(self.db.characters[cid].name or '?')

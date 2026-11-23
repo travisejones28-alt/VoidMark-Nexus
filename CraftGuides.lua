@@ -363,6 +363,46 @@ function N:HoldersText(name)
  return nil
 end
 
+-- Crafts you make, counted per recipe and the skill you had when you made
+-- them, so a step can say "made 12, about 7 to go".
+function N:RecordGuideCraft(spell)
+ local c=self.character
+ if type(c)~='table' or not spell then return false end
+ for _,p in pairs(c.professions or {}) do
+  if type(p)=='table' and type(p.recipes)=='table' then
+   local r=p.recipes[tostring(spell)]
+   if type(r)~='table' then for _,x in pairs(p.recipes) do if type(x)=='table' and x.spell==spell then r=x; break end end end
+   if type(r)=='table' and type(r.name)=='string' then
+    c.guideCrafts=type(c.guideCrafts)=='table' and c.guideCrafts or {}
+    local k=r.name:lower();local h=type(c.guideCrafts[k])=='table' and c.guideCrafts[k] or {};c.guideCrafts[k]=h
+    local sk=tonumber(p.skill) or 0;h[sk]=(h[sk] or 0)+1
+    self.dirty=true
+    return true
+   end
+  end
+ end
+ return false
+end
+N:On('UNIT_SPELLCAST_SUCCEEDED',function(unit,_,spell) if unit=='player' then N:RecordGuideCraft(spell) end end)
+-- Crafts of a step's recipes made while your skill was inside the step.
+function N:StepMade(c,names,a,b)
+ local made=0
+ local log=type(c)=='table' and type(c.guideCrafts)=='table' and c.guideCrafts or {}
+ for _,n in ipairs(names or {}) do
+  local h=log[tostring(n):lower()]
+  if type(h)=='table' then for sk,k in pairs(h) do sk=tonumber(sk) if sk and sk>=a and sk<b and tonumber(k) then made=made+k end end end
+ end
+ return made
+end
+-- "Skill 24 / 30  [========--]  made 12 - about 7 to go"
+function N:StepProgressText(skill,a,b,made,more)
+ local span=math.max(1,b-a);local into=math.max(0,math.min(span,skill-a))
+ local w=20;local fill=math.floor(w*into/span+0.5)
+ local bar='[|cff66dd66'..string.rep('=',fill)..'|r|cff5a4f6a'..string.rep('-',w-fill)..'|r]'
+ local tail=made>0 and ('made '..made..' - about '..more..' to go') or ('about '..more..' to go')
+ return 'Skill '..skill..' / '..b..'  '..bar..'  '..tail
+end
+
 -- Training checkpoints: index 1/2/3 of a guide's train list = Journeyman,
 -- Expert, Artisan; learn at 50/125/200, after which the cap is 150/225/300.
 local TIERS={{at=50,cap=150},{at=125,cap=225},{at=200,cap=300}}
@@ -430,13 +470,17 @@ function N:GuideCharacterRows(key,cid,showDone)
     doneRows[#doneRows+1]={text='   |cff66dd66done|r  '..s[1]..'  '..s[2],color=muted}
    else
     if past then past=false; flushDone() end
-    local _,count=self:StepCrafts(s[2])
+    local stepNames,count=self:StepCrafts(s[2])
     if n==curIndex then
      local more=count
      if it.b>it.a and skill>=it.a then more=math.ceil(count*(it.b-skill)/(it.b-it.a)) end
+     -- Once you have made a few, use your own skill-ups per craft.
+     local made=g and self:StepMade(c,stepNames,it.a,it.b) or 0
+     if made>=3 and skill>it.a then more=math.max(it.b-skill,math.ceil((it.b-skill)*made/(skill-it.a))) end
      local what=g and ('|cffffd200NOW|r  '..s[1]..'  '..s[2]..(count>0 and ('  - about '..more..' more') or '')) or ('|cffffd200NOW|r  '..s[1]..': '..s[2])
      rows[#rows+1]={text=what,color={1,1,1},current=true,itemName=s[2]:match('^(.-) x%d')}
-     if skill<it.a then rows[#rows+1]={text='      Your skill is '..skill..'; this step starts at '..it.a..'.',color=warn} end
+     if skill<it.a then rows[#rows+1]={text='      Your skill is '..skill..'; this step starts at '..it.a..'.',color=warn}
+     elseif g and count>0 then rows[#rows+1]={text='      '..self:StepProgressText(skill,it.a,it.b,made,more),color=sub,progress=true} end
      if g then
       local r,known=self:StepRecipe(p,s[2])
       if r and known then

@@ -24,6 +24,11 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.14.6
+
+- **Guides track your progress live.** The step you're on shows a progress line: `Skill 24 / 30  [==========----------]  made 12 - about 7 to go`. Crafts you make are counted per recipe; after 3 crafts the "to go" number uses your own skill-ups per craft instead of the guide's estimate. Updates as you craft.
+- **Opens on the character you're on.** A profession guide now shows the logged-in character's progress automatically when they have that profession. Pick "Whole guide" to read the full guide instead (remembered).
+
 ## What changed in 0.14.5
 - Routes: the current gathering stop is now also WoW's own waypoint (map pin, tracked), so the game's on-screen navigation marker (`/console showInGameNavigation 1`) points at it and moves with the route. A pin you set yourself is never cleared by Nexus.
 

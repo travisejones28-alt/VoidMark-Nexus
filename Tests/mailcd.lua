@@ -346,6 +346,27 @@ test('Guides: pick a character and see where they are (Kitty, Leatherworking 50 
  assert(t:find('90-100  Fine Leather Belt x19  |cffffc040short 1 item|r',1,true),t) -- 114 leather > 100
  assert(t:find('Hillman\'s Leather Gloves x17  |cff9a8fb0not learned|r',1,true),t)
  assert(not t:find('1-30  Light Leather x35',1,true),'done steps collapse')
+ -- 0.14.6: live progress under NOW, then crafts you make count and set the estimate.
+ assert(t:find('Skill 50 / 55  [',1,true) and t:find('about 6 to go',1,true),t)
+ me.professions.lw.skill=34;me.professions.lw.recipes['1'].spell=3816;me.professions.lw.recipes['1'].name='Cured Light Hide'
+ me.professions.lw.recipes['3816']=me.professions.lw.recipes['1'];me.professions.lw.recipes['1']=nil
+ for _=1,4 do assert(N:RecordGuideCraft(3816)) end -- 4 made at 34 (skill 30-55 step)
+ assert(not N:RecordGuideCraft(99999),'not a recipe')
+ eq(N:StepMade(me,{'Cured Light Hide'},30,55),4)
+ rows=N:GuideCharacterRows('lw',N.characterID,false)
+ t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
+ -- 4 crafts for 4 points: 21 left at 1 per craft.
+ assert(t:find('made 4 - about 21 to go',1,true),t)
+ assert(t:find('NOW|r  30-55  Cured Light Hide x27  - about 21 more',1,true),t)
+ me.professions.lw.skill=50;me.guideCrafts=nil
+ me.professions.lw.recipes['1']=me.professions.lw.recipes['3816'];me.professions.lw.recipes['3816']=nil
+ -- With no character picked, the guide opens on the one you're on (they know LW).
+ N:Show('Guides');local u0=N.ui;u0.guideKey='lw';u0.guideChar=nil;N.db.settings.guideChar=nil;N:Render()
+ assert(u0.guideInfo:GetText():find('Kitty: Leatherworking',1,true),u0.guideInfo:GetText())
+ N.db.settings.guideWhole=true;N:Render();assert(not u0.guideInfo:GetText():find('Kitty:',1,true),'Whole guide stays when picked')
+ N.db.settings.guideWhole=nil
+ rows=N:GuideCharacterRows('lw',N.characterID,false)
+ t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
  rows=N:GuideCharacterRows('lw',N.characterID,true)
  t={};for _,r in ipairs(rows) do t[#t+1]=r.text end;t=table.concat(t,'\n')
  assert(t:find('done|r  1-30  Light Leather x35',1,true),'done steps show')
