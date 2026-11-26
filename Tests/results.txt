@@ -268,4 +268,5 @@ PASS 0.14.7 Arrow: points on the route zone while the game reports a smaller sub
 PASS 0.14.7 Arrow: a saved spot off the screen falls back to the default spot
 PASS 0.14.8 Ore: Wowhead Forever mining spots are loaded
 PASS 0.14.9 Herbs: Wowhead Forever herb spots are loaded
-PASS: 270 tests; Lua 5.3 / standard interpreter
+PASS 0.15.0 Profit shows in the game profession window rows and detail
+PASS: 271 tests; Lua 5.3 / standard interpreter

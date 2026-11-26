@@ -24,6 +24,10 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.15.0
+
+- **Profit in the game's profession window.** Each recipe row shows its profit on the right (green for profit, red for loss), and the selected recipe shows a small box under its reagents: cost to craft, what it sells for after the AH cut, and net profit with the margin. Same numbers as Nexus > Professions > Profit, using VoidMark Market prices. Recipes without a price show nothing. Turn it off in Nexus settings: "Show profit in the game's profession window".
+
 ## What changed in 0.14.10
 
 - New Forever nodes now show their item icon and price: Marefoil (Marefoil), Demonsage (Demonsage), Heavy Thorium Vein (Thorium Ore). Drops taken from Wowhead Forever. Hyjal Silphium has no drop data yet.

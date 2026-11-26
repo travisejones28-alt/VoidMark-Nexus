@@ -280,7 +280,7 @@ function N:CreateUI()
  local st=u.pages.Settings; st:SetHeight(H-110)
  local s=function() return N.db.settings end
  local entries={
-  {'tooltipCounts','Show my item counts in tooltips'},{'deTooltips','Show disenchant value in item tooltips (when Market is not installed)'},{'includeBanks','Count items in banks'},{'includeAlts','Count items on my other characters'},
+  {'tooltipCounts','Show my item counts in tooltips'},{'nativeProfit','Show profit in the game\'s profession window'},{'deTooltips','Show disenchant value in item tooltips (when Market is not installed)'},{'includeBanks','Count items in banks'},{'includeAlts','Count items on my other characters'},
   {'includeSynced','Count the other account (sync)'},{'market','Use VoidMark Market prices'},{'manualFirst','Use my own prices first'},
   {'routeVisible','Show the route arrow'},{'manualStops','Wait for me at each stop'},{'nodesVisible','Show spawn spots on the world map'},
   {'minimapRoute','Show the route on the minimap'},{'minimap','Minimap button'},{'native','Keep the normal profession window'},
@@ -293,6 +293,7 @@ function N:CreateUI()
    s()[key]=v
    if key=='minimap' and N.minimap then N.minimap:SetShown(v) end
    if key=='routeVisible' and N.activeRoute and v then N:ShowArrow() end
+   if key=='nativeProfit' then N:UpdateNativeRows(); N:UpdateNativeDetail() end
   end)
  end
  local y=-4-#entries*25-8

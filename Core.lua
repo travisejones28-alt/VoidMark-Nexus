@@ -4,7 +4,7 @@ N.schema = 1
 do -- One source of truth: the TOC's Version line (the fallback must match it).
  local get=(C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
  local ok,v=pcall(type(get)=='function' and get or error,'VoidMarkNexus','Version')
- N.version=(ok and type(v)=='string' and v~='') and v or '0.14.10-beta'
+ N.version=(ok and type(v)=='string' and v~='') and v or '0.15.0-beta'
 end
 N.handlers, N.jobs, N.errors = {}, {}, {}
 function N:Now() return time() end
@@ -240,7 +240,7 @@ function N:Initialize()
  local defaults={native=true,learn=true,importedNodes=true,observedNodes=true,nodesVisible=true,routeVisible=true,minimapRoute=true,minimapAhead=3,stopRadius=60,learnSpots=true,stats=true,
  includeAlts=true,includeBanks=true,includeImports=false,includeStale=false,maxAge=86400,inventoryAge=604800,
  market=true,auctionator=false,manualFirst=false,deTooltips=true,cut=.05,deposit=0,failedAuctions=0,saleFraction=1,waste=0,
- speed=7,travel='Foot',mountDelay=0,gatherDelay=3,routeMinutes=20,nodeLimit=100,kind='all',target='',minimap=true,scale=1,arrowScale=1,mapIconSize=7,terrainLearn=true,manualStops=false,mapButton=true,tomtom=true,tomtomArrow=false,gameWaypoint=true,levelMode='Cheapest',includeSynced=true,levelResale=true,levelCraftValue=500,tooltipCounts=true}
+ speed=7,travel='Foot',mountDelay=0,gatherDelay=3,routeMinutes=20,nodeLimit=100,kind='all',target='',minimap=true,scale=1,arrowScale=1,mapIconSize=7,terrainLearn=true,manualStops=false,mapButton=true,tomtom=true,tomtomArrow=false,gameWaypoint=true,levelMode='Cheapest',includeSynced=true,levelResale=true,levelCraftValue=500,tooltipCounts=true,nativeProfit=true}
  for k,v in pairs(defaults) do if type(d.settings[k])~=type(v) then d.settings[k]=v end end
  d.settings.hideArrowInCombat=nil; d.settings.minimapHideNear=nil -- retired in 0.6.1
  local bounds={levelCraftValue={0,1e7},maxAge={60,2592000},inventoryAge={60,2592000},cut={0,.3},deposit={0,1e8},failedAuctions={0,20},saleFraction={0,1},waste={0,1},speed={1,50},mountDelay={0,30},gatherDelay={0,60},routeMinutes={1,120},nodeLimit={2,150},scale={.6,1.5},arrowScale={.5,2}}
