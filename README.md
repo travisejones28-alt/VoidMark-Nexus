@@ -24,6 +24,12 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.14.9
+
+- **652 more herb spots, from Wowhead's WoW Forever map data.** All 64 Forever herb objects (about 15,700 spots) were checked against Nexus; spots it didn't have are added. Biggest gaps filled: Riverglades (Goldthorn, Kingsblood, Liferoot, Khadgar's Whisker, Wild Steelbloom, Stranglekelp), Zephras Isle (Peacebloom, Silverleaf, Earthroot), Redridge (Briarthorn, Earthroot, Bruiseweed, Mageroyal), Mulgore, Mount Hyjal and Shen'dralas (Grave Moss).
+- **New Forever herbs:** Marefoil and Demonsage (skill 300, Mount Hyjal), Hyjal Silphium (Mount Hyjal) and a second Stranglekelp node. Quest-only objects (Doom Weed, Tomb Weed, sea creatures and so on) are not added.
+- Existing spots are kept: about 156 Nexus herb spots and 71 ore spots aren't on Wowhead, mostly a few per zone in Eastern Plaguelands, Burning Steppes and Un'Goro. Wowhead's data is player-collected, so those are left in.
+
 ## What changed in 0.14.8
 
 - **960 more mining spots, from Wowhead's WoW Forever map data.** Every Forever mineral vein (46 node types, about 12,400 spots) was checked against Nexus; spots Nexus didn't have are added. Biggest gaps filled: Mount Hyjal (Rich Thorium), Riverglades (Iron, Tin, Gold, Mithril, Truesilver), Zephras Isle and Redridge (Copper, Tin), Shen'dralas, and Silver/Gold across Desolace, Thousand Needles, Ashenvale and Stranglethorn.

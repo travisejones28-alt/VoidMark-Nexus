@@ -107,4 +107,9 @@ N.nodeTypes = {
  [439627]={kind="herb",name="Dreamroot",skill=205},
  [439810]={kind="herb",name="Moonroot",skill=250},
  [439762]={kind="herb",name="Star Lotus",skill=250},
+ -- WoW Forever herbs (Wowhead Forever, Nov 2026)
+ [618987]={kind="herb",name="Stranglekelp",skill=85},
+ [654624]={kind="herb",name="Hyjal Silphium",skill=1},
+ [566786]={kind="herb",name="Demonsage",skill=300},
+ [566788]={kind="herb",name="Marefoil",skill=300},
 }
