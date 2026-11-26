@@ -975,7 +975,9 @@ local nexusNodeIcons = {
  ["Small Thorium Vein"]=10620, ["Rich Thorium Vein"]=10620,
  ["Incendicite Mineral Vein"]=3340, ["Lesser Bloodstone Deposit"]=4278,
  ["Indurium Mineral Vein"]=5833, ["Hakkari Thorium Vein"]=10620,
- ["Small Obsidian Chunk"]=22202, ["Large Obsidian Chunk"]=22203
+ ["Small Obsidian Chunk"]=22202, ["Large Obsidian Chunk"]=22203,
+ -- Forever: amber chunks give Copper Ore (Icy Veins Forever mining guide)
+ ["Chunk of Amber"]=2770, ["Large Chunk of Amber"]=2770
 }
 local nexusNodeFallback = {
  ["Peacebloom"]='Interface\\Icons\\INV_Misc_Flower_02',

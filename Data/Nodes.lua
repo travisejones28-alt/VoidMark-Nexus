@@ -50,6 +50,10 @@ N.nodeTypes = {
  [180215]={kind="ore",name="Hakkari Thorium Vein",skill=275},
  [181068]={kind="ore",name="Small Obsidian Chunk",skill=305},
  [181069]={kind="ore",name="Large Obsidian Chunk",skill=305},
+ -- WoW Forever nodes (Wowhead Forever, Nov 2026)
+ [656332]={kind="ore",name="Chunk of Amber",skill=1},
+ [656333]={kind="ore",name="Large Chunk of Amber",skill=1},
+ [566779]={kind="ore",name="Heavy Thorium Vein",skill=300},
  [1617]={kind="herb",name="Silverleaf",skill=1},
  [3725]={kind="herb",name="Silverleaf",skill=1},
  [656161]={kind="herb",name="Silverleaf",skill=1},

@@ -24,6 +24,11 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.14.8
+
+- **960 more mining spots, from Wowhead's WoW Forever map data.** Every Forever mineral vein (46 node types, about 12,400 spots) was checked against Nexus; spots Nexus didn't have are added. Biggest gaps filled: Mount Hyjal (Rich Thorium), Riverglades (Iron, Tin, Gold, Mithril, Truesilver), Zephras Isle and Redridge (Copper, Tin), Shen'dralas, and Silver/Gold across Desolace, Thousand Needles, Ashenvale and Stranglethorn.
+- **New Forever ores:** Heavy Thorium Vein (skill 300, Mount Hyjal) and Chunk of Amber / Large Chunk of Amber (skill 1, Teldrassil; they give Copper Ore).
+
 ## What changed in 0.14.7
 
 - **Route arrow always shows when a route starts.** If "Show routes" had been unticked (world map checkbox), starting a route left the arrow hidden with no message. Starting a route now turns it back on and says so.
