@@ -263,4 +263,7 @@ PASS 0.13.12 DE: Nexus adds no DE tooltip when VoidMark Market draws its own
 PASS 0.14 Crates: every crate has its favor, level and bundles; item IDs are unique
 PASS 0.14 Crates: cheapest bundle, crate price, favor and cost per favor from Market prices
 PASS 0.14.1 Favor rewards: recipe favor follows the vendor skill bands; Horde camp vendors; gold at the cheapest crate
-PASS: 265 tests; Lua 5.1 / standard interpreter
+PASS 0.14.7 Arrow: starting a route turns a hidden arrow back on
+PASS 0.14.7 Arrow: points on the route zone while the game reports a smaller sub-map
+PASS 0.14.7 Arrow: a saved spot off the screen falls back to the default spot
+PASS: 268 tests; Lua 5.3 / standard interpreter

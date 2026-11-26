@@ -545,9 +545,11 @@ test('Reference-style arrow HUD updates live progress, distance, ETA and next-st
  assert(math.abs(f.texture.angle+math.pi/2)<.00001,'North-facing artwork should turn right for an east target')
  f.skip.scripts.OnClick();eq(N.waypoint,3)
  N.routePaused=true;N:UpdateArrow();eq(f.status.text,'Route paused');eq(f.eta.text,'-- sec')
+ -- In another zone the game has no spot for you on the route's map.
+ local mapPos=C_Map.GetPlayerMapPosition;C_Map.GetPlayerMapPosition=function() return nil end
  N.routePaused=false;N.Position=function() return 999,.4,.4 end
  N:UpdateArrow();assert(f.status.text:find('^Go to '),f.status.text);assert(not f.texture:IsShown())
- N.Position=position;N.activeRoute=nil
+ C_Map.GetPlayerMapPosition=mapPos;N.Position=position;N.activeRoute=nil
 end)
 
 
@@ -556,7 +558,7 @@ test('Navigation display scales as one saved unit with safe size bounds',functio
  f.SetScale=function(self,value) self.appliedScale=value end
  assert(N:SetArrowScale(.75));eq(f.appliedScale,.75);eq(N.db.settings.arrowScale,.75)
  N:ShowArrow();eq(f.appliedScale,.75)
- eq(f.strata,'LOW')
+ eq(f.strata,'MEDIUM')
  assert(not N:SetArrowScale(9));eq(f.appliedScale,.75)
  assert(not N:SetArrowScale(0/0));eq(N.db.settings.arrowScale,.75)
  assert(N:SetArrowScale(1));eq(f.appliedScale,1)
@@ -1133,6 +1135,7 @@ assert(loadfile(root..'/Tests/v013_recipes.lua'))(N,test,eq,widget,root)
 assert(loadfile(root..'/Tests/help.lua'))(N,test,eq,widget,root)
 assert(loadfile(root..'/Tests/disenchant.lua'))(N,test,eq,widget)
 assert(loadfile(root..'/Tests/v014_crates.lua'))(N,test,eq)
+assert(loadfile(root..'/Tests/v0147_arrow.lua'))(N,test,eq)
 local summary='PASS: '..count..' tests; '.._VERSION..' / '..tostring(jit and jit.version or 'standard interpreter')
 print(summary); results[#results+1]=summary
 local file=assert(io.open(root..'/Tests/results.txt','w')); file:write(table.concat(results,'\n')); file:close()

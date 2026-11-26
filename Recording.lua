@@ -103,7 +103,7 @@ function N:ReplayRoute(name)
   end
   self.activeRoute=route;self.terrainIndex=index;self.waypoint=1
   while self.waypoint<#route.points and route.travelStopIndices[self.waypoint]<index do self.waypoint=self.waypoint+1 end
-  self.routePaused=false;self:ShowArrow();self.dirty=true;return
+  self.routePaused=false;if self.EnsureRouteVisible then self:EnsureRouteVisible() end;self:ShowArrow();self.dirty=true;return
  end
  self:RunPlanner(function()
   if (route.strategy=='nearest' or route.strategy=='optimal') and map==route.map and x and y then
@@ -112,7 +112,7 @@ function N:ReplayRoute(name)
   return self:PrepareTerrainRoute(route)
  end,function(r)
   if r.unreachable then return self:Print('Saved route contains an unreachable leg.') end
-  self.activeRoute=r;self.waypoint=1;self.terrainIndex=1;self.routePaused=false;self:ShowArrow();self.dirty=true
+  self.activeRoute=r;self.waypoint=1;self.terrainIndex=1;self.routePaused=false;if self.EnsureRouteVisible then self:EnsureRouteVisible() end;self:ShowArrow();self.dirty=true
  end)
 end
 function N:SaveActiveSession()

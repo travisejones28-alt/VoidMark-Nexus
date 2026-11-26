@@ -559,7 +559,8 @@ function N:GenerateRoute(refresh)
   if not best then return end
   local map,x,y=self:Position()
   if map and x and y then self:StartRouteAtNearest(best,{map=map,x=x,y=y}) end
-  self.activeRoute=best; self.waypoint=1; self.terrainIndex=1;self.routePaused=false; self.dirty=true; self:ShowArrow()
+  self.activeRoute=best; self.waypoint=1; self.terrainIndex=1;self.routePaused=false; self.dirty=true
+  if self.EnsureRouteVisible then self:EnsureRouteVisible() end; self:ShowArrow()
   self:Print(string.format('%s: %d stops, %.1f minute loop; %.0f%% learned corridor distance. Unverified connectors remain estimates.',best.strategy,#best.points,(best.seconds or 0)/60,(best.traversalConfidence or 0)*100))
  end)
 end
@@ -685,8 +686,13 @@ function N:RestoreArrowPosition()
  if not self.arrow then return end
  local position=self.db.settings.arrowPosition
  self.arrow:ClearAllPoints()
+ -- 0.14.7: a saved spot off the current screen (smaller window or resolution) is dropped.
+ local sw=UIParent and UIParent.GetWidth and tonumber(UIParent:GetWidth()) or 20000
+ local sh=UIParent and UIParent.GetHeight and tonumber(UIParent:GetHeight()) or 20000
+ if not (sw and sw>0) then sw=20000 end
+ if not (sh and sh>0) then sh=20000 end
  if type(position)=='table' and arrowAnchors[position.point] and arrowAnchors[position.relativePoint]
-  and self:Finite(position.x,-20000,20000) and self:Finite(position.y,-20000,20000) then
+  and self:Finite(position.x,-sw,sw) and self:Finite(position.y,-sh,sh) then
   self.arrow:SetPoint(position.point,UIParent,position.relativePoint,position.x,position.y)
  else self.arrow:SetPoint('TOP',UIParent,'TOP',0,-135) end
 end
@@ -701,7 +707,7 @@ function N:ShowArrow()
  if not self.arrow then
   local f=CreateFrame('Frame','VoidMarkNexusArrow',UIParent,BackdropTemplateMixin and 'BackdropTemplate' or nil)
   f:SetSize(320,262)
-  f:SetFrameStrata('LOW')
+  f:SetFrameStrata('MEDIUM')
   f:SetMovable(true); f:EnableMouse(true);f:SetClampedToScreen(true)
   f:RegisterForDrag('LeftButton')
   f:SetScript('OnDragStart',function(w) w.dragging=true;w:StartMoving() end)
@@ -800,7 +806,7 @@ function N:ShowArrow()
   end)
   self.arrow=f
  end
- self.arrow:SetFrameStrata('LOW')
+ self.arrow:SetFrameStrata('MEDIUM')
  self.arrow:SetScale(self.db.settings.arrowScale or 1)
  if not self.arrow.positionRestored then self:RestoreArrowPosition();self.arrow.positionRestored=true end
  self.arrow.refreshAt=0
@@ -863,6 +869,20 @@ function N:SyncTomTom()
   if ok then self.tomtomUID=uid end
  end
 end
+-- 0.14.7: where you stand on the route's own map. GetBestMapForUnit can name a
+-- smaller map (a cave, town or sub-zone) than the zone the route was built on;
+-- the game still gives your spot on the zone map, so the arrow keeps pointing.
+function N:RoutePosition(route)
+ local map,x,y=self:Position()
+ if route and map~=route.map and route.map and C_Map and C_Map.GetPlayerMapPosition then
+  local p=self:Call(C_Map.GetPlayerMapPosition,route.map,'player')
+  if p and p.GetXY then
+   local rx,ry=p:GetXY()
+   if self:Finite(rx,0,1) and self:Finite(ry,0,1) and not (rx==0 and ry==0) then return route.map,rx,ry end
+  end
+ end
+ return map,x,y
+end
 function N:UpdateArrow()
  self:SyncTomTom()
  local arrow=self.arrow
@@ -893,7 +913,7 @@ function N:UpdateArrow()
  if not transit and route and route.loop and self.LoopViaTarget then transit=self:LoopViaTarget(route) end
  local point=transit or node
  if not point or not self.db.settings.routeVisible then arrow:Hide(); return end
- local map,x,y=self:Position()
+ local map,x,y=self:RoutePosition(route)
  if map~=route.map or not x or not y then
   arrow.status:SetText('Go to '..(N.RouteZoneName and N:RouteZoneName(route.map) or 'the route zone'));arrow.label:SetText('-- yd');arrow.eta:SetText('-- sec')
   arrow.texture:Hide()

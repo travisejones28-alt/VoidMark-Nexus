@@ -24,6 +24,12 @@ Gathering routes, profession leveling and your items across both accounts, for W
 
 **Settings.** A short list of checkboxes, the route lap length, and the window size.
 
+## What changed in 0.14.7
+
+- **Route arrow always shows when a route starts.** If "Show routes" had been unticked (world map checkbox), starting a route left the arrow hidden with no message. Starting a route now turns it back on and says so.
+- **Arrow keeps pointing in caves, towns and sub-zones.** When the game put you on a smaller map than the route's zone, the arrow hid itself and said "Go to <zone>". It now reads your spot on the route's zone map.
+- **Arrow can't get lost off screen.** A saved arrow spot that is off the current screen (smaller window or resolution) resets to the top-centre default. The arrow also draws on the same layer as normal windows, so UI-panel addons can't cover it.
+
 ## What changed in 0.14.6
 
 - **Guides track your progress live.** The step you're on shows a progress line: `Skill 24 / 30  [==========----------]  made 12 - about 7 to go`. Crafts you make are counted per recipe; after 3 crafts the "to go" number uses your own skill-ups per craft instead of the guide's estimate. Updates as you craft.

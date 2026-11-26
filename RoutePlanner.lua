@@ -242,10 +242,18 @@ function N:RouteOptionWhy(o)
  return table.concat(lines,'\n')
 end
 
+function N:EnsureRouteVisible(quiet)
+ if self.db.settings.routeVisible then return end
+ self.db.settings.routeVisible=true
+ if not quiet then self:Print('Route arrow was turned off; turned it back on.') end
+end
 -- Starts a built route (the planner's pick, or GenerateRoute's).
 function N:StartRoute(route,quiet)
  if self.ResetLoopTracking then self:ResetLoopTracking() end
  self.activeRoute=route; self.waypoint=1; self.terrainIndex=1; self.routePaused=false; self.lap=1
+ -- 0.14.7: starting a route always brings the arrow back. Unticking "Show routes"
+ -- on the world map used to leave it hidden with no message.
+ self:EnsureRouteVisible(quiet)
  self.dirty=true; self:ShowArrow()
  if WorldMapFrame and WorldMapFrame.IsShown and WorldMapFrame:IsShown() and self.RefreshMap then self:RefreshMap() end
  if not quiet then self:Print('Route ready: '..self:RouteSummary(route)..'.') end
